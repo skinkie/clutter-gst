@@ -1,0 +1,20 @@
+SUBDIRS=clutter-gst doc examples 
+
+pcfiles = clutter-gst-@CLUTTER_GST_MAJORMINOR@.pc
+
+%-@CLUTTER_GST_MAJORMINOR@.pc: %.pc
+	cp $< $@
+
+pkgconfig_DATA = $(pcfiles)
+pkgconfigdir   = $(libdir)/pkgconfig
+
+EXTRA_DIST = clutter-gst.pc.in
+
+CLEANFILES = $(pcfiles)
+
+DISTCHECK_CONFIGURE_FLAGS=--enable-gtk-doc
+
+# Extra clean files so that maintainer-clean removes *everything*
+MAINTAINERCLEANFILES = aclocal.m4 compile config.guess config.sub \
+                       configure depcomp install-sh ltmain.sh     \
+                       Makefile.in missing config.h.in

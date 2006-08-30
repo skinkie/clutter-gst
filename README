@@ -1,0 +1,5 @@
+Clutter-gst README.
+===================
+
+This package contains a video texture actor and an audio player object for
+use with clutter.

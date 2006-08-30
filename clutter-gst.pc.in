@@ -1,0 +1,11 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: clutter-@CLUTTER_MAJORMINOR@
+Description: Clutter GStreamer bits
+Version: @VERSION@
+Libs: -L${libdir} -lclutter-gst-@CLUTTER_MAJORMINOR@ 
+Cflags: -I${includedir}/clutter-gst-@CLUTTER_MAJORMINOR@
+Requires: clutter-0.1 gstreamer-0.10 gstreamer-plugins-base-0.10
