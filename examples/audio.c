@@ -14,6 +14,7 @@ main (int argc, char *argv[])
   }
   
   clutter_init (&argc, &argv);
+  gst_init (&argc, &argv);
 
   stage = clutter_stage_get_default ();
 

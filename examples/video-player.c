@@ -258,6 +258,7 @@ main (int argc, char *argv[])
     g_error("%s <video file>", argv[0]);
 
   clutter_init (&argc, &argv);
+  gst_init (&argc, &argv);
 
   stage = clutter_stage_get_default ();
   g_object_set (stage, "fullscreen", TRUE, NULL);

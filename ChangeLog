@@ -1,3 +1,11 @@
 2006-08-30  Jorn Baayen  <jorn@openedhand.com>
 
+	* examples/audio.c: (main):
+	* examples/video-cube.c: (main):
+	* examples/video-player.c: (main):
+
+	Call gst_init().
+
+2006-08-30  Jorn Baayen  <jorn@openedhand.com>
+
 	* Split off from clutter

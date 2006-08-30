@@ -235,6 +235,7 @@ main (int argc, char *argv[])
     g_error("%s <video file>", argv[0]);
 
   clutter_init (&argc, &argv);
+  gst_init (&argc, &argv);
 
   stage = clutter_stage_get_default ();
   g_signal_connect (stage, "key-press-event",
