@@ -27,9 +27,7 @@
 #define _HAVE_CLUTTER_GST_VIDEO_TEXTURE_H
 
 #include <glib-object.h>
-#include <clutter/clutter-actor.h>
-#include <clutter/clutter-texture.h>
-#include <clutter-gst/clutter-gst-media.h>
+#include <clutter/clutter.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
 G_BEGIN_DECLS

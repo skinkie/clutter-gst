@@ -33,8 +33,8 @@ main (int argc, char *argv[])
 
   /* Set up audio player */
   audio = clutter_gst_audio_new ();
-  clutter_gst_media_set_uri (CLUTTER_GST_MEDIA (audio), argv[1]);
-  clutter_gst_media_set_playing (CLUTTER_GST_MEDIA (audio), TRUE);
+  clutter_media_set_uri (CLUTTER_MEDIA (audio), argv[1]);
+  clutter_media_set_playing (CLUTTER_MEDIA (audio), TRUE);
 
   /* start the timeline */
   clutter_timeline_start (timeline);

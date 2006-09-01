@@ -2,8 +2,7 @@ source_h =				      \
 	$(srcdir)/clutter-gst-video-texture.h \
 	$(srcdir)/clutter-gst-audio.h
 
-source_c = clutter-gst-media.c         \
-	   clutter-gst-video-texture.c \
+source_c = clutter-gst-video-texture.c \
 	   clutter-gst-audio.c
 
 libclutter_gst_@CLUTTER_GST_MAJORMINOR@_la_SOURCES = $(MARSHALFILES) \

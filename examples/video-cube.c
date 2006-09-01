@@ -258,13 +258,13 @@ main (int argc, char *argv[])
       g_error("failed to create vtexture, err: %s", err->message);
     }
 
-  clutter_gst_media_set_filename (CLUTTER_GST_MEDIA(vtexture), argv[1]);
+  clutter_media_set_filename (CLUTTER_MEDIA(vtexture), argv[1]);
 
   clutter_group_add (CLUTTER_GROUP (stage), texture);
   clutter_group_add (CLUTTER_GROUP (stage), vtexture);
   clutter_group_show_all (CLUTTER_GROUP (stage));
 
-  clutter_gst_media_set_playing(CLUTTER_GST_MEDIA(vtexture), TRUE);
+  clutter_media_set_playing(CLUTTER_MEDIA(vtexture), TRUE);
 
   clutter_main();
 

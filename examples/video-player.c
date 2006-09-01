@@ -98,7 +98,7 @@ toggle_pause_state (VideoApp *app)
 {
   if (app->paused)
     {
-      clutter_gst_media_set_playing (CLUTTER_GST_MEDIA(app->vtexture), 
+      clutter_media_set_playing (CLUTTER_MEDIA(app->vtexture), 
 				     TRUE);
       app->paused = FALSE;
       clutter_actor_hide (app->control_play);
@@ -106,7 +106,7 @@ toggle_pause_state (VideoApp *app)
     }
   else
     {
-      clutter_gst_media_set_playing (CLUTTER_GST_MEDIA(app->vtexture), 
+      clutter_media_set_playing (CLUTTER_MEDIA(app->vtexture), 
 				     FALSE);
       app->paused = TRUE;
       clutter_actor_hide (app->control_pause);
@@ -155,10 +155,10 @@ input_cb (ClutterStage *stage,
 
 	      CLAMP(dist, 0, SEEK_W);
 
-	      pos = (dist * clutter_gst_media_get_duration 
-                               (CLUTTER_GST_MEDIA(app->vtexture))) / SEEK_W;
+	      pos = (dist * clutter_media_get_duration 
+                               (CLUTTER_MEDIA(app->vtexture))) / SEEK_W;
 
-	      clutter_gst_media_set_position (CLUTTER_GST_MEDIA(app->vtexture),
+	      clutter_media_set_position (CLUTTER_MEDIA(app->vtexture),
 					      pos);
 	    }
 	}
@@ -220,8 +220,8 @@ tick (GObject      *object,
 
   vtex = CLUTTER_GST_VIDEO_TEXTURE(object);
 
-  position = clutter_gst_media_get_position (CLUTTER_GST_MEDIA(vtex));
-  duration = clutter_gst_media_get_duration (CLUTTER_GST_MEDIA(vtex));
+  position = clutter_media_get_position (CLUTTER_MEDIA(vtex));
+  duration = clutter_media_get_duration (CLUTTER_MEDIA(vtex));
 
   if (duration == 0 || position == 0)
     return;
@@ -282,7 +282,7 @@ main (int argc, char *argv[])
 		    G_CALLBACK (size_change), NULL);
 
   /* Load up out video texture */
-  clutter_gst_media_set_filename(CLUTTER_GST_MEDIA(app->vtexture), argv[1]);
+  clutter_media_set_filename(CLUTTER_MEDIA(app->vtexture), argv[1]);
 
   /* Create the control UI */
   app->control = clutter_group_new ();
@@ -328,10 +328,6 @@ main (int argc, char *argv[])
 			  app->control_label,
 			  NULL);
 
-  x = (CLUTTER_STAGE_WIDTH() - clutter_actor_get_width(app->control))/2;
-  y = CLUTTER_STAGE_HEIGHT() - (CLUTTER_STAGE_HEIGHT()/3);
-    
-  clutter_actor_set_position (app->control, x, y);
   clutter_actor_set_opacity (app->control, 0xee);
 
   clutter_actor_set_position (app->control_play, 30, 30);
@@ -349,6 +345,17 @@ main (int argc, char *argv[])
   /* Add control UI to stage */
   clutter_group_add_many (CLUTTER_GROUP (stage), 
 			  app->vtexture, app->control, NULL);
+
+  printf("start\n");
+
+  x = (CLUTTER_STAGE_WIDTH() - clutter_actor_get_width(app->control))/2;
+  y = CLUTTER_STAGE_HEIGHT() - (CLUTTER_STAGE_HEIGHT()/3);
+
+  printf("setting x = %i, y = %i, width = %i\n", x, y, clutter_actor_get_width(app->control));
+
+  clutter_actor_set_position (app->control, x, y);
+
+  printf("stop\n");
 
   /* hook up a time line for fading controls */
   app->controls_tl = clutter_timeline_new (10, 30);
@@ -372,7 +379,7 @@ main (int argc, char *argv[])
 		    G_CALLBACK (tick),
 		    app);
 
-  clutter_gst_media_set_playing (CLUTTER_GST_MEDIA(app->vtexture), TRUE);
+  clutter_media_set_playing (CLUTTER_MEDIA(app->vtexture), TRUE);
 
   clutter_group_show_all (CLUTTER_GROUP (stage));
 

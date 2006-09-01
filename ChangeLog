@@ -1,3 +1,18 @@
+2006-09-01  Matthew Allum  <mallum@openedhand.com>
+
+	* clutter-gst/Makefile.am:
+	* clutter-gst/clutter-gst-audio.c:
+	* clutter-gst/clutter-gst-audio.h:
+	* clutter-gst/clutter-gst-media.c:
+	* clutter-gst/clutter-gst-media.h:
+	* clutter-gst/clutter-gst-video-texture.c:
+	* clutter-gst/clutter-gst-video-texture.h:
+	* clutter-gst/clutter-gst.h:
+	* examples/audio.c:
+	* examples/video-cube.c:
+	* examples/video-player.c:
+	clutter-gst-media -> clutter-media
+
 2006-08-30  Jorn Baayen  <jorn@openedhand.com>
 
 	* examples/audio.c: (main):

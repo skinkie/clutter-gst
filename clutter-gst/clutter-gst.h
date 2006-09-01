@@ -3,7 +3,6 @@
 
 #include <clutter/clutter.h>
 
-#include "clutter-gst-media.h"
 #include "clutter-gst-video-texture.h"
 #include "clutter-gst-audio.h"
 

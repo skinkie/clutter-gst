@@ -50,7 +50,7 @@ struct _ClutterGstAudioPrivate
 
 enum {
   PROP_0,
-  /* ClutterGstMedia proprs */
+  /* ClutterMedia proprs */
   PROP_URI,
   PROP_PLAYING,
   PROP_POSITION,
@@ -63,21 +63,21 @@ enum {
 
 #define TICK_TIMEOUT 0.5
 
-static void clutter_gst_media_init (ClutterGstMediaInterface *iface);
+static void clutter_media_init (ClutterMediaInterface *iface);
 
 static gboolean tick_timeout (ClutterGstAudio *audio);
 
-G_DEFINE_TYPE_EXTENDED (ClutterGstAudio,                          \
-			clutter_gst_audio,                        \
-			G_TYPE_OBJECT,                         \
+G_DEFINE_TYPE_EXTENDED (ClutterGstAudio,                              \
+			clutter_gst_audio,                            \
+			G_TYPE_OBJECT,                                \
 			0,                                            \
-			G_IMPLEMENT_INTERFACE (CLUTTER_GST_TYPE_MEDIA,    \
-					       clutter_gst_media_init));
+			G_IMPLEMENT_INTERFACE (CLUTTER_TYPE_MEDIA,    \
+					       clutter_media_init));
 
 /* Interface implementation */
 
 static void
-set_uri (ClutterGstMedia *media,
+set_uri (ClutterMedia    *media,
 	 const char      *uri)
 {
   ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
@@ -153,7 +153,7 @@ set_uri (ClutterGstMedia *media,
 }
 
 static const char *
-get_uri (ClutterGstMedia *media)
+get_uri (ClutterMedia *media)
 {
   ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
   ClutterGstAudioPrivate *priv; 
@@ -166,7 +166,7 @@ get_uri (ClutterGstMedia *media)
 }
 
 static void
-set_playing (ClutterGstMedia *media,
+set_playing (ClutterMedia *media,
 	     gboolean         playing)
 {
   ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
@@ -201,7 +201,7 @@ set_playing (ClutterGstMedia *media,
 }
 
 static gboolean
-get_playing (ClutterGstMedia *media)
+get_playing (ClutterMedia *media)
 {
   ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
   ClutterGstAudioPrivate *priv; 
@@ -223,7 +223,7 @@ get_playing (ClutterGstMedia *media)
 }
 
 static void
-set_position (ClutterGstMedia *media,
+set_position (ClutterMedia *media,
 	      int              position) /* seconds */
 {
   ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
@@ -256,7 +256,7 @@ set_position (ClutterGstMedia *media,
 }
 
 static int
-get_position (ClutterGstMedia *media)
+get_position (ClutterMedia *media)
 {
   ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
   ClutterGstAudioPrivate *priv; 
@@ -283,7 +283,7 @@ get_position (ClutterGstMedia *media)
 }
 
 static void
-set_volume (ClutterGstMedia *media,
+set_volume (ClutterMedia *media,
 	    double           volume)
 {
   ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
@@ -305,7 +305,7 @@ set_volume (ClutterGstMedia *media,
 }
 
 static double
-get_volume (ClutterGstMedia *media)
+get_volume (ClutterMedia *media)
 {
   ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
   ClutterGstAudioPrivate *priv; 
@@ -326,7 +326,7 @@ get_volume (ClutterGstMedia *media)
 }
 
 static gboolean
-can_seek (ClutterGstMedia *media)
+can_seek (ClutterMedia *media)
 {
   ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
 
@@ -336,7 +336,7 @@ can_seek (ClutterGstMedia *media)
 }
 
 static int
-get_buffer_percent (ClutterGstMedia *media)
+get_buffer_percent (ClutterMedia *media)
 {
   ClutterGstAudio         *audio = CLUTTER_GST_AUDIO(media);
 
@@ -346,7 +346,7 @@ get_buffer_percent (ClutterGstMedia *media)
 }
 
 static int
-get_duration (ClutterGstMedia *media)
+get_duration (ClutterMedia *media)
 {
   ClutterGstAudio         *audio = CLUTTER_GST_AUDIO(media);
 
@@ -356,7 +356,7 @@ get_duration (ClutterGstMedia *media)
 }
 
 static void
-clutter_gst_media_init (ClutterGstMediaInterface *iface)
+clutter_media_init (ClutterMediaInterface *iface)
 {
   iface->set_uri            = set_uri;
   iface->get_uri            = get_uri;
@@ -427,19 +427,19 @@ clutter_gst_audio_set_property (GObject      *object,
   switch (property_id)
     {
     case PROP_URI:
-      clutter_gst_media_set_uri (CLUTTER_GST_MEDIA(audio), 
+      clutter_media_set_uri (CLUTTER_MEDIA(audio), 
 			     g_value_get_string (value));
       break;
     case PROP_PLAYING:
-      clutter_gst_media_set_playing (CLUTTER_GST_MEDIA(audio),
+      clutter_media_set_playing (CLUTTER_MEDIA(audio),
 				 g_value_get_boolean (value));
       break;
     case PROP_POSITION:
-      clutter_gst_media_set_position (CLUTTER_GST_MEDIA(audio),
+      clutter_media_set_position (CLUTTER_MEDIA(audio),
 				  g_value_get_int (value));
       break;
     case PROP_VOLUME:
-      clutter_gst_media_set_volume (CLUTTER_GST_MEDIA(audio),
+      clutter_media_set_volume (CLUTTER_MEDIA(audio),
 				g_value_get_double (value));
       break;
     default:
@@ -454,33 +454,33 @@ clutter_gst_audio_get_property (GObject    *object,
 				GParamSpec *pspec)
 {
   ClutterGstAudio *audio;
-  ClutterGstMedia    *media;
+  ClutterMedia    *media;
 
   audio = CLUTTER_GST_AUDIO (object);
-  media = CLUTTER_GST_MEDIA (audio);
+  media = CLUTTER_MEDIA (audio);
 
   switch (property_id)
     {
     case PROP_URI:
-      g_value_set_string (value, clutter_gst_media_get_uri (media));
+      g_value_set_string (value, clutter_media_get_uri (media));
       break;
     case PROP_PLAYING:
-      g_value_set_boolean (value, clutter_gst_media_get_playing (media));
+      g_value_set_boolean (value, clutter_media_get_playing (media));
       break;
     case PROP_POSITION:
-      g_value_set_int (value, clutter_gst_media_get_position (media));
+      g_value_set_int (value, clutter_media_get_position (media));
       break;
     case PROP_VOLUME:
-      g_value_set_double (value, clutter_gst_media_get_volume (media));
+      g_value_set_double (value, clutter_media_get_volume (media));
       break;
     case PROP_CAN_SEEK:
-      g_value_set_boolean (value, clutter_gst_media_get_can_seek (media));
+      g_value_set_boolean (value, clutter_media_get_can_seek (media));
       break;
     case PROP_BUFFER_PERCENT:
-      g_value_set_int (value, clutter_gst_media_get_buffer_percent (media));
+      g_value_set_int (value, clutter_media_get_buffer_percent (media));
       break;
     case PROP_DURATION:
-      g_value_set_int (value, clutter_gst_media_get_duration (media));
+      g_value_set_int (value, clutter_media_get_duration (media));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -521,7 +521,7 @@ bus_message_error_cb (GstBus          *bus,
   error = NULL;
   gst_message_parse_error (message, &error, NULL);
         
-  g_signal_emit_by_name (CLUTTER_GST_MEDIA(audio), "error", error);
+  g_signal_emit_by_name (CLUTTER_MEDIA(audio), "error", error);
 
   g_error_free (error);
 }
@@ -533,7 +533,7 @@ bus_message_eos_cb (GstBus          *bus,
 {
   g_object_notify (G_OBJECT (audio), "position");
 
-  g_signal_emit_by_name (CLUTTER_GST_MEDIA(audio), "eos");
+  g_signal_emit_by_name (CLUTTER_MEDIA(audio), "eos");
 }
 
 static void
@@ -544,11 +544,11 @@ bus_message_tag_cb (GstBus          *bus,
   GstTagList *tag_list;
 
   gst_message_parse_tag (message, &tag_list);
-
-  g_signal_emit_by_name (CLUTTER_GST_MEDIA(audio), 
+#if 0
+  g_signal_emit_by_name (CLUTTER_MEDIA(audio), 
 			 "metadata-available", 
 			 tag_list);
-  
+#endif  
   gst_tag_list_free (tag_list);
 }
 

@@ -28,7 +28,7 @@
 #define _HAVE_CLUTTER_GST_AUDIO_H
 
 #include <glib-object.h>
-#include <clutter-gst/clutter-gst-media.h>
+#include <clutter/clutter.h>
 
 G_BEGIN_DECLS
 

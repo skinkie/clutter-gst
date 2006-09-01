@@ -50,11 +50,13 @@ struct _ClutterGstVideoTexturePrivate
   int         duration;
   gboolean    force_aspect_ratio;
   guint       tick_timeout_id;
+  GdkPixbuf  *scratch_pixb;
+  GMutex     *scratch_lock;
 };
 
 enum {
   PROP_0,
-  /* ClutterGstMedia proprs */
+  /* ClutterMedia proprs */
   PROP_URI,
   PROP_PLAYING,
   PROP_POSITION,
@@ -70,21 +72,21 @@ enum {
 
 #define TICK_TIMEOUT 0.5
 
-static void clutter_gst_media_init (ClutterGstMediaInterface *iface);
+static void clutter_media_init (ClutterMediaInterface *iface);
 
 static gboolean tick_timeout (ClutterGstVideoTexture *video_texture);
 
-G_DEFINE_TYPE_EXTENDED (ClutterGstVideoTexture,                          \
-			clutter_gst_video_texture,                        \
+G_DEFINE_TYPE_EXTENDED (ClutterGstVideoTexture,                       \
+			clutter_gst_video_texture,                    \
 			CLUTTER_TYPE_TEXTURE,                         \
 			0,                                            \
-			G_IMPLEMENT_INTERFACE (CLUTTER_GST_TYPE_MEDIA,    \
-					       clutter_gst_media_init));
+			G_IMPLEMENT_INTERFACE (CLUTTER_TYPE_MEDIA,    \
+					       clutter_media_init));
 
 /* Interface implementation */
 
 static void
-set_uri (ClutterGstMedia *media,
+set_uri (ClutterMedia *media,
 	 const char      *uri)
 {
   ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
@@ -160,7 +162,7 @@ set_uri (ClutterGstMedia *media,
 }
 
 static const char *
-get_uri (ClutterGstMedia *media)
+get_uri (ClutterMedia *media)
 {
   ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
   ClutterGstVideoTexturePrivate *priv; 
@@ -173,7 +175,7 @@ get_uri (ClutterGstMedia *media)
 }
 
 static void
-set_playing (ClutterGstMedia *media,
+set_playing (ClutterMedia *media,
 	     gboolean         playing)
 {
   ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
@@ -208,7 +210,7 @@ set_playing (ClutterGstMedia *media,
 }
 
 static gboolean
-get_playing (ClutterGstMedia *media)
+get_playing (ClutterMedia *media)
 {
   ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
   ClutterGstVideoTexturePrivate *priv; 
@@ -230,7 +232,7 @@ get_playing (ClutterGstMedia *media)
 }
 
 static void
-set_position (ClutterGstMedia *media,
+set_position (ClutterMedia *media,
 	      int              position) /* seconds */
 {
   ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
@@ -263,7 +265,7 @@ set_position (ClutterGstMedia *media,
 }
 
 static int
-get_position (ClutterGstMedia *media)
+get_position (ClutterMedia *media)
 {
   ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
   ClutterGstVideoTexturePrivate *priv; 
@@ -290,7 +292,7 @@ get_position (ClutterGstMedia *media)
 }
 
 static void
-set_volume (ClutterGstMedia *media,
+set_volume (ClutterMedia *media,
 	    double           volume)
 {
   ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
@@ -312,7 +314,7 @@ set_volume (ClutterGstMedia *media,
 }
 
 static double
-get_volume (ClutterGstMedia *media)
+get_volume (ClutterMedia *media)
 {
   ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
   ClutterGstVideoTexturePrivate *priv; 
@@ -333,7 +335,7 @@ get_volume (ClutterGstMedia *media)
 }
 
 static gboolean
-can_seek (ClutterGstMedia *media)
+can_seek (ClutterMedia *media)
 {
   ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
 
@@ -343,7 +345,7 @@ can_seek (ClutterGstMedia *media)
 }
 
 static int
-get_buffer_percent (ClutterGstMedia *media)
+get_buffer_percent (ClutterMedia *media)
 {
   ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
 
@@ -353,7 +355,7 @@ get_buffer_percent (ClutterGstMedia *media)
 }
 
 static int
-get_duration (ClutterGstMedia *media)
+get_duration (ClutterMedia *media)
 {
   ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
 
@@ -363,7 +365,7 @@ get_duration (ClutterGstMedia *media)
 }
 
 static void
-clutter_gst_media_init (ClutterGstMediaInterface *iface)
+clutter_media_init (ClutterMediaInterface *iface)
 {
   iface->set_uri            = set_uri;
   iface->get_uri            = get_uri;
@@ -434,19 +436,19 @@ clutter_gst_video_texture_set_property (GObject      *object,
   switch (property_id)
     {
     case PROP_URI:
-      clutter_gst_media_set_uri (CLUTTER_GST_MEDIA(video_texture), 
+      clutter_media_set_uri (CLUTTER_MEDIA(video_texture), 
 			     g_value_get_string (value));
       break;
     case PROP_PLAYING:
-      clutter_gst_media_set_playing (CLUTTER_GST_MEDIA(video_texture),
+      clutter_media_set_playing (CLUTTER_MEDIA(video_texture),
 				 g_value_get_boolean (value));
       break;
     case PROP_POSITION:
-      clutter_gst_media_set_position (CLUTTER_GST_MEDIA(video_texture),
+      clutter_media_set_position (CLUTTER_MEDIA(video_texture),
 				  g_value_get_int (value));
       break;
     case PROP_VOLUME:
-      clutter_gst_media_set_volume (CLUTTER_GST_MEDIA(video_texture),
+      clutter_media_set_volume (CLUTTER_MEDIA(video_texture),
 				g_value_get_double (value));
       break;
     default:
@@ -461,33 +463,33 @@ clutter_gst_video_texture_get_property (GObject    *object,
 				        GParamSpec *pspec)
 {
   ClutterGstVideoTexture *video_texture;
-  ClutterGstMedia        *media;
+  ClutterMedia           *media;
 
   video_texture = CLUTTER_GST_VIDEO_TEXTURE (object);
-  media         = CLUTTER_GST_MEDIA (video_texture);
+  media         = CLUTTER_MEDIA (video_texture);
 
   switch (property_id)
     {
     case PROP_URI:
-      g_value_set_string (value, clutter_gst_media_get_uri (media));
+      g_value_set_string (value, clutter_media_get_uri (media));
       break;
     case PROP_PLAYING:
-      g_value_set_boolean (value, clutter_gst_media_get_playing (media));
+      g_value_set_boolean (value, clutter_media_get_playing (media));
       break;
     case PROP_POSITION:
-      g_value_set_int (value, clutter_gst_media_get_position (media));
+      g_value_set_int (value, clutter_media_get_position (media));
       break;
     case PROP_VOLUME:
-      g_value_set_double (value, clutter_gst_media_get_volume (media));
+      g_value_set_double (value, clutter_media_get_volume (media));
       break;
     case PROP_CAN_SEEK:
-      g_value_set_boolean (value, clutter_gst_media_get_can_seek (media));
+      g_value_set_boolean (value, clutter_media_get_can_seek (media));
       break;
     case PROP_BUFFER_PERCENT:
-      g_value_set_int (value, clutter_gst_media_get_buffer_percent (media));
+      g_value_set_int (value, clutter_media_get_buffer_percent (media));
       break;
     case PROP_DURATION:
-      g_value_set_int (value, clutter_gst_media_get_duration (media));
+      g_value_set_int (value, clutter_media_get_duration (media));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -530,7 +532,7 @@ bus_message_error_cb (GstBus                 *bus,
   error = NULL;
   gst_message_parse_error (message, &error, NULL);
         
-  g_signal_emit_by_name (CLUTTER_GST_MEDIA(video_texture), "error", error);
+  g_signal_emit_by_name (CLUTTER_MEDIA(video_texture), "error", error);
 
   g_error_free (error);
 }
@@ -542,7 +544,7 @@ bus_message_eos_cb (GstBus                 *bus,
 {
   g_object_notify (G_OBJECT (video_texture), "position");
 
-  g_signal_emit_by_name (CLUTTER_GST_MEDIA(video_texture), "eos");
+  g_signal_emit_by_name (CLUTTER_MEDIA(video_texture), "eos");
 }
 
 static void
@@ -554,10 +556,11 @@ bus_message_tag_cb (GstBus                 *bus,
 
   gst_message_parse_tag (message, &tag_list);
 
-  g_signal_emit_by_name (CLUTTER_GST_MEDIA(video_texture), 
+#if 0
+  g_signal_emit_by_name (CLUTTER_MEDIA(video_texture), 
 			 "metadata-available", 
 			 tag_list);
-  
+#endif  
   gst_tag_list_free (tag_list);
 }
 
@@ -669,6 +672,27 @@ bus_message_state_change_cb (GstBus                 *bus,
     }
 }
 
+static void
+bus_message_element_cb (GstBus                 *bus,
+			GstMessage             *message,
+			ClutterGstVideoTexture *video_texture)
+{
+
+  g_mutex_lock (video_texture->priv->scratch_lock);
+
+  if (video_texture->priv->scratch_pixb)
+    {
+      clutter_texture_set_pixbuf (CLUTTER_TEXTURE(video_texture), 
+				  video_texture->priv->scratch_pixb); 
+ 
+      g_object_unref(G_OBJECT(video_texture->priv->scratch_pixb));
+      video_texture->priv->scratch_pixb = NULL;
+    }
+
+  g_mutex_unlock (video_texture->priv->scratch_lock);
+}
+
+
 static gboolean
 tick_timeout (ClutterGstVideoTexture *video_texture)
 {
@@ -678,14 +702,15 @@ tick_timeout (ClutterGstVideoTexture *video_texture)
 }
 
 static void
-fakesink_handoff_cb (GstElement *fakesrc, 
-		     GstBuffer  *buffer,
-		     GstPad     *pad, 
-		     gpointer    user_data)
+fakesink_handoff_cb (GstElement             *fakesrc, 
+		     GstBuffer              *buffer,
+		     GstPad                 *pad, 
+		     ClutterGstVideoTexture *video_texture)
 {
   GstStructure  *structure;
   int            width, height;
   GdkPixbuf     *pixb;
+  GstMessage    *msg;
 
   structure = gst_caps_get_structure(GST_CAPS(buffer->caps), 0);
   gst_structure_get_int(structure, "width", &width);
@@ -703,12 +728,15 @@ fakesink_handoff_cb (GstElement *fakesrc,
 				   (3 * width + 3) &~ 3,
 				   NULL,
 				   NULL);
-  
-  if (pixb)
-    {
-      clutter_texture_set_pixbuf (CLUTTER_TEXTURE(user_data), pixb);
-      g_object_unref(G_OBJECT(pixb));
-    }
+
+  g_mutex_lock (video_texture->priv->scratch_lock);
+
+  video_texture->priv->scratch_pixb = gdk_pixbuf_copy(pixb);
+
+  msg = gst_message_new_element (GST_OBJECT(fakesrc), NULL);
+  gst_element_post_message (fakesrc, msg);
+
+  g_mutex_unlock (video_texture->priv->scratch_lock);
 }
 
 static gboolean
@@ -823,6 +851,8 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
       return;
     }
 
+  priv->scratch_lock = g_mutex_new ();
+
   bus = gst_pipeline_get_bus (GST_PIPELINE (priv->playbin));
 
   gst_bus_add_signal_watch (bus);
@@ -860,6 +890,12 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
   g_signal_connect_object (bus,
 			   "message::state-changed",
 			   G_CALLBACK (bus_message_state_change_cb),
+			   video_texture,
+			   0);
+
+  g_signal_connect_object (bus,
+			   "message::element",
+			   G_CALLBACK (bus_message_element_cb),
 			   video_texture,
 			   0);
 
