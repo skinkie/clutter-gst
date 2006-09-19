@@ -50,7 +50,7 @@ struct _ClutterGstVideoTexturePrivate
   int         duration;
   gboolean    force_aspect_ratio;
   guint       tick_timeout_id;
-  GdkPixbuf  *scratch_pixb;
+  GstBuffer  *scratch_buffer;
   GMutex     *scratch_lock;
 };
 
@@ -677,19 +677,36 @@ bus_message_element_cb (GstBus                 *bus,
 			GstMessage             *message,
 			ClutterGstVideoTexture *video_texture)
 {
+  ClutterGstVideoTexturePrivate *priv;
 
-  g_mutex_lock (video_texture->priv->scratch_lock);
+  priv = video_texture->priv;
 
-  if (video_texture->priv->scratch_pixb)
+  g_mutex_lock (priv->scratch_lock);
+
+  if (priv->scratch_buffer)
     {
-      clutter_texture_set_pixbuf (CLUTTER_TEXTURE(video_texture), 
-				  video_texture->priv->scratch_pixb); 
- 
-      g_object_unref(G_OBJECT(video_texture->priv->scratch_pixb));
-      video_texture->priv->scratch_pixb = NULL;
+      GstStructure  *structure;
+      int            width, height;
+
+      structure = gst_caps_get_structure(GST_CAPS(priv->scratch_buffer->caps),
+					 0);
+
+      gst_structure_get_int(structure, "width", &width);
+      gst_structure_get_int(structure, "height", &height);
+
+      clutter_texture_set_from_data (CLUTTER_TEXTURE(video_texture),
+				     GST_BUFFER_DATA (priv->scratch_buffer),
+				     FALSE,
+				     width,
+				     height,
+				     (3 * width + 3) &~ 3,
+				     4);
+
+      gst_buffer_unref (priv->scratch_buffer);
+      priv->scratch_buffer = NULL;
     }
 
-  g_mutex_unlock (video_texture->priv->scratch_lock);
+  g_mutex_unlock (priv->scratch_lock);
 }
 
 
@@ -707,31 +724,12 @@ fakesink_handoff_cb (GstElement             *fakesrc,
 		     GstPad                 *pad, 
 		     ClutterGstVideoTexture *video_texture)
 {
-  GstStructure  *structure;
-  int            width, height;
-  GdkPixbuf     *pixb;
   GstMessage    *msg;
-
-  structure = gst_caps_get_structure(GST_CAPS(buffer->caps), 0);
-  gst_structure_get_int(structure, "width", &width);
-  gst_structure_get_int(structure, "height", &height);
-
-  /* FIXME: We really dont want to do this every time as gobject creation
-   *        really need a clutter_texture_set_from_data call ?
-  */
-  pixb = gdk_pixbuf_new_from_data (GST_BUFFER_DATA (buffer),
-				   GDK_COLORSPACE_RGB, 
-				   FALSE, 
-				   8, 
-				   width, 
-				   height,
-				   (3 * width + 3) &~ 3,
-				   NULL,
-				   NULL);
 
   g_mutex_lock (video_texture->priv->scratch_lock);
 
-  video_texture->priv->scratch_pixb = gdk_pixbuf_copy(pixb);
+  gst_buffer_ref (buffer);
+  video_texture->priv->scratch_buffer = buffer;
 
   msg = gst_message_new_element (GST_OBJECT(fakesrc), NULL);
   gst_element_post_message (fakesrc, msg);
@@ -832,6 +830,8 @@ lay_pipeline (ClutterGstVideoTexture *video_texture)
 		"video-sink", video_bin,
 		"audio-sink", audio_sink,
 		NULL);
+
+  gst_caps_unref (video_filtercaps);
 
   return TRUE;
 }
