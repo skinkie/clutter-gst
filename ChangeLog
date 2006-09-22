@@ -1,3 +1,9 @@
+2006-09-22  Jorn Baayen  <jorn@openedhand.com>
+
+	* clutter-gst/clutter-gst-video-texture.c: (lay_pipeline):
+
+	Unref video_filtercaps only once.
+
 2006-09-16  Jorn Baayen  <jorn@openedhand.com>
 
 	* clutter-gst/clutter-gst-video-texture.h:

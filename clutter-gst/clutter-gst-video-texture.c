@@ -804,6 +804,8 @@ lay_pipeline (ClutterGstVideoTexture *video_texture)
 	       "caps", video_filtercaps, 
 	       NULL);
 
+  gst_caps_unref(video_filtercaps);
+
   gst_bin_add(GST_BIN(video_bin), video_capsfilter);
   gst_bin_add(GST_BIN(video_bin), video_sink);
 
@@ -830,8 +832,6 @@ lay_pipeline (ClutterGstVideoTexture *video_texture)
 		"video-sink", video_bin,
 		"audio-sink", audio_sink,
 		NULL);
-
-  gst_caps_unref (video_filtercaps);
 
   return TRUE;
 }
