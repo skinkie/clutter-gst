@@ -48,7 +48,6 @@ struct _ClutterGstVideoTexturePrivate
   gboolean    can_seek;
   int         buffer_percent;
   int         duration;
-  gboolean    force_aspect_ratio;
   guint       tick_timeout_id;
   GstBuffer  *scratch_buffer;
   GMutex     *scratch_lock;
@@ -63,10 +62,7 @@ enum {
   PROP_VOLUME,
   PROP_CAN_SEEK,
   PROP_BUFFER_PERCENT,
-  PROP_DURATION,
-
-  /* Extra texture props */
-  PROP_FORCE_ASPECT_RATIO
+  PROP_DURATION
 };
 
 
