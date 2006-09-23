@@ -189,21 +189,34 @@ input_cb (ClutterStage *stage,
 
 void
 size_change (ClutterTexture *texture, 
-	     gint             width,
-	     gint             height,
-	     gpointer         user_data)
+	     gint            width,
+	     gint            height,
+	     gpointer        user_data)
 {
   ClutterActor  *stage;
-  ClutterGeometry  stage_geom;
-  gint             new_y, new_height;
+  gint           new_x, new_y, new_width, new_height;
 
   new_height = ( height * CLUTTER_STAGE_WIDTH() ) / width;
-  new_y      = ( (gint)CLUTTER_STAGE_HEIGHT() - new_height) / 2;
+  if (new_height <= CLUTTER_STAGE_HEIGHT())
+    {
+      new_width = CLUTTER_STAGE_WIDTH();
 
-  clutter_actor_set_position (CLUTTER_ACTOR (texture), 0, new_y);
+      new_x = 0;
+      new_y = (CLUTTER_STAGE_HEIGHT() - new_height) / 2;
+    }
+  else
+    {
+      new_width  = ( width * CLUTTER_STAGE_HEIGHT() ) / height;
+      new_height = CLUTTER_STAGE_HEIGHT();
+
+      new_x = (CLUTTER_STAGE_WIDTH() - new_width) / 2;
+      new_y = 0;
+    }
+
+  clutter_actor_set_position (CLUTTER_ACTOR (texture), new_x, new_y);
 
   clutter_actor_set_size (CLUTTER_ACTOR (texture),
-			  CLUTTER_STAGE_WIDTH(),
+			  new_width,
 			  new_height);
 }
 

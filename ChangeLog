@@ -1,5 +1,11 @@
 2006-09-23  Jorn Baayen  <jorn@openedhand.com>
 
+	* examples/video-player.c:
+
+	Preserve aspect ratio in all cases. Fixes #158.
+
+2006-09-23  Jorn Baayen  <jorn@openedhand.com>
+
 	* clutter-gst/clutter-gst-video-texture.c:
 
 	Remove traces of unused force-aspect-ratio prop.
