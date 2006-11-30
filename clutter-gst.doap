@@ -1,0 +1,42 @@
+<Project xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+	xmlns:foaf="http://xmlns.com/foaf/0.1/"
+	xmlns="http://usefulinc.com/ns/doap#">
+
+	<name>Clutter-Gst</name>
+	<created>2006-11-18</created>
+
+	<shortdesc xml:lang="en">Clutter-Gst adds GStreamer support to Clutter</shortdesc>
+
+	<description xml:lang="en">
+
+        Clutter-Gst is a library which uses GStreamer to provide media
+        support (both audio and video) to the Clutter GL canvas library.
+	
+	</description>
+
+	<homepage rdf:resource="http://labs.o-hand.com/clutter" />
+        <download-page rdf:resource="http://projects.o-hand.com/clutter/sources" />
+	<license rdf:resource="http://usefulinc.com/doap/licenses/lgpl" />
+        <bug-database rdf:resource="http://bugzilla.o-hand.com/enter_bug.cgi?product=Clutter"/>
+        <os>linux</os>
+        <programming-language>C</programming-language>
+        <programming-language>Python</programming-language>
+        <programming-language>Perl</programming-language>
+
+        <category rdf:resource="http://labs.o-hand.com/doap/category/library"/>
+        <category rdf:resource="http://labs.o-hand.com/doap/category/graphics"/>
+        <category rdf:resource="http://labs.o-hand.com/doap/category/embedded"/>
+	<maintainer>
+		<foaf:Person>
+			<foaf:name>Matthew Allum</foaf:name>
+		</foaf:Person>
+	</maintainer>
+
+        <repository>
+		<SVNRepository>
+			<browse rdf:resource="http://svn.o-hand.com/view/clutter"/>
+			<location rdf:resource="https://svn.o-hand.com/repos/clutter"/>
+		</SVNRepository>
+        </repository>
+
+</Project>
