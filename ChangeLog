@@ -1,3 +1,10 @@
+2006-12-04  Emmanuele Bassi  <ebassi@openedhand.com>
+
+	A examples/clutter-logo-800x600.png
+
+	* examples/clutter-logo-800x600.png: Add back the
+	background image.
+
 2006-11-30  Matthew Allum  <mallum@openedhand.com>
 
 	* clutter-gst.doap:
