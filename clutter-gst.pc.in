@@ -3,9 +3,9 @@ exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include
 
-Name: clutter-@CLUTTER_MAJORMINOR@
+Name: clutter-@CLUTTER_GST_MAJORMINOR@
 Description: Clutter GStreamer bits
 Version: @VERSION@
-Libs: -L${libdir} -lclutter-gst-@CLUTTER_MAJORMINOR@ 
-Cflags: -I${includedir}/clutter-gst-@CLUTTER_MAJORMINOR@
+Libs: -L${libdir} -lclutter-gst-@CLUTTER_GST_MAJORMINOR@ 
+Cflags: -I${includedir}/clutter-gst-@CLUTTER_GST_MAJORMINOR@
 Requires: clutter-0.1 gstreamer-0.10 gstreamer-plugins-base-0.10

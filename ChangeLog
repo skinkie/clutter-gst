@@ -1,3 +1,8 @@
+2007-01-04  Matthew Allum  <mallum@openedhand.com>
+
+	* clutter-gst.pc.in:
+	Fix version substitution
+
 2006-12-04  Emmanuele Bassi  <ebassi@openedhand.com>
 
 	A examples/clutter-logo-800x600.png
