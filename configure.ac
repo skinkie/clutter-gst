@@ -97,7 +97,7 @@ clutter-gst.pc
 dnl ========================================================================
 
 echo ""
-echo "                    Clutter $VERSION"
+echo "                 Clutter-GST $VERSION"
 echo "                 ==================="
 echo ""
 echo "                   prefix:   ${prefix}"
