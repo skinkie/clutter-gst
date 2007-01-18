@@ -1,3 +1,10 @@
+2007-01-18 =================== 0.1.0 Released ===========================
+
+2007-01-18  Matthew Allum  <mallum@openedhand.com>
+
+	* configure.ac:
+	Check for clutter-0.2.pc
+
 2007-01-18  Emmanuele Bassi  <ebassi@openedhand.com>
 
 	* configure.ac: Fix summary.
