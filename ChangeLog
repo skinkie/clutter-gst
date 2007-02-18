@@ -1,3 +1,8 @@
+2007-02-18  Matthew Allum  <mallum@openedhand.com>
+
+	* clutter-gst.pc.in:
+	Fix requires to point at clutter-0.2
+
 2007-01-18  Emmanuele Bassi  <ebassi@openedhand.com>
 
 	* configure.ac: Post release bump to 0.2.0
