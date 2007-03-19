@@ -29,7 +29,7 @@ main (int argc, char *argv[])
 
   /* Make a timeline */
   timeline = clutter_timeline_new (100, 30); /* num frames, fps */
-  g_object_set(timeline, "loop", TRUE, 0);  
+  g_object_set(timeline, "loop", TRUE, NULL);
 
   /* Set up audio player */
   audio = clutter_gst_audio_new ();
