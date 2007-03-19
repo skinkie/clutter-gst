@@ -1,0 +1,6 @@
+clutter-gst 0.1.1
+=================
+
+Critical bug fixes;
+ - #242 memory leak when playing videos 
+ - #219 clutter-gst apps won't compile with clutter 0.2

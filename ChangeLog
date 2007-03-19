@@ -1,3 +1,11 @@
+2007-01-18 =================== 0.1.1 Released ===========================
+
+2007-03-19  Matthew Allum  <mallum@openedhand.com>
+
+	* NEWS:
+	* configure.ac:
+	Prepare for 0.1.1 release
+
 2007-03-19  Matthew Allum  <mallum@openedhand.com>
 
 	* clutter-gst/clutter-gst-video-texture.c: (fakesink_handoff_cb):
