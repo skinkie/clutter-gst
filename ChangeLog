@@ -1,7 +1,12 @@
+2007-03-19  Matthew Allum  <mallum@openedhand.com>
+
+	* clutter-gst/clutter-gst-video-texture.c: (fakesink_handoff_cb):
+	Fix via Iain for leaking on dropped frames (fixes #242) 
+
 2007-02-18  Matthew Allum  <mallum@openedhand.com>
 
 	* clutter-gst.pc.in:
-	Fix requires to point at clutter-0.2
+	Fix requires to point at clutter-0.2 (Fixes #219)
 
 2007-01-18  Emmanuele Bassi  <ebassi@openedhand.com>
 

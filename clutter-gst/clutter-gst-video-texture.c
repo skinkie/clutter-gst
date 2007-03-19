@@ -725,6 +725,10 @@ fakesink_handoff_cb (GstElement             *fakesrc,
   g_mutex_lock (video_texture->priv->scratch_lock);
 
   gst_buffer_ref (buffer);
+
+  if (video_texture->priv->scratch_buffer != NULL) 
+    gst_buffer_unref (video_texture->priv->scratch_buffer);
+
   video_texture->priv->scratch_buffer = buffer;
 
   msg = gst_message_new_element (GST_OBJECT(fakesrc), NULL);
