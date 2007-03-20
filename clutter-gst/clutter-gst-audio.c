@@ -532,8 +532,10 @@ bus_message_eos_cb (GstBus          *bus,
                     ClutterGstAudio *audio)
 {
   g_object_notify (G_OBJECT (audio), "position");
-
+  
   g_signal_emit_by_name (CLUTTER_MEDIA(audio), "eos");
+
+  gst_element_set_state (audio->priv->playbin, GST_STATE_READY);
 }
 
 static void

@@ -1,3 +1,9 @@
+2007-03-20  Matthew Allum  <mallum@openedhand.com>
+
+	* clutter-gst/clutter-gst-audio.c: (bus_message_eos_cb):
+	Patch from Iain to reset audio pipeline on EOS and thus
+	allow for easy re-playback of sounds.
+
 2007-01-18 =================== 0.1.1 Released ===========================
 
 2007-03-19  Matthew Allum  <mallum@openedhand.com>
