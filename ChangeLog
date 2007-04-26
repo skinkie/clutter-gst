@@ -1,3 +1,20 @@
+2007-04-26  Matthew Allum  <mallum@openedhand.com>
+
+	* clutter-gst/Makefile.am:
+	* clutter-gst/clutter-gst-util.c:
+	* clutter-gst/clutter-gst-util.h:
+	* clutter-gst/clutter-gst.h:
+	Add a clutter_gst_init() call mainly for binding usage.
+
+	* clutter-gst/clutter-gst-video-sink.c:
+	* clutter-gst/clutter-gst-video-sink.h:
+	* clutter-gst/clutter-gst-video-texture.c:
+	* examples/Makefile.am:
+	* examples/README:
+	* examples/video-sink.c:
+	Addition of clutter texture gstreamer video sink from
+	Jonathan Matthew (#296)
+
 2007-03-20  Matthew Allum  <mallum@openedhand.com>
 
 	* clutter-gst/clutter-gst-audio.c: (bus_message_eos_cb):

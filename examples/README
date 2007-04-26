@@ -19,3 +19,8 @@ There are:
  
    Pure evil. A nasty hack to do a video cube with clutter.
    Could be done much nicer.
+
+ o video-sink.
+
+   Demonstrates use of ClutterGstVideoSink with a custom
+   pipeline.

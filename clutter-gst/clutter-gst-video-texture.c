@@ -31,14 +31,9 @@
  */
 
 #include "clutter-gst-video-texture.h"
+#include "clutter-gst-video-sink.h"
 
 #include <gst/gst.h>
-#include <gst/video/gstvideosink.h>
-#include <gst/audio/gstbaseaudiosink.h>
-
-#include <GL/glx.h>
-#include <GL/gl.h>
-
 #include <glib.h>
 
 struct _ClutterGstVideoTexturePrivate
@@ -49,8 +44,6 @@ struct _ClutterGstVideoTexturePrivate
   int         buffer_percent;
   int         duration;
   guint       tick_timeout_id;
-  GstBuffer  *scratch_buffer;
-  GMutex     *scratch_lock;
 };
 
 enum {
@@ -668,44 +661,6 @@ bus_message_state_change_cb (GstBus                 *bus,
     }
 }
 
-static void
-bus_message_element_cb (GstBus                 *bus,
-			GstMessage             *message,
-			ClutterGstVideoTexture *video_texture)
-{
-  ClutterGstVideoTexturePrivate *priv;
-
-  priv = video_texture->priv;
-
-  g_mutex_lock (priv->scratch_lock);
-
-  if (priv->scratch_buffer)
-    {
-      GstStructure  *structure;
-      int            width, height;
-
-      structure = gst_caps_get_structure(GST_CAPS(priv->scratch_buffer->caps),
-					 0);
-
-      gst_structure_get_int(structure, "width", &width);
-      gst_structure_get_int(structure, "height", &height);
-
-      clutter_texture_set_from_data (CLUTTER_TEXTURE(video_texture),
-				     GST_BUFFER_DATA (priv->scratch_buffer),
-				     FALSE,
-				     width,
-				     height,
-				     (3 * width + 3) &~ 3,
-				     4);
-
-      gst_buffer_unref (priv->scratch_buffer);
-      priv->scratch_buffer = NULL;
-    }
-
-  g_mutex_unlock (priv->scratch_lock);
-}
-
-
 static gboolean
 tick_timeout (ClutterGstVideoTexture *video_texture)
 {
@@ -714,37 +669,12 @@ tick_timeout (ClutterGstVideoTexture *video_texture)
   return TRUE;
 }
 
-static void
-fakesink_handoff_cb (GstElement             *fakesrc, 
-		     GstBuffer              *buffer,
-		     GstPad                 *pad, 
-		     ClutterGstVideoTexture *video_texture)
-{
-  GstMessage    *msg;
-
-  g_mutex_lock (video_texture->priv->scratch_lock);
-
-  gst_buffer_ref (buffer);
-
-  if (video_texture->priv->scratch_buffer != NULL) 
-    gst_buffer_unref (video_texture->priv->scratch_buffer);
-
-  video_texture->priv->scratch_buffer = buffer;
-
-  msg = gst_message_new_element (GST_OBJECT(fakesrc), NULL);
-  gst_element_post_message (fakesrc, msg);
-
-  g_mutex_unlock (video_texture->priv->scratch_lock);
-}
-
 static gboolean
 lay_pipeline (ClutterGstVideoTexture *video_texture)
 {
   ClutterGstVideoTexturePrivate *priv;
   GstElement                    *audio_sink = NULL;
-  GstElement                    *video_sink, *video_bin, *video_capsfilter;
-  GstCaps                       *video_filtercaps;
-  GstPad                        *video_ghost_pad;
+  GstElement                    *video_sink = NULL;
 
   priv = video_texture->priv;
 
@@ -771,65 +701,10 @@ lay_pipeline (ClutterGstVideoTexture *video_texture)
 	}
     }
 
-  video_sink = gst_element_factory_make ("fakesink", "fakesink");
-
-  if (video_sink == NULL) 
-    {
-      g_warning ("Could not create actor 'fakesink' for video playback");
-      priv->playbin = NULL;
-      return FALSE;
-    }
-
-  video_bin = gst_bin_new  ("video-bin");
-
-  video_capsfilter = gst_element_factory_make ("capsfilter", 
-					       "video-capsfilter");
-
-  video_filtercaps 
-    = gst_caps_new_simple("video/x-raw-rgb",
-			  "bpp", G_TYPE_INT, 24,
-			  "depth", G_TYPE_INT, 24,
-			  "endianness", G_TYPE_INT, G_BIG_ENDIAN, 
-			  /* >> 8 for 24bpp */ 
-			  "red_mask", G_TYPE_INT, 0xff0000,
-			  "green_mask", G_TYPE_INT, 0xff00,
-			  "blue_mask", G_TYPE_INT,  0xff,
-			  "width", GST_TYPE_INT_RANGE, 1, G_MAXINT,
-			  "height", GST_TYPE_INT_RANGE, 1, G_MAXINT,
-			  "framerate", GST_TYPE_FRACTION_RANGE, 
-			  0, 1, G_MAXINT, 1, 
-			  NULL);
-
-  g_object_set(G_OBJECT(video_capsfilter), 
-	       "caps", video_filtercaps, 
-	       NULL);
-
-  gst_caps_unref(video_filtercaps);
-
-  gst_bin_add(GST_BIN(video_bin), video_capsfilter);
-  gst_bin_add(GST_BIN(video_bin), video_sink);
-
-  gst_element_link (video_capsfilter, video_sink);
-
-  video_ghost_pad = gst_ghost_pad_new ("sink", 
-				       gst_element_get_pad (video_capsfilter, 
-							    "sink"));
-  gst_element_add_pad (video_bin, video_ghost_pad);
-
-  g_object_set (G_OBJECT(video_sink), 
-		"signal-handoffs", TRUE, 
-		"sync", TRUE,
-		/* Enable frame drops. FIXME: export setting in API ? */
-		"qos",  TRUE, 
-		NULL);
-
-  g_signal_connect(G_OBJECT (video_sink), 
-		   "handoff",
-		   G_CALLBACK(fakesink_handoff_cb), 
-		   video_texture);
+  video_sink = clutter_gst_video_sink_new (CLUTTER_TEXTURE (video_texture));
 
   g_object_set (G_OBJECT (priv->playbin),
-		"video-sink", video_bin,
+		"video-sink", video_sink,
 		"audio-sink", audio_sink,
 		NULL);
 
@@ -850,8 +725,6 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
       g_warning("Failed to initiate suitable playback pipeline.");
       return;
     }
-
-  priv->scratch_lock = g_mutex_new ();
 
   bus = gst_pipeline_get_bus (GST_PIPELINE (priv->playbin));
 
@@ -890,12 +763,6 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
   g_signal_connect_object (bus,
 			   "message::state-changed",
 			   G_CALLBACK (bus_message_state_change_cb),
-			   video_texture,
-			   0);
-
-  g_signal_connect_object (bus,
-			   "message::element",
-			   G_CALLBACK (bus_message_element_cb),
 			   video_texture,
 			   0);
 
