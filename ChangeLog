@@ -1,3 +1,23 @@
+2007-06-22  Matthew Allum  <mallum@openedhand.com>
+
+	* configure.ac:
+	Bump up to use Clutter 0.3 (trunk)
+
+	* clutter-gst/clutter-gst-video-sink.c:
+	Improve caps usage and switch to BGRA data, taking advantage
+	of newer texture api and thus giving an alpha channel to video 
+	textures.
+	Collect pixel aspect ratio info but do not expose as yet.
+
+	* clutter-gst/clutter-gst-video-texture.c:
+	Minor change to object creation.
+
+	* examples/Makefile.am:
+	* examples/audio.c:
+	* examples/video-player.c:
+	* examples/video-sink.c:
+	Update for 0.3 API
+
 2007-04-26  Matthew Allum  <mallum@openedhand.com>
 
 	* clutter-gst/Makefile.am:

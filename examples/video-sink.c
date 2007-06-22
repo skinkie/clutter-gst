@@ -58,16 +58,13 @@ main (int argc, char *argv[])
   timeline = clutter_timeline_new (100, 30); /* num frames, fps */
   g_object_set(timeline, "loop", TRUE, 0);
 
-  texture = clutter_texture_new ();
-
   /* We need to set certain props on the target texture currently for
    * efficient/corrent playback onto the texture (which sucks a bit)  
   */
-  g_object_set (texture, 
-		"sync-size",    FALSE, 
-		"tiled",        FALSE, 
-		"pixel-format", GL_RGB,
-		NULL);
+  texture = g_object_new (CLUTTER_TYPE_TEXTURE, 
+			  "sync-size",    FALSE, 
+			  "tiled",        FALSE, 
+			  NULL);
 
   g_signal_connect (CLUTTER_TEXTURE (texture),
 		    "size-change",
@@ -81,7 +78,7 @@ main (int argc, char *argv[])
   colorspace = gst_element_factory_make ("ffmpegcolorspace", NULL);
   sink = clutter_gst_video_sink_new (CLUTTER_TEXTURE (texture));
 
-  g_object_set (src , "pattern", 10, NULL);
+  // g_object_set (src , "pattern", 10, NULL);
 
   gst_bus_add_signal_watch (GST_ELEMENT_BUS (pipeline));
 
@@ -93,7 +90,8 @@ main (int argc, char *argv[])
   clutter_timeline_start (timeline);
 
   clutter_group_add (CLUTTER_GROUP (stage), texture);
-  clutter_group_show_all (CLUTTER_GROUP (stage));
+  // clutter_actor_set_opacity (texture, 0x11);
+  clutter_actor_show_all (CLUTTER_GROUP (stage));
 
   clutter_main();
 

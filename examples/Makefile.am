@@ -1,4 +1,4 @@
-noinst_PROGRAMS = video-player video-cube video-sink audio
+noinst_PROGRAMS = video-player video-sink audio
 
 INCLUDES = -I$(top_srcdir)/
 

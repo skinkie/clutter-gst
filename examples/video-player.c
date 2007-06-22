@@ -25,7 +25,7 @@ control_tl_cb (ClutterTimeline *timeline,
 {
   guint8 opacity;
 
-  clutter_group_show_all (CLUTTER_GROUP (app->control));
+  clutter_actor_show_all (CLUTTER_GROUP (app->control));
   clutter_actor_hide (app->paused ? app->control_pause : app->control_play);
   clutter_actor_show (app->paused ? app->control_play : app->control_pause);
 
@@ -42,7 +42,7 @@ control_tl_complete_cb (ClutterTimeline *timeline,
 			VideoApp        *app)
 {
   if (!app->controls_showing)
-      clutter_group_hide_all (CLUTTER_GROUP (app->control));
+      clutter_actor_hide_all (app->control);
 
   app->controls_timeout = 0;
 }
@@ -136,6 +136,8 @@ input_cb (ClutterStage *stage,
 	    = clutter_stage_get_actor_at_pos 
 	                         (CLUTTER_STAGE(clutter_stage_get_default()),
 				  bev->x, bev->y);
+
+	  printf("got actor %p at pos %ix%i\n", actor, bev->x, bev->y);
 
 	  if (actor == app->control_pause || actor == app->control_play)
 	    {
@@ -381,7 +383,7 @@ main (int argc, char *argv[])
 		    G_CALLBACK (effect1_tl_cb), app);
 
   /* Hook up other events */
-  g_signal_connect (stage, "input-event",
+  g_signal_connect (stage, "event",
 		    G_CALLBACK (input_cb), 
 		    app);
 
@@ -392,7 +394,8 @@ main (int argc, char *argv[])
 
   clutter_media_set_playing (CLUTTER_MEDIA(app->vtexture), TRUE);
 
-  clutter_group_show_all (CLUTTER_GROUP (stage));
+  clutter_actor_show_all (stage);
+  // clutter_group_hide_all (CLUTTER_GROUP (app->control));
 
   clutter_main();
 

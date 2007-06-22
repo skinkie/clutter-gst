@@ -39,7 +39,7 @@ main (int argc, char *argv[])
   /* start the timeline */
   clutter_timeline_start (timeline);
 
-  clutter_group_show_all (CLUTTER_GROUP (stage));
+  clutter_actor_show_all (stage);
 
   clutter_main();
 

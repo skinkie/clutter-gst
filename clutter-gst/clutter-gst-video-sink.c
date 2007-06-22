@@ -36,24 +36,19 @@
 #include "clutter-gst-video-sink.h"
 
 #include <gst/gst.h>
+#include <gst/video/video.h>
 
 #include <glib.h>
 #include <clutter/clutter.h>
+#include <string.h>
 
-static GstStaticPadTemplate sinktemplate = GST_STATIC_PAD_TEMPLATE ("sink",
-    GST_PAD_SINK,
-    GST_PAD_ALWAYS,
-    GST_STATIC_CAPS ("video/x-raw-rgb, "
-      "framerate = (fraction) [ 0, MAX ], "
-      "width = (int) [ 1, MAX ], "
-      "height = (int) [ 1, MAX ], "
-      "bpp = (int) 24, "
-      "depth = (int) 24, "
-      "endianness = (int) BIG_ENDIAN, "
-      "red_mask = (int) 0xff0000, "
-      "green_mask = (int) 0xff00, "
-      "blue_mask = (int) 0xff")
-    );
+static GstStaticPadTemplate sinktemplate 
+ = GST_STATIC_PAD_TEMPLATE ("sink",
+			    GST_PAD_SINK,
+			    GST_PAD_ALWAYS,
+			    GST_STATIC_CAPS (GST_VIDEO_CAPS_RGBx ";"   \
+                                             GST_VIDEO_CAPS_BGRx  ) \
+			    );
 
 GST_DEBUG_CATEGORY_STATIC (clutter_gst_video_sink_debug);
 #define GST_CAT_DEFAULT clutter_gst_video_sink_debug
@@ -62,7 +57,7 @@ static GstElementDetails clutter_gst_video_sink_details =
   GST_ELEMENT_DETAILS ("Clutter video sink",
       "Sink/Video",
       "Sends video data from a GStreamer pipeline to a Clutter texture",
-      "Jonathan Matthew <jonathan@kaolin.wh9.net>");
+      "Jonathan Matthew <jonathan@kaolin.wh9.net>, Matthew Allum <mallum@o-hand.com");
 
 enum
 {
@@ -76,6 +71,11 @@ struct _ClutterGstVideoSinkPrivate
   guint           bus_id;
   GstBuffer      *scratch_buffer;
   GMutex         *scratch_lock;
+  gboolean        rgb_ordering;
+  int             width;
+  int             height;
+  int             fps_n, fps_d;
+  int             par_n, par_d;
 };
 
 
@@ -95,11 +95,14 @@ static void
 clutter_gst_video_sink_base_init (gpointer g_class)
 {
   GstElementClass *element_class = GST_ELEMENT_CLASS (g_class);
-  gst_element_class_add_pad_template (element_class,
-      gst_static_pad_template_get (&sinktemplate));
-  gst_element_class_set_details (element_class, &clutter_gst_video_sink_details);
-}
 
+  gst_element_class_add_pad_template 
+                     (element_class,
+		      gst_static_pad_template_get (&sinktemplate));
+
+  gst_element_class_set_details (element_class, 
+				 &clutter_gst_video_sink_details);
+}
 
 static void
 clutter_gst_video_sink_init (ClutterGstVideoSink *sink,
@@ -118,29 +121,29 @@ clutter_gst_video_sink_bus_cb (GstBus              *bus,
     			       GstMessage          *message,
 			       ClutterGstVideoSink *sink)
 {
+  ClutterGstVideoSinkPrivate *priv;
+
   if (sink->priv->texture == NULL)
     return;
 
-  g_mutex_lock (sink->priv->scratch_lock);
+  priv = sink->priv;
 
-  if (sink->priv->scratch_buffer != NULL)
+  g_mutex_lock (priv->scratch_lock);
+
+  if (priv->scratch_buffer != NULL)
     {
-      GstCaps *caps;
-      GstStructure *structure;
-      int width, height;
+      clutter_texture_set_from_rgb_data 
+	(sink->priv->texture,
+		    GST_BUFFER_DATA (sink->priv->scratch_buffer),
+		    TRUE,
+		    sink->priv->width,
+		    sink->priv->height,
+		    (4 * sink->priv->width + 3) &~ 3,
+		    4,
+		    sink->priv->rgb_ordering ? 
+	                   0 : CLUTTER_TEXTURE_RGB_FLAG_BGR,
+		    NULL);
 
-      caps = GST_BUFFER_CAPS (sink->priv->scratch_buffer);
-      structure = gst_caps_get_structure (caps, 0);
-      gst_structure_get_int (structure, "width", &width);
-      gst_structure_get_int (structure, "height", &height);
-
-      clutter_texture_set_from_data (sink->priv->texture,
-				     GST_BUFFER_DATA (sink->priv->scratch_buffer),
-				     FALSE,
-				     width,
-				     height,
-				     (3 * width + 3) &~ 3,
-				     4);
       gst_buffer_unref (sink->priv->scratch_buffer);
       sink->priv->scratch_buffer = NULL;
     }
@@ -191,6 +194,65 @@ clutter_gst_video_sink_render (GstBaseSink *bsink, GstBuffer *buffer)
   return GST_FLOW_OK;
 }
 
+static gboolean
+clutter_gst_video_sink_set_caps (GstBaseSink *bsink, GstCaps *caps)
+{
+  ClutterGstVideoSink        *sink;
+  ClutterGstVideoSinkPrivate *priv;
+  GstCaps                    *intersection;
+  GstStructure               *structure;
+  gboolean                    ret;
+  const GValue               *fps;
+  const GValue               *par;
+  gint                        width, height;   
+  int                         red_mask;
+
+  sink = CLUTTER_GST_VIDEO_SINK(bsink);
+  priv = sink->priv;
+
+  intersection 
+    = gst_caps_intersect 
+          (gst_static_pad_template_get_caps (&sinktemplate), 
+	   caps);
+
+  if (gst_caps_is_empty (intersection)) 
+    return FALSE;
+
+  gst_caps_unref (intersection);
+
+  structure = gst_caps_get_structure (caps, 0);
+
+  ret  = gst_structure_get_int (structure, "width", &width);
+  ret &= gst_structure_get_int (structure, "height", &height);
+  fps  = gst_structure_get_value (structure, "framerate");
+  ret &= (fps != NULL);
+
+  par  = gst_structure_get_value (structure, "pixel-aspect-ratio");
+
+  if (!ret)
+    return FALSE;
+
+  priv->width  = width;
+  priv->height = height;
+
+  /* We dont yet use fps or pixel aspect into but handy to have */
+  priv->fps_n  = gst_value_get_fraction_numerator (fps);
+  priv->fps_d  = gst_value_get_fraction_denominator (fps);
+
+  if (par) 
+    {
+      priv->par_n = gst_value_get_fraction_numerator (par);
+      priv->par_d = gst_value_get_fraction_denominator (par);
+    } 
+  else 
+    priv->par_n = priv->par_d = 1;
+
+  gst_structure_get_int (structure, "red_mask", &red_mask);
+  priv->rgb_ordering = (red_mask == 0xff000000);
+
+  return TRUE;
+}
+
 static void
 clutter_gst_video_sink_dispose (GObject *object)
 {
@@ -230,6 +292,7 @@ clutter_gst_video_sink_set_property (GObject *object,
   ClutterGstVideoSink *sink;
 
   sink = CLUTTER_GST_VIDEO_SINK (object);
+
   switch (prop_id) 
     {
     case PROP_TEXTURE:
@@ -275,22 +338,23 @@ clutter_gst_video_sink_class_init (ClutterGstVideoSinkClass *klass)
   gobject_class = G_OBJECT_CLASS (klass);
   gstbase_sink_class = GST_BASE_SINK_CLASS (klass);
 
-  gobject_class->set_property =
-    GST_DEBUG_FUNCPTR (clutter_gst_video_sink_set_property);
-  gobject_class->get_property =
-    GST_DEBUG_FUNCPTR (clutter_gst_video_sink_get_property);
-  gobject_class->dispose = clutter_gst_video_sink_dispose;
-  gobject_class->finalize = clutter_gst_video_sink_finalize;
+  gobject_class->set_property = clutter_gst_video_sink_set_property;
+  gobject_class->get_property = clutter_gst_video_sink_get_property;
 
-  gstbase_sink_class->render =
-    GST_DEBUG_FUNCPTR (clutter_gst_video_sink_render);
+  gobject_class->dispose     = clutter_gst_video_sink_dispose;
+  gobject_class->finalize    = clutter_gst_video_sink_finalize;
 
-  g_object_class_install_property (gobject_class, PROP_TEXTURE,
-      g_param_spec_object ("texture",
-			   "texture",
-			   "Target ClutterTexture object",
-			   CLUTTER_TYPE_TEXTURE,
-			   G_PARAM_READWRITE));
+  gstbase_sink_class->render  = clutter_gst_video_sink_render;
+  gstbase_sink_class->preroll = clutter_gst_video_sink_render;
+  gstbase_sink_class->set_caps = clutter_gst_video_sink_set_caps;
+
+  g_object_class_install_property 
+              (gobject_class, PROP_TEXTURE,
+	       g_param_spec_object ("texture",
+				    "texture",
+				    "Target ClutterTexture object",
+				    CLUTTER_TYPE_TEXTURE,
+				    G_PARAM_READWRITE));
 }
 
 GstElement *
