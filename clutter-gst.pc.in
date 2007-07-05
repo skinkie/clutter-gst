@@ -8,4 +8,4 @@ Description: Clutter GStreamer bits
 Version: @VERSION@
 Libs: -L${libdir} -lclutter-gst-@CLUTTER_GST_MAJORMINOR@ 
 Cflags: -I${includedir}/clutter-gst-@CLUTTER_GST_MAJORMINOR@
-Requires: clutter-0.2 gstreamer-0.10 gstreamer-plugins-base-0.10
+Requires: clutter-0.3 gstreamer-0.10 gstreamer-plugins-base-0.10
