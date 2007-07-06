@@ -1,5 +1,13 @@
 2007-07-06  Emmanuele Bassi  <ebassi@openedhand.com>
 
+	* clutter-gst/clutter-gst-video-texture.c: General code clean
+	up and code style consistency check. Fix a memory leak, where
+	we allocated the space of the private data structure but never
+	freed it inside the ::finalize method; use GObject private
+	data pointer instead.
+
+2007-07-06  Emmanuele Bassi  <ebassi@openedhand.com>
+
 	* configure.ac: Use the same M4 macros clutter-core uses to set
 	the various libtool flags and simplify the release process.
 

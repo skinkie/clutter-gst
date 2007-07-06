@@ -68,12 +68,11 @@ static void clutter_media_init (ClutterMediaInterface *iface);
 
 static gboolean tick_timeout (ClutterGstVideoTexture *video_texture);
 
-G_DEFINE_TYPE_EXTENDED (ClutterGstVideoTexture,                       \
-			clutter_gst_video_texture,                    \
-			CLUTTER_TYPE_TEXTURE,                         \
-			0,                                            \
-			G_IMPLEMENT_INTERFACE (CLUTTER_TYPE_MEDIA,    \
-					       clutter_media_init));
+G_DEFINE_TYPE_WITH_CODE (ClutterGstVideoTexture,
+                         clutter_gst_video_texture,
+                         CLUTTER_TYPE_TEXTURE,
+                         G_IMPLEMENT_INTERFACE (CLUTTER_TYPE_MEDIA,
+                                                clutter_media_init));
 
 /* Interface implementation */
 
@@ -410,7 +409,7 @@ clutter_gst_video_texture_finalize (GObject *object)
   priv = self->priv;
 
   if (priv->uri)
-    g_free(priv->uri);
+    g_free (priv->uri);
 
   G_OBJECT_CLASS (clutter_gst_video_texture_parent_class)->finalize (object);
 }
@@ -491,11 +490,9 @@ clutter_gst_video_texture_get_property (GObject    *object,
 static void
 clutter_gst_video_texture_class_init (ClutterGstVideoTextureClass *klass)
 {
-  GObjectClass      *object_class;
-  ClutterActorClass *actor_class;
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  object_class = (GObjectClass*)klass;
-  actor_class = (ClutterActorClass*)klass;
+  g_type_class_add_private (klass, sizeof (ClutterGstVideoTexturePrivate));
 
   object_class->dispose      = clutter_gst_video_texture_dispose;
   object_class->finalize     = clutter_gst_video_texture_finalize;
@@ -503,7 +500,6 @@ clutter_gst_video_texture_class_init (ClutterGstVideoTextureClass *klass)
   object_class->get_property = clutter_gst_video_texture_get_property;
 
   /* Interface props */
-
   g_object_class_override_property (object_class, PROP_URI, "uri");
   g_object_class_override_property (object_class, PROP_PLAYING, "playing");
   g_object_class_override_property (object_class, PROP_POSITION, "position");
@@ -539,6 +535,7 @@ bus_message_eos_cb (GstBus                 *bus,
   g_signal_emit_by_name (CLUTTER_MEDIA(video_texture), "eos");
 }
 
+#if 0
 static void
 bus_message_tag_cb (GstBus                 *bus,
                     GstMessage             *message,
@@ -548,13 +545,12 @@ bus_message_tag_cb (GstBus                 *bus,
 
   gst_message_parse_tag (message, &tag_list);
 
-#if 0
   g_signal_emit_by_name (CLUTTER_MEDIA(video_texture), 
 			 "metadata-available", 
 			 tag_list);
-#endif  
   gst_tag_list_free (tag_list);
 }
+#endif
 
 static void
 bus_message_buffering_cb (GstBus                 *bus,
@@ -583,10 +579,7 @@ bus_message_duration_cb (GstBus                 *bus,
   GstFormat format;
   gint64 duration;
 
-  gst_message_parse_duration (message,
-			      &format,
-			      &duration);
-
+  gst_message_parse_duration (message, &format, &duration);
   if (format != GST_FORMAT_TIME)
     return;
   
@@ -600,12 +593,15 @@ bus_message_state_change_cb (GstBus                 *bus,
                              GstMessage             *message,
                              ClutterGstVideoTexture *video_texture)
 {
+  ClutterGstVideoTexturePrivate *priv;
   gpointer src;
   GstState old_state, new_state;
 
   src = GST_MESSAGE_SRC (message);
+
+  priv = video_texture->priv;
         
-  if (src != video_texture->priv->playbin)
+  if (src != priv->playbin)
     return;
 
   gst_message_parse_state_changed (message, &old_state, &new_state, NULL);
@@ -620,25 +616,25 @@ bus_message_state_change_cb (GstBus                 *bus,
        **/
       query = gst_query_new_seeking (GST_FORMAT_TIME);
       
-      if (gst_element_query (video_texture->priv->playbin, query)) {
-	gst_query_parse_seeking (query,
-				 NULL,
-				 &video_texture->priv->can_seek,
-				 NULL,
-				 NULL);
-      } else {
-	/*
-	 * Could not query for ability to seek. Determine
-	 * using URI.
-	 */
+      if (gst_element_query (priv->playbin, query))
+        {
+	  gst_query_parse_seeking (query, NULL,
+                                   &priv->can_seek,
+                                   NULL,
+                                   NULL);
+        }
+      else
+        {
+	  /*
+	   * Could not query for ability to seek. Determine
+	   * using URI.
+	   */
 	
-	if (g_str_has_prefix (video_texture->priv->uri,
-			      "http://")) {
-	  video_texture->priv->can_seek = FALSE;
-	} else {
-	  video_texture->priv->can_seek = TRUE;
+	  if (g_str_has_prefix (priv->uri, "http://"))
+            priv->can_seek = FALSE;
+          else
+            priv->can_seek = TRUE;
 	}
-      }
       
       gst_query_unref (query);
       
@@ -649,13 +645,12 @@ bus_message_state_change_cb (GstBus                 *bus,
        **/
       query = gst_query_new_duration (GST_FORMAT_TIME);
       
-      if (gst_element_query (video_texture->priv->playbin, query)) 
+      if (gst_element_query (priv->playbin, query)) 
 	{
 	  gint64 duration;
 	  
 	  gst_query_parse_duration (query, NULL, &duration);
-
-	  video_texture->priv->duration = duration / GST_SECOND;
+	  priv->duration = duration / GST_SECOND;
                         
 	  g_object_notify (G_OBJECT (video_texture), "duration");
 	}
@@ -705,12 +700,7 @@ lay_pipeline (ClutterGstVideoTexture *video_texture)
     }
 
   video_sink = clutter_gst_video_sink_new (CLUTTER_TEXTURE (video_texture));
-
-  g_object_set (G_OBJECT(video_sink),  
-		"qos",  TRUE,  
-		"sync",  TRUE,  
-		NULL);
-
+  g_object_set (G_OBJECT (video_sink), "qos", TRUE, "sync", TRUE, NULL);
   g_object_set (G_OBJECT (priv->playbin),
 		"video-sink", video_sink,
 		"audio-sink", audio_sink,
@@ -725,10 +715,12 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
   ClutterGstVideoTexturePrivate *priv;
   GstBus                        *bus;
 
-  priv                 = g_new0 (ClutterGstVideoTexturePrivate, 1);
-  video_texture->priv  = priv;
+  video_texture->priv  = priv =
+    G_TYPE_INSTANCE_GET_PRIVATE (video_texture,
+                                 CLUTTER_GST_TYPE_VIDEO_TEXTURE,
+                                 ClutterGstVideoTexturePrivate);
 
-  if (!lay_pipeline(video_texture))
+  if (!lay_pipeline (video_texture))
     {
       g_warning("Failed to initiate suitable playback pipeline.");
       return;
@@ -738,45 +730,39 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
 
   gst_bus_add_signal_watch (bus);
 
-  g_signal_connect_object (bus,
-			   "message::error",
+  g_signal_connect_object (bus, "message::error",
 			   G_CALLBACK (bus_message_error_cb),
 			   video_texture,
 			   0);
 
-  g_signal_connect_object (bus,
-			   "message::eos",
+  g_signal_connect_object (bus, "message::eos",
 			   G_CALLBACK (bus_message_eos_cb),
 			   video_texture,
 			   0);
 
-  g_signal_connect_object (bus,
-			   "message::tag",
+#if 0
+  g_signal_connect_object (bus, "message::tag",
 			   G_CALLBACK (bus_message_tag_cb),
 			   video_texture,
 			   0);
+#endif
 
-  g_signal_connect_object (bus,
-			   "message::buffering",
+  g_signal_connect_object (bus, "message::buffering",
 			   G_CALLBACK (bus_message_buffering_cb),
 			   video_texture,
 			   0);
 
-  g_signal_connect_object (bus,
-			   "message::duration",
+  g_signal_connect_object (bus, "message::duration",
 			   G_CALLBACK (bus_message_duration_cb),
 			   video_texture,
 			   0);
 
-  g_signal_connect_object (bus,
-			   "message::state-changed",
+  g_signal_connect_object (bus, "message::state-changed",
 			   G_CALLBACK (bus_message_state_change_cb),
 			   video_texture,
 			   0);
 
   gst_object_unref (GST_OBJECT (bus));
-
-  return;
 }
 
 /**
@@ -789,12 +775,24 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
 ClutterActor*
 clutter_gst_video_texture_new (void)
 {
-  ClutterGstVideoTexture        *video_texture;
-
-  video_texture = g_object_new (CLUTTER_GST_TYPE_VIDEO_TEXTURE, 
-				"tiled", FALSE, 
-				NULL);
-
-  return CLUTTER_ACTOR(video_texture);
+  return g_object_new (CLUTTER_GST_TYPE_VIDEO_TEXTURE,
+                       "tiled", FALSE,
+                       NULL);
 }
 
+/**
+ * clutter_gst_video_texture_get_playbin:
+ * @texture: a #ClutterGstVideoTexture
+ *
+ * Retrieves the #GstElement used by the @texture, for direct use with
+ * GStreamer API.
+ *
+ * Return value: the playbin element used by the video texture
+ */
+GstElement *
+clutter_gst_video_texture_get_playbin (ClutterGstVideoTexture *texture)
+{
+  g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (texture), NULL);
+
+  return texture->priv->playbin;
+}
