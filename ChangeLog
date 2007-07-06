@@ -1,3 +1,21 @@
+2007-07-06  Emmanuele Bassi  <ebassi@openedhand.com>
+
+	* configure.ac: Use the same M4 macros clutter-core uses to set
+	the various libtool flags and simplify the release process.
+
+	* clutter-gst/clutter-gst.h:
+	* clutter-gst/clutter-gst-version.h.in: Add version header and
+	macros for clutter-gst.
+
+	* clutter-gst/*.[ch]: Fix copyright and attributions.
+
+	* clutter-gst/clutter-gst-util.[hc]: Fix second argument of
+	clutter_gst_init() function call: the underlying libraries
+	require a pointer to the arguments vector to remove their own
+	arguments from it.
+
+	* README: Flesh out the description a little.
+
 2007-07-05  Emmanuele Bassi  <ebassi@openedhand.com>
 
 	* clutter-gst.pc.in: Bump to use Clutter 0.3 here, too.

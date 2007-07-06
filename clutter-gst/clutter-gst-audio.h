@@ -1,10 +1,12 @@
 /*
- * Clutter.
+ * Clutter-GStreamer.
  *
- * An OpenGL based 'interactive canvas' library.
+ * GStreamer integration library for Clutter.
+ *
+ * clutter-gst-audio.h - Audio streaming object
  *
  * Authored By Matthew Allum  <mallum@openedhand.com>
- *             Jorn Baayen  <jorn@openedhand.com>
+ *             Jorn Baayen <jorn@openedhand.com>
  *
  * Copyright (C) 2006 OpenedHand
  *
@@ -23,7 +25,6 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-
 #ifndef _HAVE_CLUTTER_GST_AUDIO_H
 #define _HAVE_CLUTTER_GST_AUDIO_H
 

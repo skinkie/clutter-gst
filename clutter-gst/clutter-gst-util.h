@@ -1,11 +1,13 @@
 /*
- * Clutter.
+ * Clutter-GStreamer.
  *
- * An OpenGL based 'interactive canvas' library.
+ * GStreamer integration library for Clutter.
+ *
+ * clutter-gst-util.h - Miscellaneous functions
  *
  * Authored By Matthew Allum  <mallum@openedhand.com>
  *
- * Copyright (C) 2007 OpenedHand
+ * Copyright (C) 2006 OpenedHand
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -30,8 +32,8 @@
 
 G_BEGIN_DECLS
 
-ClutterInitError clutter_gst_init (int    *argc,
-                                   char  **argv);
+ClutterInitError clutter_gst_init (int     *argc,
+                                   char  ***argv);
 
 G_END_DECLS
 

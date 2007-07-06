@@ -1,7 +1,10 @@
 /*
- * Clutter.
+ * Clutter-GStreamer.
  *
- * An OpenGL based 'interactive canvas' library.
+ * GStreamer integration library for Clutter.
+ *
+ * clutter-gst-video-texture.h - ClutterTexture using GStreamer to display a
+ *                               video stream.
  *
  * Authored By Matthew Allum  <mallum@openedhand.com>
  *

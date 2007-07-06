@@ -7,5 +7,6 @@
 #include "clutter-gst-video-sink.h"
 #include "clutter-gst-audio.h"
 #include "clutter-gst-util.h"
+#include "clutter-gst-version.h"
 
 #endif

@@ -1,31 +1,51 @@
+# clutter package version number, (as distinct from shared library version)
+# An odd micro number indicates in-progress developmen
+# An even micro number indicates a released version.
+m4_define(clutter_gst_major_version, 0)
+m4_define(clutter_gst_minor_version, 3)
+m4_define(clutter_gst_micro_version, 0)
+
+m4_define([clutter_gst_version],
+          [clutter_gst_major_version.clutter_gst_minor_version.clutter_gst_micro_version])
+
+m4_define([clutter_gst_api_version],
+          [clutter_gst_major_version.clutter_gst_minor_version])
+
+# increase the interface age for each release; if the API changes, set to 0
+m4_define([clutter_gst_interface_age], [0])
+m4_define([clutter_gst_binary_age],
+          [m4_eval(100 * clutter_gst_minor_version + clutter_gst_micro_version)])
+
 AC_PREREQ(2.53)
 
-# clutter package version number, (as distinct from shared library version)
-# An odd micro number indicates in-progress development, (eg. from CVS)
-# An even micro number indicates a released version.
-m4_define(clutter_gst_version_major, 0)
-m4_define(clutter_gst_version_minor, 3)
-m4_define(clutter_gst_version_micro, 0)
-
-AC_INIT([clutter-gst], 
-       clutter_gst_version_major.clutter_gst_version_minor.clutter_gst_version_micro, 
+AC_INIT([clutter-gst], [clutter_gst_version],
         [http://bugzilla.o-hand.com/enter_bug.cgi?product=Clutter-gst])
 AC_CONFIG_SRCDIR([clutter-gst/clutter-gst.h])
 AM_CONFIG_HEADER([config.h])
 
 AM_INIT_AUTOMAKE([1.7])
 
-CLUTTER_GST_MAJORMINOR=clutter_gst_version_major.clutter_gst_version_minor
+CLUTTER_GST_MAJOR_VERSION=clutter_gst_major_version
+CLUTTER_GST_MINOR_VERSION=clutter_gst_minor_version
+CLUTTER_GST_MICRO_VERSION=clutter_gst_micro_version
+CLUTTER_GST_VERSION=clutter_gst_version
+CLUTTER_GST_API_VERSION=clutter_gst_api_version
+CLUTTER_GST_MAJORMINOR=clutter_gst_api_version
+AC_SUBST(CLUTTER_GST_MAJOR_VERSION)
+AC_SUBST(CLUTTER_GST_MINOR_VERSION)
+AC_SUBST(CLUTTER_GST_MICRO_VERSION)
+AC_SUBST(CLUTTER_GST_VERSION)
+AC_SUBST(CLUTTER_GST_API_VERSION)
 AC_SUBST(CLUTTER_GST_MAJORMINOR)
 
-# CURRENT, REVISION, AGE
-# - library source changed -> increment REVISION
-# - interfaces added/removed/changed -> increment CURRENT, REVISION = 0
-# - interfaces added -> increment AGE
-# - interfaces removed -> AGE = 0
-CLUTTER_GST_LT_CURRENT=1
-CLUTTER_GST_LT_REV=0
-CLUTTER_GST_LT_AGE=1
+m4_define([lt_current],
+          [m4_eval(100 * clutter_gst_minor_version + clutter_gst_micro_version - clutter_gst_interface_age)])
+m4_define([lt_revision], [clutter_gst_interface_age])
+m4_define([lt_age], [m4_eval(clutter_gst_binary_age - clutter_gst_interface_age)])
+
+CLUTTER_GST_LT_CURRENT=lt_current
+CLUTTER_GST_LT_REV=lt_revision
+CLUTTER_GST_LT_AGE=lt_age
 CLUTTER_GST_LT_VERSION="$CLUTTER_GST_LT_CURRENT:$CLUTTER_GST_LT_REV:$CLUTTER_GST_LT_AGE"
 CLUTTER_GST_LT_LDFLAGS="-version-info $CLUTTER_GST_LT_VERSION"
 
@@ -85,19 +105,21 @@ AC_SUBST(GST_LIBS)
 AC_SUBST(CLUTTER_GST_CFLAGS)
 AC_SUBST(CLUTTER_GST_LIBS)
 
-AC_OUTPUT([Makefile
-clutter-gst/Makefile
-examples/Makefile
-doc/Makefile
-doc/reference/Makefile
-doc/reference/version.xml
-clutter-gst.pc
+AC_OUTPUT([
+        Makefile
+        clutter-gst/Makefile
+        clutter-gst/clutter-gst-version.h
+        examples/Makefile
+        doc/Makefile
+        doc/reference/Makefile
+        doc/reference/version.xml
+        clutter-gst.pc
 ])
 
 dnl ========================================================================
 
 echo ""
-echo "                 Clutter-GST $VERSION"
+echo "                  Clutter-GST $VERSION"
 echo "                 ==================="
 echo ""
 echo "                   prefix:   ${prefix}"

@@ -91,7 +91,7 @@ main (int argc, char *argv[])
 
   clutter_group_add (CLUTTER_GROUP (stage), texture);
   // clutter_actor_set_opacity (texture, 0x11);
-  clutter_actor_show_all (CLUTTER_GROUP (stage));
+  clutter_actor_show_all (stage);
 
   clutter_main();
 

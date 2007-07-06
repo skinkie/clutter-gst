@@ -1,11 +1,14 @@
 /*
- * ClutterGstVideoSink
+ * Clutter-GStreamer.
  *
- * Gstreamer Video Sink that renders to a Clutter Texture.
+ * GStreamer integration library for Clutter.
  *
- * Authored by  Jonathan Matthew  <jonathan@kaolin.wh9.net>
+ * clutter-gst-video-sink.h - Gstreamer Video Sink that renders to a
+ *                            Clutter Texture.
  *
- * Copyright (C) 2007 OpenedHand Ltd.
+ * Authored by Jonathan Matthew  <jonathan@kaolin.wh9.net>
+ *
+ * Copyright (C) 2007 OpenedHand
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
