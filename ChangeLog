@@ -1,5 +1,14 @@
 2007-07-06  Emmanuele Bassi  <ebassi@openedhand.com>
 
+	* clutter-gst/clutter-gst-video-sink.c: Code style
+	consistency check here, too. And leak plugging as well. The
+	video sink keeps a reference on the texture, so it's always
+	present; this should work, because the texture itself does
+	not keep a reference on the video sink (GStreamer does), so
+	it's not a circular reference.
+
+2007-07-06  Emmanuele Bassi  <ebassi@openedhand.com>
+
 	* clutter-gst/clutter-gst-video-texture.c: General code clean
 	up and code style consistency check. Fix a memory leak, where
 	we allocated the space of the private data structure but never
