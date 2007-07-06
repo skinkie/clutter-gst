@@ -108,15 +108,16 @@ clutter_gst_video_sink_base_init (gpointer g_class)
 }
 
 static void
-clutter_gst_video_sink_init (ClutterGstVideoSink *sink,
-    			     ClutterGstVideoSinkClass *klass)
+clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
+                             ClutterGstVideoSinkClass *klass)
 {
   ClutterGstVideoSinkPrivate *priv;
 
-  priv = g_new0 (ClutterGstVideoSinkPrivate, 1);
-  sink->priv = priv;
+  sink->priv = priv =
+    G_TYPE_INSTANCE_GET_PRIVATE (sink, CLUTTER_GST_TYPE_VIDEO_SINK,
+                                 ClutterGstVideoSinkPrivate);
 
-  sink->priv->scratch_lock = g_mutex_new ();
+  priv->scratch_lock = g_mutex_new ();
 }
 
 static void
@@ -135,44 +136,47 @@ clutter_gst_video_sink_bus_cb (GstBus              *bus,
 
   if (priv->scratch_buffer != NULL)
     {
-      clutter_texture_set_from_rgb_data 
-	(sink->priv->texture,
-		    GST_BUFFER_DATA (sink->priv->scratch_buffer),
-		    TRUE,
-		    sink->priv->width,
-		    sink->priv->height,
-		    (4 * sink->priv->width + 3) &~ 3,
-		    4,
-		    sink->priv->rgb_ordering ? 
-	                   0 : CLUTTER_TEXTURE_RGB_FLAG_BGR,
-		    NULL);
+      clutter_texture_set_from_rgb_data (priv->texture,
+                                         GST_BUFFER_DATA (priv->scratch_buffer),
+                                         TRUE,
+                                         priv->width,
+                                         priv->height,
+                                         (4 * priv->width + 3) &~ 3,
+                                         4,
+                                         priv->rgb_ordering ? 
+                                           0 : CLUTTER_TEXTURE_RGB_FLAG_BGR,
+                                         NULL);
 
-      gst_buffer_unref (sink->priv->scratch_buffer);
-      sink->priv->scratch_buffer = NULL;
+      gst_buffer_unref (priv->scratch_buffer);
+      priv->scratch_buffer = NULL;
     }
 
   g_mutex_unlock (sink->priv->scratch_lock);
 }
 
 static GstFlowReturn
-clutter_gst_video_sink_render (GstBaseSink *bsink, GstBuffer *buffer)
+clutter_gst_video_sink_render (GstBaseSink *bsink,
+                               GstBuffer   *buffer)
 {
   ClutterGstVideoSink *sink;
+  ClutterGstVideoSinkPrivate *priv;
   GstMessage *msg;
 
   sink = CLUTTER_GST_VIDEO_SINK (bsink);
+  priv = sink->priv;
 
-  if (sink->priv->bus_id == 0)
+  if (priv->bus_id == 0)
     {
       GstBus *bus;
       GstElement *lp = NULL;
       GstElement *p = GST_ELEMENT (sink);
 
       /* find the outermost element and use its bus */
-      while (p != NULL) {
-	lp = p;
-	p = GST_ELEMENT_PARENT (lp);
-      }
+      while (p != NULL)
+        {
+	  lp = p;
+	  p = GST_ELEMENT_PARENT (lp);
+        }
 
       bus = GST_ELEMENT_BUS (lp);
       sink->priv->bus_id =
@@ -183,22 +187,24 @@ clutter_gst_video_sink_render (GstBaseSink *bsink, GstBuffer *buffer)
 				 0);
     }
 
-  g_mutex_lock (sink->priv->scratch_lock);
+  g_mutex_lock (priv->scratch_lock);
 
-  if (sink->priv->scratch_buffer)
-    gst_buffer_unref (sink->priv->scratch_buffer);
-  sink->priv->scratch_buffer = gst_buffer_ref (buffer);
+  if (priv->scratch_buffer)
+    gst_buffer_unref (priv->scratch_buffer);
+  
+  priv->scratch_buffer = gst_buffer_ref (buffer);
 
   msg = gst_message_new_element (GST_OBJECT (sink), NULL);
   gst_element_post_message (GST_ELEMENT (sink), msg);
 
-  g_mutex_unlock (sink->priv->scratch_lock);
+  g_mutex_unlock (priv->scratch_lock);
 
   return GST_FLOW_OK;
 }
 
 static gboolean
-clutter_gst_video_sink_set_caps (GstBaseSink *bsink, GstCaps *caps)
+clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
+                                 GstCaps     *caps)
 {
   ClutterGstVideoSink        *sink;
   ClutterGstVideoSinkPrivate *priv;
@@ -260,16 +266,26 @@ static void
 clutter_gst_video_sink_dispose (GObject *object)
 {
   ClutterGstVideoSink *self;
+  ClutterGstVideoSinkPrivate *priv;
 
-  self = CLUTTER_GST_VIDEO_SINK(object);
+  self = CLUTTER_GST_VIDEO_SINK (object);
+  priv = self->priv;
 
-  g_mutex_lock (self->priv->scratch_lock);
-  if (self->priv->scratch_buffer)
+  g_mutex_lock (priv->scratch_lock);
+
+  if (priv->texture)
     {
-      gst_buffer_unref (self->priv->scratch_buffer);
-      self->priv->scratch_buffer = NULL;
+      g_object_unref (priv->texture);
+      priv->texture = NULL;
     }
-  g_mutex_unlock (self->priv->scratch_lock);
+
+  if (priv->scratch_buffer)
+    {
+      gst_buffer_unref (priv->scratch_buffer);
+      priv->scratch_buffer = NULL;
+    }
+
+  g_mutex_unlock (priv->scratch_lock);
 
   G_OBJECT_CLASS (parent_class)->dispose (object);
 }
@@ -278,10 +294,12 @@ static void
 clutter_gst_video_sink_finalize (GObject *object)
 {
   ClutterGstVideoSink *self;
+  ClutterGstVideoSinkPrivate *priv;
 
-  self = CLUTTER_GST_VIDEO_SINK(object);
+  self = CLUTTER_GST_VIDEO_SINK (object);
+  priv = self->priv;
 
-  g_mutex_free (self->priv->scratch_lock);
+  g_mutex_free (priv->scratch_lock);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
@@ -293,17 +311,18 @@ clutter_gst_video_sink_set_property (GObject *object,
 				     GParamSpec *pspec)
 {
   ClutterGstVideoSink *sink;
+  ClutterGstVideoSinkPrivate *priv;
 
   sink = CLUTTER_GST_VIDEO_SINK (object);
+  priv = sink->priv;
 
   switch (prop_id) 
     {
     case PROP_TEXTURE:
-      if (sink->priv->texture != NULL)
-	{
-	  g_object_unref (sink->priv->texture);
-	}
-      sink->priv->texture = g_value_get_object (value);
+      if (priv->texture)
+        g_object_unref (priv->texture);
+
+      priv->texture = g_value_dup_object (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -335,19 +354,18 @@ clutter_gst_video_sink_get_property (GObject *object,
 static void
 clutter_gst_video_sink_class_init (ClutterGstVideoSinkClass *klass)
 {
-  GObjectClass *gobject_class;
-  GstBaseSinkClass *gstbase_sink_class;
+  GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
+  GstBaseSinkClass *gstbase_sink_class = GST_BASE_SINK_CLASS (klass);
 
-  gobject_class = G_OBJECT_CLASS (klass);
-  gstbase_sink_class = GST_BASE_SINK_CLASS (klass);
+  g_type_class_add_private (klass, sizeof (ClutterGstVideoSinkPrivate));
 
   gobject_class->set_property = clutter_gst_video_sink_set_property;
   gobject_class->get_property = clutter_gst_video_sink_get_property;
 
-  gobject_class->dispose     = clutter_gst_video_sink_dispose;
-  gobject_class->finalize    = clutter_gst_video_sink_finalize;
+  gobject_class->dispose = clutter_gst_video_sink_dispose;
+  gobject_class->finalize = clutter_gst_video_sink_finalize;
 
-  gstbase_sink_class->render  = clutter_gst_video_sink_render;
+  gstbase_sink_class->render = clutter_gst_video_sink_render;
   gstbase_sink_class->preroll = clutter_gst_video_sink_render;
   gstbase_sink_class->set_caps = clutter_gst_video_sink_set_caps;
 
@@ -363,12 +381,9 @@ clutter_gst_video_sink_class_init (ClutterGstVideoSinkClass *klass)
 GstElement *
 clutter_gst_video_sink_new (ClutterTexture *texture)
 {
-  GstElement *element;
-
-  element = GST_ELEMENT (g_object_new (CLUTTER_GST_TYPE_VIDEO_SINK,
-				       "texture", texture,
-				       NULL));
-  return element;
+  return g_object_new (CLUTTER_GST_TYPE_VIDEO_SINK,
+                       "texture", texture,
+                       NULL);
 }
 
 static gboolean
