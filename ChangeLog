@@ -1,5 +1,9 @@
 2007-07-06  Emmanuele Bassi  <ebassi@openedhand.com>
 
+	* configure.ac: Bump up to 0.3.1
+
+2007-07-06  Emmanuele Bassi  <ebassi@openedhand.com>
+
 	* clutter-gst/clutter-gst-video-sink.c: Code style
 	consistency check here, too. And leak plugging as well. The
 	video sink keeps a reference on the texture, so it's always
@@ -14,6 +18,9 @@
 	we allocated the space of the private data structure but never
 	freed it inside the ::finalize method; use GObject private
 	data pointer instead.
+
+	(clutter_gst_video_texture_get_playbin): Implement the function
+	we advertise in the header.
 
 2007-07-06  Emmanuele Bassi  <ebassi@openedhand.com>
 
