@@ -1,3 +1,9 @@
+2007-07-10  Emmanuele Bassi  <ebassi@openedhand.com>
+
+	* examples/Makefile.am:
+	* examples/video-cube.c: Remove the video-cube example: it
+	has been broken for a while now.
+
 2007-07-06  Emmanuele Bassi  <ebassi@openedhand.com>
 
 	* configure.ac: Bump up to 0.3.1

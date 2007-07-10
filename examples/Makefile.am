@@ -9,13 +9,6 @@ video_player_LDFLAGS = \
     $(GST_LIBS)   \
     $(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la 
 
-video_cube_SOURCES = video-cube.c
-video_cube_CFLAGS = $(CLUTTER_GST_CFLAGS) $(GST_CFLAGS)
-video_cube_LDFLAGS = \
-    $(CLUTTER_LIBS) \
-    $(GST_LIBS)   \
-    $(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la 
-
 video_sink_SOURCES = video-sink.c
 video_sink_CFLAGS = $(CLUTTER_GST_CFLAGS) $(GST_CFLAGS)
 video_sink_LDFLAGS = \
