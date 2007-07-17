@@ -1,18 +1,18 @@
-SUBDIRS=clutter-gst doc examples 
+SUBDIRS = clutter-gst doc examples 
 
-pcfiles = clutter-gst-@CLUTTER_GST_MAJORMINOR@.pc
+clutter-gst-0.3.pc: clutter-gst.pc
+	@cp -f clutter-gst.pc clutter-gst-0.3.pc
 
-%-@CLUTTER_GST_MAJORMINOR@.pc: %.pc
-	cp $< $@
-
-pkgconfig_DATA = $(pcfiles)
+pkgconfig_DATA = clutter-gst-0.3.pc
 pkgconfigdir   = $(libdir)/pkgconfig
 
 EXTRA_DIST = clutter-gst.pc.in
 
-CLEANFILES = $(pcfiles)
+CLEANFILES = clutter-gst-0.3.pc
 
-DISTCHECK_CONFIGURE_FLAGS=--enable-gtk-doc
+DISTCLEANFILES = clutter-gst.pc
+
+DISTCHECK_CONFIGURE_FLAGS = --enable-gtk-doc
 
 # Extra clean files so that maintainer-clean removes *everything*
 MAINTAINERCLEANFILES = aclocal.m4 compile config.guess config.sub \

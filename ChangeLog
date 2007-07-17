@@ -1,3 +1,12 @@
+2007-07-17  Emmanuele Bassi  <ebassi@openedhand.com>
+
+	* clutter-gst/Makefile.am: Install headers under the clutter-0.x
+	include directory, so that the clutter integration libraries header
+	files are all self-contained into the version they are linking to.
+
+	* Makefile.am:
+	* clutter-gst.pc.in: Update pkgconfig file template.
+
 2007-07-10  Emmanuele Bassi  <ebassi@openedhand.com>
 
 	* examples/Makefile.am:
