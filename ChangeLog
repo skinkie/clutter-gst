@@ -1,3 +1,8 @@
+2007-07-21  Matthew Allum  <mallum@openedhand.com>
+
+	* clutter-gst.pc.in:
+	Add missing gstreamer-base-0.10 dep. See #399
+
 2007-07-17  Emmanuele Bassi  <ebassi@openedhand.com>
 
 	* clutter-gst/Makefile.am: Install headers under the clutter-0.x
