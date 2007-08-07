@@ -2,8 +2,8 @@
 # An odd micro number indicates in-progress developmen
 # An even micro number indicates a released version.
 m4_define(clutter_gst_major_version, 0)
-m4_define(clutter_gst_minor_version, 3)
-m4_define(clutter_gst_micro_version, 1)
+m4_define(clutter_gst_minor_version, 4)
+m4_define(clutter_gst_micro_version, 0)
 
 m4_define([clutter_gst_version],
           [clutter_gst_major_version.clutter_gst_minor_version.clutter_gst_micro_version])
@@ -74,7 +74,7 @@ AC_CHECK_FUNCS([memset munmap strcasecmp strdup])
 
 dnl ========================================================================
 
-pkg_modules="clutter-0.3"
+pkg_modules="clutter-0.4"
 PKG_CHECK_MODULES(CLUTTER_GST, [$pkg_modules])
 
 dnl ========================================================================
