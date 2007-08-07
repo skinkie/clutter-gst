@@ -322,7 +322,7 @@ clutter_gst_video_sink_set_property (GObject *object,
       if (priv->texture)
         g_object_unref (priv->texture);
 
-      priv->texture = g_value_dup_object (value);
+      priv->texture = CLUTTER_TEXTURE (g_value_dup_object (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
