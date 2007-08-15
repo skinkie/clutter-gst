@@ -1,14 +1,14 @@
 SUBDIRS = clutter-gst doc examples 
 
-clutter-gst-0.4.pc: clutter-gst.pc
-	@cp -f clutter-gst.pc clutter-gst-0.4.pc
+clutter-gst-0.5.pc: clutter-gst.pc
+	@cp -f clutter-gst.pc clutter-gst-0.5.pc
 
-pkgconfig_DATA = clutter-gst-0.4.pc
+pkgconfig_DATA = clutter-gst-0.5.pc
 pkgconfigdir   = $(libdir)/pkgconfig
 
 EXTRA_DIST = clutter-gst.pc.in
 
-CLEANFILES = clutter-gst-0.4.pc
+CLEANFILES = clutter-gst-0.5.pc
 
 DISTCLEANFILES = clutter-gst.pc
 
