@@ -15,7 +15,12 @@ libclutter_gst_@CLUTTER_GST_MAJORMINOR@_la_SOURCES = $(MARSHALFILES) \
                                                      $(source_c)     \
                                                      $(source_h)
 
-INCLUDES = @GCC_FLAGS@ @CLUTTER_GST_CFLAGS@  $(GST_CFLAGS) -I$(top_srcdir)
+INCLUDES = \
+	-I$(top_srcdir) \
+	-DG_LOG_DOMAIN=\"Clutter-Gst\" \
+	@GCC_FLAGS@ \
+	@CLUTTER_GST_CFLAGS@ \
+	$(GST_CFLAGS)
 
 lib_LTLIBRARIES = libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la
 

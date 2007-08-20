@@ -1,4 +1,8 @@
-2007-08-20  Emmanuele Bassi  <ebasso@openedhand.com>
+2007-08-20  Emmanuele Bassi  <ebassi@openedhand.com>
+
+	* clutter-gst/Makefile.am: Define G_LOG_DOMAIN.
+
+2007-08-20  Emmanuele Bassi  <ebassi@openedhand.com>
 
 	* examples/video-player.c: Remove useless cast.
 
