@@ -25,7 +25,7 @@ control_tl_cb (ClutterTimeline *timeline,
 {
   guint8 opacity;
 
-  clutter_actor_show_all (CLUTTER_GROUP (app->control));
+  clutter_actor_show_all (app->control);
   clutter_actor_hide (app->paused ? app->control_pause : app->control_play);
   clutter_actor_show (app->paused ? app->control_play : app->control_pause);
 
