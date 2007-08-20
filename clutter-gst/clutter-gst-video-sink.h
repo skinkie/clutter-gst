@@ -63,12 +63,14 @@ typedef struct _ClutterGstVideoSinkPrivate ClutterGstVideoSinkPrivate;
 
 struct _ClutterGstVideoSink
 {
+  /*< private >*/
   GstBaseSink                 parent;
   ClutterGstVideoSinkPrivate *priv;
 };
 
 struct _ClutterGstVideoSinkClass
 {
+  /*< private >*/
   GstBaseSinkClass parent_class;
 
   /* Future padding */

@@ -21,7 +21,7 @@ DOC_MAIN_SGML_FILE=clutter-gst-docs.sgml
 DOC_SOURCE_DIR=../../clutter-gst
 
 # Extra options to pass to gtkdoc-scangobj. Not normally needed.
-SCANGOBJ_OPTIONS=
+SCANGOBJ_OPTIONS=--type-init-func="clutter_gst_init(0,0)"
 
 # Extra options to supply to gtkdoc-scan.
 # e.g. SCAN_OPTIONS=--deprecated-guards="GTK_DISABLE_DEPRECATED" 
@@ -70,7 +70,7 @@ expand_content_files=
 
 # FIXME:  $(GST_CFLAGS) needed for clutter_media metadata - togo..
 INCLUDES=-I$(top_srcdir) $(CLUTTER_GST_CFLAGS) $(GST_CFLAGS)
-GTKDOC_LIBS=$(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_MAJORMINOR@.la $(CLUTTER_GST_LIBS)
+GTKDOC_LIBS=$(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la $(CLUTTER_GST_LIBS)
 
 # This includes the standard gtk-doc make rules, copied by gtkdocize.
 include $(top_srcdir)/gtk-doc.make

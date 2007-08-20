@@ -1,0 +1,72 @@
+<SECTION>
+<FILE>clutter-gst-video-texture</FILE>
+<TITLE>ClutterGstVideoTexture</TITLE>
+ClutterGstVideoTexture
+ClutterGstVideoTextureClass
+clutter_gst_video_texture_new
+clutter_gst_video_texture_get_playbin
+<SUBSECTION Standard>
+CLUTTER_GST_VIDEO_TEXTURE
+CLUTTER_GST_IS_VIDEO_TEXTURE
+CLUTTER_GST_TYPE_VIDEO_TEXTURE
+clutter_gst_video_texture_get_type
+CLUTTER_GST_VIDEO_TEXTURE_CLASS
+CLUTTER_GST_IS_VIDEO_TEXTURE_CLASS
+CLUTTER_GST_VIDEO_TEXTURE_GET_CLASS
+<SUBSECTION Private>
+ClutterGstVideoTexturePrivate
+</SECTION>
+
+<SECTION>
+<FILE>clutter-gst-video-sink</FILE>
+<TITLE>ClutterGstVideoSink</TITLE>
+ClutterGstVideoSink
+ClutterGstVideoSinkClass
+clutter_gst_video_sink_new
+<SUBSECTION Standard>
+CLUTTER_GST_VIDEO_SINK
+CLUTTER_GST_IS_VIDEO_SINK
+CLUTTER_GST_TYPE_VIDEO_SINK
+clutter_gst_video_sink_get_type
+CLUTTER_GST_VIDEO_SINK_CLASS
+CLUTTER_GST_IS_VIDEO_SINK_CLASS
+CLUTTER_GST_VIDEO_SINK_GET_CLASS
+<SUBSECTION Private>
+ClutterGstVideoSinkPrivate
+</SECTION>
+
+<SECTION>
+<FILE>clutter-gst-audio</FILE>
+<TITLE>ClutterGstAudio</TITLE>
+ClutterGstAudio
+ClutterGstAudioClass
+clutter_gst_audio_new
+<SUBSECTION Standard>
+CLUTTER_GST_AUDIO
+CLUTTER_GST_IS_AUDIO
+CLUTTER_GST_TYPE_AUDIO
+clutter_gst_audio_get_type
+CLUTTER_GST_AUDIO_CLASS
+CLUTTER_GST_IS_AUDIO_CLASS
+CLUTTER_GST_AUDIO_GET_CLASS
+<SUBSECTION Private>
+ClutterGstAudioPrivate
+</SECTION>
+
+<SECTION>
+<FILE>clutter-gst-util</FILE>
+<TITLE>Utilities</TITLE>
+clutter_gst_init
+</SECTION>
+
+<SECTION>
+<FILE>clutter-gst-version</FILE>
+<TITLE>Version Checking</TITLE>
+CLUTTER_GST_MAJOR_VERSION
+CLUTTER_GST_MINOR_VERSION
+CLUTTER_GST_MICRO_VERSION
+CLUTTER_GST_VERSION
+CLUTTER_GST_VERSION_S
+CLUTTER_GST_VERSION_HEX
+CLUTTER_GST_CHECK_VERSION
+</SECTION>

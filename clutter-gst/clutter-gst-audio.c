@@ -27,10 +27,12 @@
  */
 
 /**
- * SECTION:clutter-audio
+ * SECTION:clutter-gst-audio
  * @short_description: Object for playback of audio files.
  *
- * #ClutterGstAudio is an object that plays audio files.
+ * #ClutterGstAudio is an object that plays audio files. It is a simple
+ * wrapper around GStreamer base audio sink implementing the #ClutterMedia
+ * interface and providing a nice API to play a sound file using its URI.
  */
 
 #include "clutter-gst-audio.h"
@@ -69,12 +71,11 @@ static void clutter_media_init (ClutterMediaInterface *iface);
 
 static gboolean tick_timeout (ClutterGstAudio *audio);
 
-G_DEFINE_TYPE_EXTENDED (ClutterGstAudio,                              \
-			clutter_gst_audio,                            \
-			G_TYPE_OBJECT,                                \
-			0,                                            \
-			G_IMPLEMENT_INTERFACE (CLUTTER_TYPE_MEDIA,    \
-					       clutter_media_init));
+G_DEFINE_TYPE_WITH_CODE (ClutterGstAudio,
+                         clutter_gst_audio,
+                         G_TYPE_OBJECT,
+                         G_IMPLEMENT_INTERFACE (CLUTTER_TYPE_MEDIA,
+                                                clutter_media_init));
 
 /* Interface implementation */
 
@@ -777,7 +778,7 @@ clutter_gst_audio_init (ClutterGstAudio *audio)
  *
  * Return value: A newly allocated #ClutterGstAudio object.
  */
-ClutterGstAudio*
+ClutterGstAudio *
 clutter_gst_audio_new (void)
 {
   return g_object_new (CLUTTER_GST_TYPE_AUDIO, NULL);

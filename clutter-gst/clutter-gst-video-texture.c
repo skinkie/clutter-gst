@@ -27,11 +27,13 @@
  */
 
 /**
- * SECTION:clutter-video-texture
+ * SECTION:clutter-gst-video-texture
  * @short_description: Actor for playback of video files.
  *
  * #ClutterGstVideoTexture is a #ClutterTexture that plays video files.
  */
+
+#include "config.h"
 
 #include "clutter-gst-video-texture.h"
 #include "clutter-gst-video-sink.h"
@@ -103,7 +105,7 @@ set_uri (ClutterMedia *media,
        * We also have it installed in PAUSED state, because
        * seeks etc may have a delayed effect on the position.
        **/
-    if (priv->tick_timeout_id == 0) 
+    if (priv->tick_timeout_id == 0)
       {
 	priv->tick_timeout_id = g_timeout_add (TICK_TIMEOUT * 1000,
 					       (GSourceFunc) tick_timeout,

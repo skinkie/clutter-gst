@@ -64,12 +64,14 @@ typedef struct _ClutterGstVideoTexturePrivate ClutterGstVideoTexturePrivate;
 
 struct _ClutterGstVideoTexture
 {
+  /*< private >*/
   ClutterTexture              parent;
   ClutterGstVideoTexturePrivate *priv;
 }; 
 
 struct _ClutterGstVideoTextureClass 
 {
+  /*< private >*/
   ClutterTextureClass parent_class;
 
   /* Future padding */

@@ -27,11 +27,11 @@
  */
 
 /**
- * SECTION:clutter-video-sink
+ * SECTION:clutter-gst-video-sink
  * @short_description: GStreamer video sink
  *
  * #ClutterGstVideoSink is a GStreamer sink element that sends
- * data to a #ClutterTexture
+ * data to a #ClutterTexture.
  */
 
 #include "config.h"
@@ -378,6 +378,15 @@ clutter_gst_video_sink_class_init (ClutterGstVideoSinkClass *klass)
 				    G_PARAM_READWRITE));
 }
 
+/**
+ * clutter_gst_video_sink_new:
+ * @texture: a #ClutterTexture
+ *
+ * Creates a new GStreamer video sink which uses @texture as the target
+ * for sinking a video stream from GStreamer.
+ *
+ * Return value: a #GstElement for the newly created video sink
+ */
 GstElement *
 clutter_gst_video_sink_new (ClutterTexture *texture)
 {
@@ -399,10 +408,9 @@ plugin_init (GstPlugin *plugin)
 GST_PLUGIN_DEFINE_STATIC (GST_VERSION_MAJOR,
 			  GST_VERSION_MINOR,
 			  "cluttersink",
-			  "element to render to clutter textures",
+			  "Element to render to Clutter textures",
 			  plugin_init,
 			  VERSION,
-			  "LGPL",
+			  "LGPL", /* license */
 			  PACKAGE,
 			  "");
-

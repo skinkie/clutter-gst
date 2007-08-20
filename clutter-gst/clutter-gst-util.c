@@ -37,8 +37,10 @@
 
 /**
  * clutter_gst_init:
+ * @argc: pointer to the argument list count
+ * @argv: pointer to the argument list vector
  *
- * Utility function to call gst_init, then clutter_init. 
+ * Utility function to call gst_init(), then clutter_init().
  *
  * Return value: A #ClutterInitError.
  */
@@ -47,11 +49,18 @@ clutter_gst_init (int    *argc,
 		  char ***argv)
 {
   static gboolean gst_is_initialized = FALSE;
+  ClutterInitError retval;
 
   if (!gst_is_initialized)
-    gst_init (argc, argv);
+    {
+      gst_init (argc, argv);
 
-  gst_is_initialized = TRUE;
+      retval = clutter_init (argc, argv);
 
-  return clutter_init (argc, argv);
+      gst_is_initialized = TRUE;
+    }
+  else
+    retval = CLUTTER_INIT_SUCCESS;
+
+  return retval;
 }

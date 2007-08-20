@@ -1,3 +1,16 @@
+2007-08-20  Emmanuele Bassi  <ebassi@openedhand.com>
+
+	* doc/reference/clutter-gst-sections.txt:
+	* doc/reference/clutter-gst-docs.sgml:
+	* doc/reference/Makefile.am: Fix API reference generation.
+
+	* clutter-gst/clutter-gst-audio.[ch]:
+	* clutter-gst/clutter-gst-video-sink.[ch]:
+	* clutter-gst/clutter-gst-video-texture.[ch]:
+	* clutter-gst/clutter-gst-video-util.c:
+	* clutter-gst/clutter-gst-version.h.in: Fix API reference
+	documentation.
+
 2007-08-15  Emmanuele Bassi  <ebassi@openedhand.com>
 
 	* configure.ac: 

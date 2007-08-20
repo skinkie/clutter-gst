@@ -59,16 +59,16 @@ typedef struct _ClutterGstAudio        ClutterGstAudio;
 typedef struct _ClutterGstAudioClass   ClutterGstAudioClass;
 typedef struct _ClutterGstAudioPrivate ClutterGstAudioPrivate;
 
-/* #define CLUTTER_GST_AUDIO_ERROR clutter_gst_audio_error_quark() */
-
 struct _ClutterGstAudio
 {
+  /*< private >*/
   GObject              parent;
   ClutterGstAudioPrivate *priv;
 }; 
 
 struct _ClutterGstAudioClass 
 {
+  /*< private >*/
   GObjectClass parent_class;
 
   /* Future padding */
