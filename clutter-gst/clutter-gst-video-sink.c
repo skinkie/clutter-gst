@@ -71,9 +71,7 @@ enum
 struct _ClutterGstVideoSinkPrivate
 {
   ClutterTexture *texture;
-  guint           bus_id;
-  GstBuffer      *scratch_buffer;
-  GMutex         *scratch_lock;
+  GAsyncQueue    *async_queue;
   gboolean        rgb_ordering;
   int             width;
   int             height;
@@ -117,41 +115,37 @@ clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
     G_TYPE_INSTANCE_GET_PRIVATE (sink, CLUTTER_GST_TYPE_VIDEO_SINK,
                                  ClutterGstVideoSinkPrivate);
 
-  priv->scratch_lock = g_mutex_new ();
+  priv->async_queue = g_async_queue_new ();
 }
 
-static void
-clutter_gst_video_sink_bus_cb (GstBus              *bus,
-    			       GstMessage          *message,
-			       ClutterGstVideoSink *sink)
+static gboolean
+clutter_gst_video_sink_idle_func (gpointer data)
 {
   ClutterGstVideoSinkPrivate *priv;
+  GstBuffer *buffer;
 
-  if (sink->priv->texture == NULL)
-    return;
+  priv = data;
 
-  priv = sink->priv;
-
-  g_mutex_lock (priv->scratch_lock);
-
-  if (priv->scratch_buffer != NULL)
+  buffer = g_async_queue_try_pop (priv->async_queue);
+  if (buffer == NULL || G_UNLIKELY (!GST_IS_BUFFER (buffer)))
     {
-      clutter_texture_set_from_rgb_data (priv->texture,
-                                         GST_BUFFER_DATA (priv->scratch_buffer),
-                                         TRUE,
-                                         priv->width,
-                                         priv->height,
-                                         (4 * priv->width + 3) &~ 3,
-                                         4,
-                                         priv->rgb_ordering ? 
-                                           0 : CLUTTER_TEXTURE_RGB_FLAG_BGR,
-                                         NULL);
-
-      gst_buffer_unref (priv->scratch_buffer);
-      priv->scratch_buffer = NULL;
+      return FALSE;
     }
 
-  g_mutex_unlock (sink->priv->scratch_lock);
+  clutter_texture_set_from_rgb_data (priv->texture,
+                                     GST_BUFFER_DATA (buffer),
+                                     TRUE,
+                                     priv->width,
+                                     priv->height,
+                                     (4 * priv->width + 3) &~ 3,
+                                     4,
+                                     priv->rgb_ordering ?
+                                     0 : CLUTTER_TEXTURE_RGB_FLAG_BGR,
+                                     NULL);
+
+  gst_buffer_unref (buffer);
+
+  return FALSE;
 }
 
 static GstFlowReturn
@@ -160,44 +154,16 @@ clutter_gst_video_sink_render (GstBaseSink *bsink,
 {
   ClutterGstVideoSink *sink;
   ClutterGstVideoSinkPrivate *priv;
-  GstMessage *msg;
 
   sink = CLUTTER_GST_VIDEO_SINK (bsink);
   priv = sink->priv;
 
-  if (priv->bus_id == 0)
-    {
-      GstBus *bus;
-      GstElement *lp = NULL;
-      GstElement *p = GST_ELEMENT (sink);
+  g_async_queue_push (priv->async_queue, gst_buffer_ref (buffer));
 
-      /* find the outermost element and use its bus */
-      while (p != NULL)
-        {
-	  lp = p;
-	  p = GST_ELEMENT_PARENT (lp);
-        }
-
-      bus = GST_ELEMENT_BUS (lp);
-      sink->priv->bus_id =
-	g_signal_connect_object (bus,
-				 "message::element",
-				 G_CALLBACK (clutter_gst_video_sink_bus_cb),
-				 sink,
-				 0);
-    }
-
-  g_mutex_lock (priv->scratch_lock);
-
-  if (priv->scratch_buffer)
-    gst_buffer_unref (priv->scratch_buffer);
-  
-  priv->scratch_buffer = gst_buffer_ref (buffer);
-
-  msg = gst_message_new_element (GST_OBJECT (sink), NULL);
-  gst_element_post_message (GST_ELEMENT (sink), msg);
-
-  g_mutex_unlock (priv->scratch_lock);
+  clutter_threads_add_idle_full (G_PRIORITY_HIGH_IDLE,
+                                 clutter_gst_video_sink_idle_func,
+                                 priv,
+                                 NULL);
 
   return GST_FLOW_OK;
 }
@@ -271,21 +237,17 @@ clutter_gst_video_sink_dispose (GObject *object)
   self = CLUTTER_GST_VIDEO_SINK (object);
   priv = self->priv;
 
-  g_mutex_lock (priv->scratch_lock);
-
   if (priv->texture)
     {
       g_object_unref (priv->texture);
       priv->texture = NULL;
     }
 
-  if (priv->scratch_buffer)
+  if (priv->async_queue)
     {
-      gst_buffer_unref (priv->scratch_buffer);
-      priv->scratch_buffer = NULL;
+      g_async_queue_unref (priv->async_queue);
+      priv->async_queue = NULL;
     }
-
-  g_mutex_unlock (priv->scratch_lock);
 
   G_OBJECT_CLASS (parent_class)->dispose (object);
 }
@@ -298,8 +260,6 @@ clutter_gst_video_sink_finalize (GObject *object)
 
   self = CLUTTER_GST_VIDEO_SINK (object);
   priv = self->priv;
-
-  g_mutex_free (priv->scratch_lock);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
@@ -351,6 +311,29 @@ clutter_gst_video_sink_get_property (GObject *object,
   }
 }
 
+static gboolean
+clutter_gst_video_sink_stop (GstBaseSink *base_sink)
+{
+  ClutterGstVideoSinkPrivate *priv;
+  GstBuffer *buffer;
+
+  priv = CLUTTER_GST_VIDEO_SINK (base_sink)->priv;
+
+  g_async_queue_lock (priv->async_queue);
+
+  /* Remove all remaining objects from the queue */
+  do
+    {
+      buffer = g_async_queue_try_pop_unlocked (priv->async_queue);
+      if (buffer)
+        gst_buffer_unref (buffer);
+    } while (buffer != NULL);
+
+  g_async_queue_unlock (priv->async_queue);
+
+  return TRUE;
+}
+
 static void
 clutter_gst_video_sink_class_init (ClutterGstVideoSinkClass *klass)
 {
@@ -367,6 +350,7 @@ clutter_gst_video_sink_class_init (ClutterGstVideoSinkClass *klass)
 
   gstbase_sink_class->render = clutter_gst_video_sink_render;
   gstbase_sink_class->preroll = clutter_gst_video_sink_render;
+  gstbase_sink_class->stop = clutter_gst_video_sink_stop;
   gstbase_sink_class->set_caps = clutter_gst_video_sink_set_caps;
 
   g_object_class_install_property 

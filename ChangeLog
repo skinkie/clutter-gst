@@ -1,3 +1,13 @@
+2007-11-22  Zeeshan Ali Khattak  <zeenix@gstreamer.net>
+
+	* clutter-gst/clutter-gst-video-sink.c:
+	Use async queue with idle function instead of messages on the bus with
+	signal handlers to allow the application thread to actually render the
+	frames. (#644)
+
+	* examples/video-sink.c:
+	Remove the now unneeded call to gst_bus_add_signal_watch().
+
 2007-08-20  Emmanuele Bassi  <ebassi@openedhand.com>
 
 	* clutter-gst/Makefile.am: Define G_LOG_DOMAIN.

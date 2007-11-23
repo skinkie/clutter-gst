@@ -80,8 +80,6 @@ main (int argc, char *argv[])
 
   // g_object_set (src , "pattern", 10, NULL);
 
-  gst_bus_add_signal_watch (GST_ELEMENT_BUS (pipeline));
-
   gst_bin_add_many (GST_BIN (pipeline), src, warp, colorspace, sink, NULL);
   gst_element_link_many (src, warp, colorspace, sink, NULL);
   gst_element_set_state (GST_ELEMENT(pipeline), GST_STATE_PLAYING);
