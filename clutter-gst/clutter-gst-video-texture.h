@@ -62,6 +62,14 @@ typedef struct _ClutterGstVideoTexture        ClutterGstVideoTexture;
 typedef struct _ClutterGstVideoTextureClass   ClutterGstVideoTextureClass;
 typedef struct _ClutterGstVideoTexturePrivate ClutterGstVideoTexturePrivate;
 
+/**
+ * ClutterGstVideoTexture:
+ *
+ * Subclass of #ClutterTexture that displays videos using GStreamer.
+ *
+ * The #ClutterGstVideoTexture structure contains only private data and
+ * should not be accessed directly.
+ */
 struct _ClutterGstVideoTexture
 {
   /*< private >*/
@@ -69,6 +77,11 @@ struct _ClutterGstVideoTexture
   ClutterGstVideoTexturePrivate *priv;
 }; 
 
+/**
+ * ClutterGstVideoTextureClass:
+ *
+ * Base class for #ClutterGstVideoTexture.
+ */
 struct _ClutterGstVideoTextureClass 
 {
   /*< private >*/

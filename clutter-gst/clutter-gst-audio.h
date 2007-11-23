@@ -59,6 +59,14 @@ typedef struct _ClutterGstAudio        ClutterGstAudio;
 typedef struct _ClutterGstAudioClass   ClutterGstAudioClass;
 typedef struct _ClutterGstAudioPrivate ClutterGstAudioPrivate;
 
+/**
+ * ClutterGstAudio:
+ *
+ * Simple class for playing audio files.
+ *
+ * The #ClutterGstAudio structure contains only private data and should
+ * not be accessed directly.
+ */
 struct _ClutterGstAudio
 {
   /*< private >*/
@@ -66,6 +74,11 @@ struct _ClutterGstAudio
   ClutterGstAudioPrivate *priv;
 }; 
 
+/**
+ * ClutterGstAudioClass:
+ *
+ * Base class for #ClutterGstAudio.
+ */
 struct _ClutterGstAudioClass 
 {
   /*< private >*/

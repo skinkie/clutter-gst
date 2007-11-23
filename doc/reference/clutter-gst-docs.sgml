@@ -39,12 +39,12 @@
 
   <chapter>
     <title>Clutter Gst Overview</title>
-    <para>
 
-    Clutter Gst provides a ClutterMedia interface to GStreamer for basic video and audio playback.
+    <para>Clutter-GStreamer provides a ClutterMedia interface implementation
+    using GStreamer for basic video and audio playback.</para>
 
-    </para>
-  </chapter>    
+  </chapter>
+
   <chapter>
     <title>Clutter Actors And Objects</title>
     <xi:include href="xml/clutter-gst-video-texture.xml"/>
@@ -53,6 +53,7 @@
     <xi:include href="xml/clutter-gst-util.xml"/>
     <xi:include href="xml/clutter-gst-version.xml"/>
   </chapter>
+
   <appendix id="license">
     <title>License</title>
 

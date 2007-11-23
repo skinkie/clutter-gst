@@ -61,6 +61,14 @@ typedef struct _ClutterGstVideoSink        ClutterGstVideoSink;
 typedef struct _ClutterGstVideoSinkClass   ClutterGstVideoSinkClass;
 typedef struct _ClutterGstVideoSinkPrivate ClutterGstVideoSinkPrivate;
 
+/**
+ * ClutterGstVideoSink:
+ *
+ * Class implementing a GStreamer sink element for #ClutterTexture<!-- -->s.
+ *
+ * The #ClutterGstVideoSink structure contains only private data and should
+ * not be accessed directly.
+ */
 struct _ClutterGstVideoSink
 {
   /*< private >*/
@@ -68,6 +76,11 @@ struct _ClutterGstVideoSink
   ClutterGstVideoSinkPrivate *priv;
 };
 
+/**
+ * ClutterGstVideoSinkClass:
+ *
+ * Base class for #ClutterGstVideoSink.
+ */
 struct _ClutterGstVideoSinkClass
 {
   /*< private >*/

@@ -249,10 +249,11 @@ effect1_tl_cb (ClutterTimeline *timeline,
 	       gint             frame_num, 
 	       VideoApp        *app)
 {
-  clutter_actor_rotate_y (app->vtexture,
-			  frame_num * 12,
-			  CLUTTER_STAGE_WIDTH()/2,
-			  0);
+  clutter_actor_set_rotation (app->vtexture, CLUTTER_Y_AXIS,
+                              frame_num * 12,
+                              CLUTTER_STAGE_WIDTH() / 2,
+                              0,
+                              0);
 }
 
 

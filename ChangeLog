@@ -1,3 +1,18 @@
+2007-11-23  Emmanuele Bassi  <ebassi@openedhand.com>
+
+	* clutter-gst/clutter-gst-audio.h:
+	* clutter-gst/clutter-gst-version.h.in:
+	* clutter-gst/clutter-gst-video-sink.h:
+	* clutter-gst/clutter-gst-video-texture.h: Add missing
+	documentation.
+
+	* doc/reference/Makefile.am: Fix EXTRA_DIST.
+
+	* doc/reference/clutter-gst-docs.sgml: Fix wording a bit.
+
+	* examples/video-player.c (effect1_tl_cb): Update for upstream
+	API changes.
+
 2007-11-22  Zeeshan Ali Khattak  <zeenix@gstreamer.net>
 
 	* clutter-gst/clutter-gst-video-sink.c:
