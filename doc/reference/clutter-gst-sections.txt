@@ -61,7 +61,7 @@ clutter_gst_init
 
 <SECTION>
 <FILE>clutter-gst-version</FILE>
-<TITLE>Version Checking</TITLE>
+<TITLE>Versioning Macros</TITLE>
 CLUTTER_GST_MAJOR_VERSION
 CLUTTER_GST_MINOR_VERSION
 CLUTTER_GST_MICRO_VERSION
