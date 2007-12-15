@@ -25,7 +25,7 @@
 
 /**
  * SECTION:clutter-gst-version
- * @short_description: Version Checking
+ * @short_description: Versioning Macros
  *
  * Version checking macros.
  */
