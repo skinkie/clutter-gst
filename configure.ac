@@ -23,7 +23,7 @@ AC_INIT([clutter-gst], [clutter_gst_version],
 AC_CONFIG_SRCDIR([clutter-gst/clutter-gst.h])
 AM_CONFIG_HEADER([config.h])
 
-AM_INIT_AUTOMAKE([1.7])
+AM_INIT_AUTOMAKE([1.9])
 
 CLUTTER_GST_MAJOR_VERSION=clutter_gst_major_version
 CLUTTER_GST_MINOR_VERSION=clutter_gst_minor_version
@@ -74,7 +74,7 @@ AC_CHECK_FUNCS([memset munmap strcasecmp strdup])
 
 dnl ========================================================================
 
-pkg_modules="clutter-0.5"
+pkg_modules="clutter-0.5 >= 0.5.2"
 PKG_CHECK_MODULES(CLUTTER_GST, [$pkg_modules])
 
 dnl ========================================================================

@@ -19,7 +19,7 @@ installing new plug-ins.
 Clutter-GStreamer requires:
 
   GLib >= 2.10.0
-  Clutter >= 0.5.0
+  Clutter >= 0.5.2
   GStreamer >= 0.10
 
 RELEASE NOTES

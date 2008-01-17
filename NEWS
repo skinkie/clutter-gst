@@ -1,3 +1,11 @@
+clutter-gst 0.5.0
+=================
+* List of changes:
+  o Full documentation
+
+* List of bug fixed:
+  o #644 - Use an asynch queue [Zeeshan Ali Khattak]
+
 clutter-gst 0.1.1
 =================
 
