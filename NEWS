@@ -1,3 +1,8 @@
+clutter-gst 0.6.1
+=================
+* List of changes:
+  o Fix the generation of the pkg-config file
+
 clutter-gst 0.6.0
 =================
 * List of changes:
