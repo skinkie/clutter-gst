@@ -1,3 +1,8 @@
+clutter-gst 0.6.0
+=================
+* List of changes:
+  o Require Clutter stable release.
+
 clutter-gst 0.5.0
 =================
 * List of changes:
