@@ -1,4 +1,10 @@
-SUBDIRS = clutter-gst doc examples 
+SUBDIRS = clutter-gst examples
+
+if ENABLE_GTK_DOC
+SUBDIRS += doc
+endif
+
+DIST_SUBDIRS = clutter-gst examples doc
 
 clutter-gst-0.6.pc: clutter-gst.pc
 	@cp -f clutter-gst.pc clutter-gst-0.6.pc

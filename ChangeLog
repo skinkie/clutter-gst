@@ -1,3 +1,9 @@
+2008-03-03  Rob Bradford  <rob@openedhand.com>
+
+	* Makefile.am:
+	Do not recurse into doc if we did not explicitly enable the
+	documentation build; still recurse for dists.
+
 2008-02-18  Emmanuele Bassi  <ebassi@openedhand.com>
 
 	* configure.ac:
