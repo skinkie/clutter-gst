@@ -1,3 +1,9 @@
+2008-03-12  Chris Lord  <chris@openedhand.com>
+
+	* doc/reference/clutter-gst-sections.txt:
+	* clutter-gst/clutter-gst-audio.[ch]:
+	Add clutter_gst_audio_get_playbin ()
+
 2008-03-03  Rob Bradford  <rob@openedhand.com>
 
 	* Makefile.am:

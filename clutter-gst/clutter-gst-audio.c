@@ -784,3 +784,19 @@ clutter_gst_audio_new (void)
   return g_object_new (CLUTTER_GST_TYPE_AUDIO, NULL);
 }
 
+/**
+ * clutter_gst_audio_get_playbin:
+ * @audio: a #ClutterGstAudio
+ *
+ * Retrieves the #GstElement used by the @audio, for direct use with
+ * GStreamer API.
+ *
+ * Return value: the playbin element used by the audio object
+ */
+GstElement *
+clutter_gst_audio_get_playbin (ClutterGstAudio *audio)
+{
+  g_return_val_if_fail (CLUTTER_GST_IS_AUDIO (audio), NULL);
+
+  return audio->priv->playbin;
+}

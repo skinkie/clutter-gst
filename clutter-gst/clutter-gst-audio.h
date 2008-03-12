@@ -30,6 +30,7 @@
 
 #include <glib-object.h>
 #include <clutter/clutter.h>
+#include <gst/gstelement.h>
 
 G_BEGIN_DECLS
 
@@ -93,8 +94,10 @@ struct _ClutterGstAudioClass
   void (* _clutter_reserved6) (void);
 }; 
 
-GType            clutter_gst_audio_get_type (void) G_GNUC_CONST;
-ClutterGstAudio *clutter_gst_audio_new      (void);
+GType            clutter_gst_audio_get_type    (void) G_GNUC_CONST;
+ClutterGstAudio *clutter_gst_audio_new         (void);
+
+GstElement      *clutter_gst_audio_get_playbin (ClutterGstAudio *audio);
 
 G_END_DECLS
 
