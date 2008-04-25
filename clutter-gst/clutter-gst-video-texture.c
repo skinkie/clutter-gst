@@ -778,7 +778,7 @@ ClutterActor*
 clutter_gst_video_texture_new (void)
 {
   return g_object_new (CLUTTER_GST_TYPE_VIDEO_TEXTURE,
-                       "disable-slicing", TRUE,
+                       "disable-slicing", TRUE, 
                        NULL);
 }
 

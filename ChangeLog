@@ -1,3 +1,8 @@
+2008-04-25  Matthew Allum  <mallum@openedhand.com>
+
+	* clutter-gst/clutter-gst-video-texture.c:
+        Use new 'disable-slicing' prop on video texture.
+
 2008-04-25  Emmanuele Bassi  <ebassi@openedhand.com>
 
 	* examples/video-player.c (main): Do not show everything
