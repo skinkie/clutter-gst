@@ -1,3 +1,15 @@
+2008-04-25  Emmanuele Bassi  <ebassi@openedhand.com>
+
+	* configure.ac: Depend on clutter-0.7.
+
+	* clutter-gst/clutter-gst-video-texture.c:
+	(clutter_gst_video_texture_new): Use :disable-slicing instead
+	of the :tiled property.
+
+	* examples/video-player.c:
+	(control_tl_cb), (show_controls),
+	(input_cb), (main): Update for upstream API changes.
+
 2008-03-12  Chris Lord  <chris@openedhand.com>
 
 	* doc/reference/clutter-gst-sections.txt:

@@ -29,7 +29,7 @@ control_tl_cb (ClutterTimeline *timeline,
   clutter_actor_hide (app->paused ? app->control_pause : app->control_play);
   clutter_actor_show (app->paused ? app->control_play : app->control_pause);
 
-  opacity = ( frame_num * 0xde ) / clutter_timeline_get_n_frames(timeline);
+  opacity = ( frame_num * 0xde ) / clutter_timeline_get_n_frames (timeline);
 
   if (!app->controls_showing)
     opacity = 0xde - opacity;
@@ -65,9 +65,8 @@ show_controls (VideoApp *app, gboolean vis)
       app->controls_showing = TRUE;
       clutter_timeline_start (app->controls_tl);
 
-      app->controls_timeout = g_timeout_add (5 * 1000,  
-					     (GSourceFunc)controls_timeout_cb,
-					     app);
+      app->controls_timeout =
+        g_timeout_add_seconds (5, (GSourceFunc) controls_timeout_cb, app);
       return;
     }
 
@@ -77,10 +76,8 @@ show_controls (VideoApp *app, gboolean vis)
 	{
 	  g_source_remove (app->controls_timeout);
 
-	  app->controls_timeout 
-	    = g_timeout_add (5 * 1000,  
-			     (GSourceFunc)controls_timeout_cb,
-			     app);
+	  app->controls_timeout =
+	    g_timeout_add_seconds (5, (GSourceFunc) controls_timeout_cb, app);
 	}
       return;
     }
@@ -114,7 +111,7 @@ toggle_pause_state (VideoApp *app)
     }
 }
 
-void 
+static gboolean
 input_cb (ClutterStage *stage, 
 	  ClutterEvent *event,
 	  gpointer      user_data)
@@ -132,10 +129,7 @@ input_cb (ClutterStage *stage,
 	  ClutterActor       *actor;
 	  ClutterButtonEvent *bev = (ClutterButtonEvent *) event;
 
-	  actor 
-	    = clutter_stage_get_actor_at_pos 
-	                         (CLUTTER_STAGE(clutter_stage_get_default()),
-				  bev->x, bev->y);
+	  actor = clutter_stage_get_actor_at_pos (stage, bev->x, bev->y);
 
 	  printf("got actor %p at pos %ix%i\n", actor, bev->x, bev->y);
 
@@ -187,6 +181,8 @@ input_cb (ClutterStage *stage,
     default:
       break;
     }
+
+  return FALSE;
 }
 
 void
@@ -301,26 +297,14 @@ main (int argc, char *argv[])
   /* Create the control UI */
   app->control = clutter_group_new ();
 
-  pixb = gdk_pixbuf_new_from_file ("vid-panel.png", NULL);
+  app->control_bg =
+    clutter_texture_new_from_file ("vid-panel.png", NULL);
+  app->control_play =
+    clutter_texture_new_from_file ("media-actions-start.png", NULL);
+  app->control_pause =
+    clutter_texture_new_from_file ("media-actions-pause.png", NULL);
 
-  if (pixb == NULL)
-    g_error("Unable to load vid-panel.png");
-
-  app->control_bg = clutter_texture_new_from_pixbuf (pixb);
-  
-  pixb = gdk_pixbuf_new_from_file("media-actions-start.png", NULL);
-
-  if (pixb == NULL)
-    g_error("Unable to load media-actions-start.png");
-
-  app->control_play = clutter_texture_new_from_pixbuf (pixb);
-
-  pixb = gdk_pixbuf_new_from_file("media-actions-pause.png", NULL);
-
-  if (pixb == NULL)
-    g_error("Unable to load media-actions-pause.png");
-
-  app->control_pause = clutter_texture_new_from_pixbuf (pixb);
+  g_assert (app->control_bg && app->control_play && app->control_pause);
 
   app->control_seek1   = clutter_rectangle_new_with_color (&control_color1);
   app->control_seek2   = clutter_rectangle_new_with_color (&control_color2);
