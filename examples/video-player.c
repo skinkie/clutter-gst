@@ -340,6 +340,8 @@ main (int argc, char *argv[])
 
   clutter_actor_set_position (app->control_label, 200, 40);
 
+  clutter_actor_hide (app->control);
+
   /* Add control UI to stage */
   clutter_group_add_many (CLUTTER_GROUP (stage), 
 			  app->vtexture, app->control, NULL);
@@ -377,10 +379,9 @@ main (int argc, char *argv[])
 		    G_CALLBACK (tick),
 		    app);
 
-  clutter_media_set_playing (CLUTTER_MEDIA(app->vtexture), TRUE);
+  clutter_media_set_playing (CLUTTER_MEDIA (app->vtexture), TRUE);
 
-  clutter_actor_show_all (stage);
-  // clutter_group_hide_all (CLUTTER_GROUP (app->control));
+  clutter_actor_show (stage);
 
   clutter_main();
 

@@ -1,5 +1,11 @@
 2008-04-25  Emmanuele Bassi  <ebassi@openedhand.com>
 
+	* examples/video-player.c (main): Do not show everything
+	before clutter_main(): the actors are all visible by default
+	now.
+
+2008-04-25  Emmanuele Bassi  <ebassi@openedhand.com>
+
 	* configure.ac: Depend on clutter-0.7.
 
 	* clutter-gst/clutter-gst-video-texture.c:
