@@ -1,3 +1,6 @@
+#include <stdlib.h>
+
+#include <clutter/clutter.h>
 #include <clutter-gst/clutter-gst.h>
 
 #define SEEK_H 20
@@ -145,7 +148,8 @@ input_cb (ClutterStage *stage,
 	    {
 	      gint x, y, dist, pos;
 
-	      clutter_actor_get_abs_position (app->control_seekbar, &x, &y);
+	      clutter_actor_get_transformed_position (app->control_seekbar,
+                                                      &x, &y);
 
 	      dist = bev->x - x;
 
@@ -261,7 +265,6 @@ main (int argc, char *argv[])
   ClutterColor         stage_color = { 0x00, 0x00, 0x00, 0x00 };
   ClutterColor         control_color1 = { 73, 74, 77, 0xee };
   ClutterColor         control_color2 = { 0xcc, 0xcc, 0xcc, 0xff };
-  GdkPixbuf           *pixb;
   gint                 x,y;
 
   if (argc < 2)

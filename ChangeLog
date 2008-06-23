@@ -1,3 +1,20 @@
+2008-06-23  Emmanuele Bassi  <ebassi@openedhand.com>
+
+	Bug 978 - Inclusion of <gdk-pixbuf/gdk-pixbuf.h> in
+	          clutter-gst-video-texture.h
+
+	* Makefile.am:
+	* clutter-gst/Makefile.am: Substitute 0.6 with 0.7.
+
+	* clutter-gst/clutter-gst-video-texture.h: Remove inclusion
+	of gdk-pixbuf.h: Clutter-GST does not depend on GdkPixbuf. (978,
+	Haakon Sporsheim)
+
+	* examples/video-player.c:
+	(input_cb): Use clutter_actor_get_transformed_position().
+
+	(main): Remove unused GdkPixbuf variable.
+
 2008-04-25  Matthew Allum  <mallum@openedhand.com>
 
 	* clutter-gst/clutter-gst-video-texture.c:

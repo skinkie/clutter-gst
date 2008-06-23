@@ -32,7 +32,6 @@
 #include <glib-object.h>
 #include <clutter/clutter.h>
 #include <gst/gstelement.h>
-#include <gdk-pixbuf/gdk-pixbuf.h>
 
 G_BEGIN_DECLS
 

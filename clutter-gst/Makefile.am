@@ -27,5 +27,5 @@ lib_LTLIBRARIES = libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la
 libclutter_gst_@CLUTTER_GST_MAJORMINOR@_la_LIBADD  = @CLUTTER_GST_LIBS@ $(GST_LIBS)
 libclutter_gst_@CLUTTER_GST_MAJORMINOR@_la_LDFLAGS = @CLUTTER_GST_LT_LDFLAGS@
 
-cluttergstheadersdir = $(includedir)/clutter-0.6/clutter-gst
+cluttergstheadersdir = $(includedir)/clutter-0.7/clutter-gst
 cluttergstheaders_HEADERS = $(source_h) clutter-gst.h
