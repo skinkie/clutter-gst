@@ -1,3 +1,15 @@
+2008-07-04  Chris Lord  <chris@openedhand.com>
+
+	* clutter-gst/Makefile.am:
+	* clutter-gst/clutter-gst-shaders.h:
+	Add some shader setup defines, taken from clutter test-shaders
+
+	* clutter-gst/clutter-gst-video-sink.c
+	(clutter_gst_video_sink_base_init),
+	(clutter_gst_video_sink_idle_func),
+	(clutter_gst_video_sink_set_caps):
+	Add shaders to decode YUV and YV12 data. YV12 is disabled by default
+
 2008-06-23  Emmanuele Bassi  <ebassi@openedhand.com>
 
 	Bug 978 - Inclusion of <gdk-pixbuf/gdk-pixbuf.h> in

@@ -3,7 +3,8 @@ source_h = 					\
 	$(srcdir)/clutter-gst-video-sink.h 	\
 	$(srcdir)/clutter-gst-audio.h 		\
 	$(srcdir)/clutter-gst-util.h		\
-	$(srcdir)/clutter-gst-version.h
+	$(srcdir)/clutter-gst-version.h		\
+	$(srcdir)/clutter-gst-shaders.h
 
 
 source_c = clutter-gst-video-texture.c \
