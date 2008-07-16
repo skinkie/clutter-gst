@@ -62,8 +62,8 @@ main (int argc, char *argv[])
    * efficient/corrent playback onto the texture (which sucks a bit)  
   */
   texture = g_object_new (CLUTTER_TYPE_TEXTURE, 
-			  "sync-size",    FALSE, 
-			  "tiled",        FALSE, 
+			  "sync-size",       FALSE, 
+			  "disable-slicing", TRUE, 
 			  NULL);
 
   g_signal_connect (CLUTTER_TEXTURE (texture),
