@@ -1,5 +1,11 @@
 2008-07-16  Chris Lord  <chris@openedhand.com>
 
+	* clutter-gst/clutter-gst-video-sink.c
+	(clutter_gst_video_sink_set_caps):
+	Don't forget to reset bgr flag when using the AYUV shader
+
+2008-07-16  Chris Lord  <chris@openedhand.com>
+
 	* examples/video-sink.c (main):
 	Update 'tiled' to 'disable-slicing'
 

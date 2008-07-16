@@ -552,6 +552,7 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
   else if (ret && (fourcc == GST_MAKE_FOURCC ('A', 'Y', 'U', 'V')))
     {
       priv->format = CLUTTER_GST_AYUV;
+      priv->bgr = FALSE;
     }
   else
     {
