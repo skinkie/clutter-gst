@@ -1,5 +1,11 @@
 2008-07-16  Chris Lord  <chris@openedhand.com>
 
+	* clutter-gst/clutter-gst-video-sink.c
+	(clutter_gst_video_sink_idle_func):
+	Don't forget to wrap YV12 shader bits with CLUTTER_COGL_HAS_GL
+
+2008-07-16  Chris Lord  <chris@openedhand.com>
+
 	* clutter-gst/clutter-gst-shaders.h:
 	Remove unneeded bits
 

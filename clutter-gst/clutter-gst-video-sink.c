@@ -419,6 +419,7 @@ clutter_gst_video_sink_idle_func (gpointer data)
       /* Initialise YV12 shader */
       if (!priv->shaders_init)
         {
+#ifdef CLUTTER_COGL_HAS_GL
           COGLint location;
           clutter_gst_video_sink_set_shader (sink,
                                              yv12_to_rgba_shader);
@@ -440,6 +441,7 @@ clutter_gst_video_sink_idle_func (gpointer data)
                                   "paint",
                                   G_CALLBACK (clutter_gst_yv12_post_paint),
                                   sink);
+#endif
         }
     }
 
