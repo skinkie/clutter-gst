@@ -74,7 +74,7 @@ AC_CHECK_FUNCS([memset munmap strcasecmp strdup])
 
 dnl ========================================================================
 
-pkg_modules="clutter-0.7 >= 0.7.0"
+pkg_modules="clutter-0.8 >= 0.8.0"
 PKG_CHECK_MODULES(CLUTTER_GST, [$pkg_modules])
 
 dnl ========================================================================

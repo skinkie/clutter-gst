@@ -1,3 +1,29 @@
+2008-07-16  Chris Lord  <chris@openedhand.com>
+
+	* clutter-gst/clutter-gst-shaders.h:
+	Remove unneeded bits
+
+	* clutter-gst/clutter-gst-video-sink.c
+	(clutter_gst_video_sink_base_init), (clutter_gst_video_sink_paint),
+	(clutter_gst_yv12_paint), (clutter_gst_yv12_post_paint),
+	(clutter_gst_video_sink_set_shader),
+	(clutter_gst_video_sink_idle_func),
+	(clutter_gst_video_sink_render), (clutter_gst_video_sink_get_caps),
+	(clutter_gst_video_sink_set_caps),
+	(clutter_gst_video_sink_dispose),
+	(clutter_gst_video_sink_set_property),
+	(clutter_gst_video_sink_get_property),
+	(clutter_gst_video_sink_class_init):
+	Improve shader support, add multi-texturing YV12 acceleration, add
+	use_shader property (default FALSE), improve shaders, add support for
+	24-bit RGB/BGR textures
+	
+	* configure.ac:
+	Update for clutter 0.8
+
+	* examples/video-player.c (main):
+	Enable shader use
+
 2008-07-04  Chris Lord  <chris@openedhand.com>
 
 	* clutter-gst/Makefile.am:

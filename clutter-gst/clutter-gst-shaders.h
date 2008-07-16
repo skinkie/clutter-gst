@@ -29,27 +29,15 @@
  * sample shaders
  */
 
-/* FRAGMENT_SHADER_BEGIN: generate boilerplate with a local vec4 color already
- * initialized, from a sampler2D in a variable tex.
- */
 #define FRAGMENT_SHADER_VARS      \
-  GLES2_VARS                      \
-  "uniform sampler2D tex;"        \
-  "uniform float width, height;"
-
-#define FRAGMENT_SHADER_BEGIN     \
-  "void main (){"                 \
-  "  vec4 color = texture2D (tex, vec2(" TEX_COORD "));"
+  GLES2_VARS
 
 /* FRAGMENT_SHADER_END: apply the changed color to the output buffer correctly
  * blended with the gl specified color (makes the opacity of actors work
  * correctly).
  */
 #define FRAGMENT_SHADER_END                             \
-      "  gl_FragColor = color;"                         \
-      "  gl_FragColor = gl_FragColor * " COLOR_VAR ";"  \
-      "}"
-
+     "  gl_FragColor = gl_FragColor * " COLOR_VAR ";"
 
 #endif
 
