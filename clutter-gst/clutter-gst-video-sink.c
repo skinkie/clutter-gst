@@ -159,6 +159,8 @@ typedef enum
   CLUTTER_GST_YV12,
 } ClutterGstVideoFormat;
 
+typedef void (*GLUNIFORM1IPROC)(COGLint location, COGLint value);
+
 struct _ClutterGstVideoSinkPrivate
 {
   ClutterTexture        *texture;
@@ -175,6 +177,8 @@ struct _ClutterGstVideoSinkPrivate
   int                    par_n, par_d;
   gboolean               use_shaders;
   gboolean               shaders_init;
+  
+  GLUNIFORM1IPROC        glUniform1iARB;
 };
 
 
@@ -214,6 +218,11 @@ clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
                                  ClutterGstVideoSinkPrivate);
 
   priv->async_queue = g_async_queue_new ();
+
+#ifdef CLUTTER_COGL_HAS_GL
+  priv->glUniform1iARB = (GLUNIFORM1IPROC)
+    cogl_get_proc_address ("glUniform1iARB");
+#endif
 }
 
 static void
@@ -426,11 +435,11 @@ clutter_gst_video_sink_idle_func (gpointer data)
           
           cogl_program_use (priv->program);
           location = cogl_program_get_uniform_location (priv->program, "ytex");
-          glUniform1iARB (location, 0);
+          priv->glUniform1iARB (location, 0);
           location = cogl_program_get_uniform_location (priv->program, "utex");
-          glUniform1iARB (location, 1);
+          priv->glUniform1iARB (location, 1);
           location = cogl_program_get_uniform_location (priv->program, "vtex");
-          glUniform1iARB (location, 2);
+          priv->glUniform1iARB (location, 2);
           cogl_program_use (COGL_INVALID_HANDLE);
           
           g_signal_connect (priv->texture,
