@@ -616,12 +616,13 @@ clutter_gst_video_sink_finalize (GObject *object)
 
 static void
 clutter_gst_video_sink_set_property (GObject *object,
-                                         guint prop_id,
+                                     guint prop_id,
                                      const GValue *value,
                                      GParamSpec *pspec)
 {
   ClutterGstVideoSink *sink;
   ClutterGstVideoSinkPrivate *priv;
+  gboolean use_shaders;
 
   sink = CLUTTER_GST_VIDEO_SINK (object);
   priv = sink->priv;
@@ -635,7 +636,12 @@ clutter_gst_video_sink_set_property (GObject *object,
       priv->texture = CLUTTER_TEXTURE (g_value_dup_object (value));
       break;
     case PROP_USE_SHADERS:
-      priv->use_shaders = g_value_get_boolean (value);
+      use_shaders = g_value_get_boolean (value);
+      if (priv->use_shaders != use_shaders)
+        {
+          priv->use_shaders = use_shaders;
+          g_object_notify (object, "use_shaders");
+        }
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -645,7 +651,7 @@ clutter_gst_video_sink_set_property (GObject *object,
 
 static void
 clutter_gst_video_sink_get_property (GObject *object,
-                                         guint prop_id,
+                                     guint prop_id,
                                      GValue *value,
                                      GParamSpec *pspec)
 {

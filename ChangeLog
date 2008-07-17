@@ -1,3 +1,20 @@
+2008-07-17  Chris Lord  <chris@openedhand.com>
+
+	* AUTHORS:
+	* NEWS:
+	* README:
+	Update for release
+
+	* Makefile.am:
+	* clutter-gst.pc.in:
+	* clutter-gst/Makefile.am:
+	* configure.ac:
+	Update version to 0.8
+
+	* clutter-gst/clutter-gst-video-sink.c:
+	(clutter_gst_video_sink_set_property):
+	Notify on change of use_shaders property
+
 2008-07-16  Chris Lord  <chris@openedhand.com>
 
 	* clutter-gst/clutter-gst-video-sink.c

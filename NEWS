@@ -1,3 +1,12 @@
+clutter-gst 0.8.0
+=================
+* List of changes:
+  o Require Clutter stable release
+  o Add clutter_gst_audio_get_playbin () function
+  o Add support for 24-bit textures
+  o Add pixel-shader AYUV/YV12 support via 'use-shaders' property on
+    ClutterGstVideoSink
+
 clutter-gst 0.6.1
 =================
 * List of changes:
