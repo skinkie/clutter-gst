@@ -1,6 +1,12 @@
 2008-07-17  Chris Lord  <chris@openedhand.com>
 
 	* clutter-gst/clutter-gst-video-sink.c:
+	(clutter_gst_video_sink_idle_func):
+	s/CoglHandle */CoglHandle/ typos
+
+2008-07-17  Chris Lord  <chris@openedhand.com>
+
+	* clutter-gst/clutter-gst-video-sink.c:
 	(clutter_gst_video_sink_init), (clutter_gst_video_sink_idle_func):
 	Use cogl_get_proc_address to get the glUniform1iARB function pointer
 

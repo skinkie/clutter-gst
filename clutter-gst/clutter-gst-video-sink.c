@@ -164,10 +164,10 @@ typedef void (*GLUNIFORM1IPROC)(COGLint location, COGLint value);
 struct _ClutterGstVideoSinkPrivate
 {
   ClutterTexture        *texture;
-  CoglHandle            *u_tex;
-  CoglHandle            *v_tex;
-  CoglHandle            *program;
-  CoglHandle            *shader;
+  CoglHandle             u_tex;
+  CoglHandle             v_tex;
+  CoglHandle             program;
+  CoglHandle             shader;
   GAsyncQueue           *async_queue;
   ClutterGstVideoFormat  format;
   gboolean               bgr;
@@ -381,7 +381,7 @@ clutter_gst_video_sink_idle_func (gpointer data)
     }
   else if (priv->format == CLUTTER_GST_YV12)
     {
-      CoglHandle *y_tex =
+      CoglHandle y_tex =
         cogl_texture_new_from_data (priv->width,
                                     priv->height,
                                     -1,
