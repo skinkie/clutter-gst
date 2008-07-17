@@ -1,5 +1,10 @@
 2008-07-17  Chris Lord  <chris@openedhand.com>
 
+	* clutter-gst.pc.in:
+	Update required clutter to 0.8
+
+2008-07-17  Chris Lord  <chris@openedhand.com>
+
 	* AUTHORS:
 	* NEWS:
 	* README:
