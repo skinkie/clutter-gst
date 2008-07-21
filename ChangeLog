@@ -1,3 +1,13 @@
+2008-07-21  Chris Lord  <chris@openedhand.com>
+
+	Bug #1050 - glActiveTexture usage in clutter-gst-video-sink
+
+	* clutter-gst/clutter-gst-video-sink.c
+	(clutter_gst_video_sink_init), (clutter_gst_yv12_paint),
+	(clutter_gst_yv12_post_paint):
+	Use cogl_get_proc_address to retrieve glActiveTexture function.
+	Fixes building on platforms with old OpenGL headers.
+
 ======== Clutter-GStreamer 0.8.0 ==============================================
 
 2008-07-18  Emmanuele Bassi  <ebassi@openedhand.com>

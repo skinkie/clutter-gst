@@ -160,6 +160,7 @@ typedef enum
 } ClutterGstVideoFormat;
 
 typedef void (*GLUNIFORM1IPROC)(COGLint location, COGLint value);
+typedef void (*GLACTIVETEXTUREPROC)(GLenum unit);
 
 struct _ClutterGstVideoSinkPrivate
 {
@@ -179,6 +180,7 @@ struct _ClutterGstVideoSinkPrivate
   gboolean               shaders_init;
   
   GLUNIFORM1IPROC        glUniform1iARB;
+  GLACTIVETEXTUREPROC    glActiveTexture;
 };
 
 
@@ -222,6 +224,9 @@ clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
 #ifdef CLUTTER_COGL_HAS_GL
   priv->glUniform1iARB = (GLUNIFORM1IPROC)
     cogl_get_proc_address ("glUniform1iARB");
+
+  priv->glActiveTexture = (GLACTIVETEXTUREPROC)
+    cogl_get_proc_address ("glActiveTexture");
 #endif
 }
 
@@ -246,7 +251,7 @@ clutter_gst_yv12_paint (ClutterActor        *actor,
   if (priv->u_tex)
     {
       cogl_texture_get_gl_texture (priv->u_tex, &texture, NULL);
-      glActiveTexture (GL_TEXTURE1);
+      priv->glActiveTexture (GL_TEXTURE1);
       glEnable (GL_TEXTURE_2D);
       glBindTexture (GL_TEXTURE_2D, texture);
     }
@@ -254,12 +259,12 @@ clutter_gst_yv12_paint (ClutterActor        *actor,
   if (priv->v_tex)
     {
       cogl_texture_get_gl_texture (priv->v_tex, &texture, NULL);
-      glActiveTexture (GL_TEXTURE2);
+      priv->glActiveTexture (GL_TEXTURE2);
       glEnable (GL_TEXTURE_2D);
       glBindTexture (GL_TEXTURE_2D, texture);
     }
   
-  glActiveTexture (GL_TEXTURE0_ARB);
+  priv->glActiveTexture (GL_TEXTURE0_ARB);
 #endif
 }
 
@@ -268,12 +273,14 @@ clutter_gst_yv12_post_paint (ClutterActor        *actor,
                              ClutterGstVideoSink *sink)
 {
 #ifdef CLUTTER_COGL_HAS_GL
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+
   /* Disable the extra texture units */
-  glActiveTexture (GL_TEXTURE1);
+  priv->glActiveTexture (GL_TEXTURE1);
   glDisable (GL_TEXTURE_2D);
-  glActiveTexture (GL_TEXTURE2);
+  priv->glActiveTexture (GL_TEXTURE2);
   glDisable (GL_TEXTURE_2D);
-  glActiveTexture (GL_TEXTURE0);
+  priv->glActiveTexture (GL_TEXTURE0);
 #endif
 }
 
