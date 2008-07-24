@@ -1,3 +1,8 @@
+2008-07-24  Emmanuele Bassi  <ebassi@openedhand.com>
+
+	* clutter-gst/Makefile.am: Do not install the private
+	clutter-gst-shaders.h header.
+
 2008-07-21  Chris Lord  <chris@openedhand.com>
 
 	Bug #1050 - glActiveTexture usage in clutter-gst-video-sink
