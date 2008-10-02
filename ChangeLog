@@ -1,3 +1,10 @@
+2008-10-2  Robert Bragg  <robert@linux.intel.com>
+
+	* clutter-gst/doc/reference/Makefile.am:
+	Dont use += to set EXTRA_DIST since there isn't a preceding = which
+	automake gets upset about. This means we can remove the patches
+	fixing this in Poky.
+
 2008-07-24  Emmanuele Bassi  <ebassi@openedhand.com>
 
 	* clutter-gst/Makefile.am: Do not install the private
