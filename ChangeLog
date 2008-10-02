@@ -1,4 +1,9 @@
 2008-10-2  Robert Bragg  <robert@linux.intel.com>
+	
+	* clutter-gst/doc/reference/Makefile.am:
+	reverts previous change: It's Poky that needs changing.
+
+2008-10-2  Robert Bragg  <robert@linux.intel.com>
 
 	* clutter-gst/doc/reference/Makefile.am:
 	Dont use += to set EXTRA_DIST since there isn't a preceding = which
