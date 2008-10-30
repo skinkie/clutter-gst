@@ -300,10 +300,15 @@ set_volume (ClutterMedia *media,
   if (!priv->playbin)
     return;
   
+  if (volume > 1.0)
+    volume = 1.0;
+  else if (volume <= 0.0)
+    volume = 0.0;
+
   g_object_set (G_OBJECT (audio->priv->playbin),
-		"volume", volume,
+		"volume", volume * 10.0,
 		NULL);
-  
+
   g_object_notify (G_OBJECT (audio), "volume");
 }
 
@@ -324,8 +329,8 @@ get_volume (ClutterMedia *media)
   g_object_get (priv->playbin,
 		"volume", &volume,
 		NULL);
-  
-  return volume;
+
+  return volume * 0.1;
 }
 
 static gboolean

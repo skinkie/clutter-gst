@@ -35,6 +35,7 @@ main (int argc, char *argv[])
   audio = clutter_gst_audio_new ();
   clutter_media_set_uri (CLUTTER_MEDIA (audio), argv[1]);
   clutter_media_set_playing (CLUTTER_MEDIA (audio), TRUE);
+  clutter_media_set_volume (CLUTTER_MEDIA (audio), 0.1);
 
   /* start the timeline */
   clutter_timeline_start (timeline);
