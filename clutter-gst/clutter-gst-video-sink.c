@@ -46,7 +46,6 @@
 #include <gst/riff/riff-ids.h>
 
 #include <glib.h>
-#include <clutter/clutter.h>
 #include <string.h>
 
 static gchar *ayuv_to_rgba_shader = \

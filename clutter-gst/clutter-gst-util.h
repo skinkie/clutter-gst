@@ -28,7 +28,7 @@
 #ifndef _HAVE_CLUTTER_GST_UTIL_H
 #define _HAVE_CLUTTER_GST_UTIL_H
 
-#include <clutter/clutter-main.h>
+#include <clutter/clutter.h>
 
 G_BEGIN_DECLS
 
