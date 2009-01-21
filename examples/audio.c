@@ -3,7 +3,6 @@
 int
 main (int argc, char *argv[])
 {
-  ClutterTimeline  *timeline;
   ClutterActor     *stage, *label;
   ClutterColor      stage_color = { 0xcc, 0xcc, 0xcc, 0xff };
   ClutterGstAudio  *audio;
@@ -22,23 +21,16 @@ main (int argc, char *argv[])
 		           &stage_color);
 
   /* Make a label */
-  label = clutter_label_new ();
-  clutter_label_set_text (CLUTTER_LABEL (label), "Music");
+  label = clutter_text_new ();
+  clutter_text_set_text (CLUTTER_TEXT (label), "Music");
   clutter_actor_set_position (label, 100, 100);
   clutter_group_add (CLUTTER_GROUP (stage), label);
-
-  /* Make a timeline */
-  timeline = clutter_timeline_new (100, 30); /* num frames, fps */
-  g_object_set(timeline, "loop", TRUE, NULL);
 
   /* Set up audio player */
   audio = clutter_gst_audio_new ();
   clutter_media_set_uri (CLUTTER_MEDIA (audio), argv[1]);
   clutter_media_set_playing (CLUTTER_MEDIA (audio), TRUE);
-  clutter_media_set_volume (CLUTTER_MEDIA (audio), 0.1);
-
-  /* start the timeline */
-  clutter_timeline_start (timeline);
+  clutter_media_set_audio_volume (CLUTTER_MEDIA (audio), 0.5);
 
   clutter_actor_show_all (stage);
 

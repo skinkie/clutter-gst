@@ -7,8 +7,10 @@
  *
  * Authored By Matthew Allum  <mallum@openedhand.com>
  *             Jorn Baayen <jorn@openedhand.com>
+ *             Emmanuele Bassi <ebassi@linux.intel.com>
  *
  * Copyright (C) 2006 OpenedHand
+ * Copyright (C) 2009 Intel Corp.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -45,31 +47,35 @@
 struct _ClutterGstAudioPrivate
 {
   GstElement *playbin;
-  char       *uri;
-  gboolean    can_seek;
-  int         buffer_percent;
-  int         duration;
-  guint       tick_timeout_id;
+
+  gchar *uri;
+
+  guint can_seek : 1;
+
+  gdouble buffer_fill;
+
+  guint duration;
+
+  guint tick_timeout_id;
 };
 
-enum {
+enum
+{
   PROP_0,
+
   /* ClutterMedia proprs */
   PROP_URI,
   PROP_PLAYING,
-  PROP_POSITION,
-  PROP_VOLUME,
+  PROP_PROGRESS,
+  PROP_AUDIO_VOLUME,
   PROP_CAN_SEEK,
-  PROP_BUFFER_PERCENT,
+  PROP_BUFFER_FILL,
   PROP_DURATION
 };
 
-
 #define TICK_TIMEOUT 0.5
 
-static void clutter_media_init (ClutterMediaInterface *iface);
-
-static gboolean tick_timeout (ClutterGstAudio *audio);
+static void clutter_media_init (ClutterMediaIface *iface);
 
 G_DEFINE_TYPE_WITH_CODE (ClutterGstAudio,
                          clutter_gst_audio,
@@ -79,17 +85,23 @@ G_DEFINE_TYPE_WITH_CODE (ClutterGstAudio,
 
 /* Interface implementation */
 
-static void
-set_uri (ClutterMedia    *media,
-	 const char      *uri)
+static gboolean
+tick_timeout (gpointer data)
 {
-  ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
-  ClutterGstAudioPrivate *priv; 
-  GstState                state, pending;
+  GObject *audio = data;
 
-  g_return_if_fail (CLUTTER_GST_IS_AUDIO (audio));
+  g_object_notify (audio, "progress");
 
-  priv = audio->priv;
+  return TRUE;
+}
+
+static void
+set_uri (ClutterGstAudio *audio,
+	 const gchar     *uri)
+{
+  ClutterGstAudioPrivate *priv = audio->priv;
+  GObject *self = G_OBJECT (audio);
+  GstState state, pending;
 
   if (!priv->playbin)
     return;
@@ -99,20 +111,18 @@ set_uri (ClutterMedia    *media,
   if (uri) 
     {
       priv->uri = g_strdup (uri);
-    
-      /**
-       * Ensure the tick timeout is installed.
+
+      /* Ensure the tick timeout is installed.
        * 
        * We also have it installed in PAUSED state, because
        * seeks etc may have a delayed effect on the position.
-       **/
-    if (priv->tick_timeout_id == 0) 
-      {
-	priv->tick_timeout_id = g_timeout_add (TICK_TIMEOUT * 1000,
-					       (GSourceFunc) tick_timeout,
-					       audio);
-      }
-    } 
+       */
+      if (priv->tick_timeout_id == 0)
+        {
+          priv->tick_timeout_id =
+            g_timeout_add (TICK_TIMEOUT * 1000, tick_timeout, audio);
+        }
+    }
   else 
     {
       priv->uri = NULL;
@@ -123,7 +133,7 @@ set_uri (ClutterMedia    *media,
 	  priv->tick_timeout_id = 0;
 	}
     }
-  
+
   priv->can_seek = FALSE;
   priv->duration = 0;
 
@@ -131,88 +141,57 @@ set_uri (ClutterMedia    *media,
 
   if (pending)
     state = pending;
-  
+
   gst_element_set_state (priv->playbin, GST_STATE_NULL);
   
-  g_object_set (priv->playbin,
-		"uri", uri,
-		NULL);
-  
-  /**
-   * Restore state.
-   **/
+  g_object_set (priv->playbin, "uri", uri, NULL);
+
+  /* Restore state */
   if (uri) 
     gst_element_set_state (priv->playbin, state);
-  
-  /*
-   * Emit notififications for all these to make sure UI is not showing
+
+  /* Emit notififications for all these to make sure UI is not showing
    * any properties of the old URI.
    */
-  g_object_notify (G_OBJECT (audio), "uri");
-  g_object_notify (G_OBJECT (audio), "can-seek");
-  g_object_notify (G_OBJECT (audio), "duration");
-  g_object_notify (G_OBJECT (audio), "position");
-  
-}
-
-static const char *
-get_uri (ClutterMedia *media)
-{
-  ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
-  ClutterGstAudioPrivate *priv; 
-
-  g_return_val_if_fail (CLUTTER_GST_IS_AUDIO (audio), NULL);
-
-  priv = audio->priv;
-
-  return priv->uri;
+  g_object_notify (self, "uri");
+  g_object_notify (self, "can-seek");
+  g_object_notify (self, "duration");
+  g_object_notify (self, "progress");
 }
 
 static void
-set_playing (ClutterMedia *media,
+set_playing (ClutterGstAudio *audio,
 	     gboolean         playing)
 {
-  ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
-  ClutterGstAudioPrivate *priv; 
-
-  g_return_if_fail (CLUTTER_GST_IS_AUDIO (audio));
-
-  priv = audio->priv;
+  ClutterGstAudioPrivate *priv = audio->priv;
 
   if (!priv->playbin)
     return;
         
   if (priv->uri) 
     {
-      GstState state;
+      GstState state = GST_STATE_PAUSED;
     
       if (playing)
 	state = GST_STATE_PLAYING;
-      else
-	state = GST_STATE_PAUSED;
     
-      gst_element_set_state (audio->priv->playbin, state);
-    } 
+      gst_element_set_state (priv->playbin, state);
+    }
   else 
     {
       if (playing)
-	g_warning ("Tried to play, but no URI is loaded.");
+	g_warning ("Unable to start playing: no URI is set");
     }
   
   g_object_notify (G_OBJECT (audio), "playing");
-  g_object_notify (G_OBJECT (audio), "position");
+  g_object_notify (G_OBJECT (audio), "progress");
 }
 
 static gboolean
-get_playing (ClutterMedia *media)
+get_playing (ClutterGstAudio *audio)
 {
-  ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
-  ClutterGstAudioPrivate *priv; 
-  GstState                state, pending;
-
-  g_return_val_if_fail (CLUTTER_GST_IS_AUDIO (audio), FALSE);
-	
-  priv = audio->priv;
+  ClutterGstAudioPrivate *priv = audio->priv;
+  GstState state, pending;
 
   if (!priv->playbin)
     return FALSE;
@@ -226,16 +205,13 @@ get_playing (ClutterMedia *media)
 }
 
 static void
-set_position (ClutterMedia *media,
-	      int              position) /* seconds */
+set_progress (ClutterGstAudio *audio,
+	      gdouble          progress)
 {
-  ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
-  ClutterGstAudioPrivate *priv; 
-  GstState                state, pending;
-
-  g_return_if_fail (CLUTTER_GST_IS_AUDIO (audio));
-
-  priv = audio->priv;
+  ClutterGstAudioPrivate *priv = audio->priv;
+  GstState state, pending;
+  GstQuery *duration_q;
+  gint64 position;
 
   if (!priv->playbin)
     return;
@@ -247,136 +223,101 @@ set_position (ClutterMedia *media,
 
   gst_element_set_state (priv->playbin, GST_STATE_PAUSED);
 
+  duration_q = gst_query_new_duration (GST_FORMAT_TIME);
+
+  if (gst_element_query (priv->playbin, duration_q))
+    {
+      gint64 duration = 0;
+
+      gst_query_parse_duration (duration_q, NULL, &duration);
+
+      position = progress * duration;
+    }
+  else
+    position = 0;
+
+  gst_query_unref (duration_q);
+
   gst_element_seek (priv->playbin,
 		    1.0,
 		    GST_FORMAT_TIME,
 		    GST_SEEK_FLAG_FLUSH,
 		    GST_SEEK_TYPE_SET,
-		    position * GST_SECOND,
+		    position,
 		    0, 0);
 
   gst_element_set_state (priv->playbin, state);
+
+  g_object_notify (G_OBJECT (audio), "progress");
 }
 
-static int
-get_position (ClutterMedia *media)
+static gdouble
+get_progress (ClutterGstAudio *audio)
 {
-  ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
-  ClutterGstAudioPrivate *priv; 
-  GstQuery               *query;
-  gint64                  position;
+  ClutterGstAudioPrivate *priv = audio->priv;
+  GstQuery *position_q, *duration_q;
+  gdouble progress;
 
-  g_return_val_if_fail (CLUTTER_GST_IS_AUDIO (audio), -1);
-
-  priv = audio->priv;
-
-  if (!priv->playbin)
-    return -1;
-  
-  query = gst_query_new_position (GST_FORMAT_TIME);
-  
-  if (gst_element_query (priv->playbin, query)) 
-    gst_query_parse_position (query, NULL, &position);
-  else
-    position = 0;
-  
-  gst_query_unref (query);
-  
-  return (position / GST_SECOND);
-}
-
-static void
-set_volume (ClutterMedia *media,
-	    double           volume)
-{
-  ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
-  ClutterGstAudioPrivate *priv; 
-
-  g_return_if_fail (CLUTTER_GST_IS_AUDIO (audio));
-  // g_return_if_fail (volume >= 0.0 && volume <= GST_VOL_MAX);
-
-  priv = audio->priv;
-  
-  if (!priv->playbin)
-    return;
-  
-  if (volume > 1.0)
-    volume = 1.0;
-  else if (volume <= 0.0)
-    volume = 0.0;
-
-  g_object_set (G_OBJECT (audio->priv->playbin),
-		"volume", volume * 10.0,
-		NULL);
-
-  g_object_notify (G_OBJECT (audio), "volume");
-}
-
-static double
-get_volume (ClutterMedia *media)
-{
-  ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
-  ClutterGstAudioPrivate *priv; 
-  double                  volume;
-
-  g_return_val_if_fail (CLUTTER_GST_IS_AUDIO (audio), 0.0);
-
-  priv = audio->priv;
-  
   if (!priv->playbin)
     return 0.0;
 
-  g_object_get (priv->playbin,
-		"volume", &volume,
-		NULL);
+  position_q = gst_query_new_position (GST_FORMAT_TIME);
+  duration_q = gst_query_new_duration (GST_FORMAT_TIME);
 
-  return volume * 0.1;
-}
+  if (gst_element_query (priv->playbin, position_q) &&
+      gst_element_query (priv->playbin, duration_q))
+    {
+      gint64 position, duration;
 
-static gboolean
-can_seek (ClutterMedia *media)
-{
-  ClutterGstAudio        *audio = CLUTTER_GST_AUDIO(media);
+      position = duration = 0;
 
-  g_return_val_if_fail (CLUTTER_GST_IS_AUDIO (audio), FALSE);
-  
-  return audio->priv->can_seek;
-}
+      gst_query_parse_position (position_q, NULL, &position);
+      gst_query_parse_duration (duration_q, NULL, &duration);
 
-static int
-get_buffer_percent (ClutterMedia *media)
-{
-  ClutterGstAudio         *audio = CLUTTER_GST_AUDIO(media);
+      progress = CLAMP ((gdouble) position / (gdouble) duration, 0.0, 1.0);
+    }
+  else
+    progress = 0.0;
 
-  g_return_val_if_fail (CLUTTER_GST_IS_AUDIO (audio), -1);
-  
-  return audio->priv->buffer_percent;
-}
+  gst_query_unref (position_q);
+  gst_query_unref (duration_q);
 
-static int
-get_duration (ClutterMedia *media)
-{
-  ClutterGstAudio         *audio = CLUTTER_GST_AUDIO(media);
-
-  g_return_val_if_fail (CLUTTER_GST_IS_AUDIO (audio), -1);
-
-  return audio->priv->duration;
+  return progress;
 }
 
 static void
-clutter_media_init (ClutterMediaInterface *iface)
+set_audio_volume (ClutterGstAudio *audio,
+                  gdouble          volume)
 {
-  iface->set_uri            = set_uri;
-  iface->get_uri            = get_uri;
-  iface->set_playing        = set_playing;
-  iface->get_playing        = get_playing;
-  iface->set_position       = set_position;
-  iface->get_position       = get_position;
-  iface->set_volume         = set_volume;
-  iface->get_volume         = get_volume;
-  iface->can_seek           = can_seek;
-  iface->get_buffer_percent = get_buffer_percent;
-  iface->get_duration       = get_duration;
+  ClutterGstAudioPrivate *priv = audio->priv;
+
+  if (!priv->playbin)
+    return;
+
+  /* the :volume property is in the [0, 10] interval */
+  g_object_set (G_OBJECT (priv->playbin), "volume", volume * 10.0, NULL);
+
+  g_object_notify (G_OBJECT (audio), "audio-volume");
+}
+
+static gdouble
+get_audio_volume (ClutterGstAudio *audio)
+{
+  ClutterGstAudioPrivate *priv = audio->priv;
+  gdouble volume = 0.0;
+
+  if (!priv->playbin)
+    return 0.0;
+
+  /* the :volume property is in the [0, 10] interval */
+  g_object_get (priv->playbin, "volume", &volume, NULL);
+
+  return CLAMP (volume / 10.0, 0.0, 1.0);
+}
+
+static void
+clutter_media_init (ClutterMediaIface *iface)
+{
 }
 
 static void
@@ -416,8 +357,7 @@ clutter_gst_audio_finalize (GObject *object)
   self = CLUTTER_GST_AUDIO(object); 
   priv = self->priv;
 
-  if (priv->uri)
-    g_free(priv->uri);
+  g_free (priv->uri);
 
   G_OBJECT_CLASS (clutter_gst_audio_parent_class)->finalize (object);
 }
@@ -435,21 +375,21 @@ clutter_gst_audio_set_property (GObject      *object,
   switch (property_id)
     {
     case PROP_URI:
-      clutter_media_set_uri (CLUTTER_MEDIA(audio), 
-			     g_value_get_string (value));
+      set_uri (audio, g_value_get_string (value));
       break;
+
     case PROP_PLAYING:
-      clutter_media_set_playing (CLUTTER_MEDIA(audio),
-				 g_value_get_boolean (value));
+      set_playing (audio, g_value_get_boolean (value));
       break;
-    case PROP_POSITION:
-      clutter_media_set_position (CLUTTER_MEDIA(audio),
-				  g_value_get_int (value));
+
+    case PROP_PROGRESS:
+      set_progress (audio, g_value_get_double (value));
       break;
-    case PROP_VOLUME:
-      clutter_media_set_volume (CLUTTER_MEDIA(audio),
-				g_value_get_double (value));
+
+    case PROP_AUDIO_VOLUME:
+      set_audio_volume (audio, g_value_get_double (value));
       break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
@@ -461,35 +401,39 @@ clutter_gst_audio_get_property (GObject    *object,
 				GValue     *value, 
 				GParamSpec *pspec)
 {
-  ClutterGstAudio *audio;
-  ClutterMedia    *media;
-
-  audio = CLUTTER_GST_AUDIO (object);
-  media = CLUTTER_MEDIA (audio);
+  ClutterGstAudio *audio = CLUTTER_GST_AUDIO (object);
+  ClutterGstAudioPrivate *priv = audio->priv;
 
   switch (property_id)
     {
     case PROP_URI:
-      g_value_set_string (value, clutter_media_get_uri (media));
+      g_value_set_string (value, priv->uri);
       break;
+
     case PROP_PLAYING:
-      g_value_set_boolean (value, clutter_media_get_playing (media));
+      g_value_set_boolean (value, get_playing (audio));
       break;
-    case PROP_POSITION:
-      g_value_set_int (value, clutter_media_get_position (media));
+
+    case PROP_PROGRESS:
+      g_value_set_int (value, get_progress (audio));
       break;
-    case PROP_VOLUME:
-      g_value_set_double (value, clutter_media_get_volume (media));
+
+    case PROP_AUDIO_VOLUME:
+      g_value_set_double (value, get_audio_volume (audio));
       break;
+
     case PROP_CAN_SEEK:
-      g_value_set_boolean (value, clutter_media_get_can_seek (media));
+      g_value_set_boolean (value, priv->can_seek);
       break;
-    case PROP_BUFFER_PERCENT:
-      g_value_set_int (value, clutter_media_get_buffer_percent (media));
+
+    case PROP_BUFFER_FILL:
+      g_value_set_double (value, priv->buffer_fill);
       break;
+
     case PROP_DURATION:
-      g_value_set_int (value, clutter_media_get_duration (media));
+      g_value_set_uint (value, priv->duration);
       break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
@@ -498,25 +442,29 @@ clutter_gst_audio_get_property (GObject    *object,
 static void
 clutter_gst_audio_class_init (ClutterGstAudioClass *klass)
 {
-  GObjectClass        *object_class;
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-  object_class = (GObjectClass*)klass;
+  g_type_class_add_private (klass, sizeof (ClutterGstAudioPrivate));
 
   object_class->dispose      = clutter_gst_audio_dispose;
   object_class->finalize     = clutter_gst_audio_finalize;
   object_class->set_property = clutter_gst_audio_set_property;
   object_class->get_property = clutter_gst_audio_get_property;
 
-  /* Interface props */
-
-  g_object_class_override_property (object_class, PROP_URI, "uri");
-  g_object_class_override_property (object_class, PROP_PLAYING, "playing");
-  g_object_class_override_property (object_class, PROP_POSITION, "position");
-  g_object_class_override_property (object_class, PROP_VOLUME, "volume");
-  g_object_class_override_property (object_class, PROP_CAN_SEEK, "can-seek");
-  g_object_class_override_property (object_class, PROP_DURATION, "duration");
-  g_object_class_override_property (object_class, PROP_BUFFER_PERCENT, 
-				    "buffer-percent" );
+  g_object_class_override_property (object_class,
+                                    PROP_URI, "uri");
+  g_object_class_override_property (object_class,
+                                    PROP_PLAYING, "playing");
+  g_object_class_override_property (object_class,
+                                    PROP_PROGRESS, "progress");
+  g_object_class_override_property (object_class,
+                                    PROP_AUDIO_VOLUME, "audio-volume");
+  g_object_class_override_property (object_class,
+                                    PROP_CAN_SEEK, "can-seek");
+  g_object_class_override_property (object_class,
+                                    PROP_DURATION, "duration");
+  g_object_class_override_property (object_class,
+                                    PROP_BUFFER_FILL, "buffer-fill");
 }
 
 static void
@@ -539,7 +487,7 @@ bus_message_eos_cb (GstBus          *bus,
                     GstMessage      *message,
                     ClutterGstAudio *audio)
 {
-  g_object_notify (G_OBJECT (audio), "position");
+  g_object_notify (G_OBJECT (audio), "progress");
   
   g_signal_emit_by_name (CLUTTER_MEDIA(audio), "eos");
 
@@ -547,38 +495,28 @@ bus_message_eos_cb (GstBus          *bus,
 }
 
 static void
-bus_message_tag_cb (GstBus          *bus,
-                    GstMessage      *message,
-                    ClutterGstAudio *audio)
-{
-  GstTagList *tag_list;
-
-  gst_message_parse_tag (message, &tag_list);
-#if 0
-  g_signal_emit_by_name (CLUTTER_MEDIA(audio), 
-			 "metadata-available", 
-			 tag_list);
-#endif  
-  gst_tag_list_free (tag_list);
-}
-
-static void
 bus_message_buffering_cb (GstBus          *bus,
                           GstMessage      *message,
                           ClutterGstAudio *audio)
 {
+  ClutterGstAudioPrivate *priv = audio->priv;
   const GstStructure *str;
+  gint buffer_percent;
+  gboolean res;
   
   str = gst_message_get_structure (message);
   if (!str)
     return;
 
-  if (!gst_structure_get_int (str,
-			      "buffer-percent",
-			      &audio->priv->buffer_percent))
-    return;
-        
-  g_object_notify (G_OBJECT (audio), "buffer-percent");
+  res = gst_structure_get_int (str, "buffer-percent", &buffer_percent);
+  if (res)
+    {
+      priv->buffer_fill = CLAMP ((gdouble) buffer_percent / 100.0,
+                                 0.0,
+                                 1.0);
+
+      g_object_notify (G_OBJECT (audio), "buffer-fill");
+    }
 }
 
 static void
@@ -586,17 +524,15 @@ bus_message_duration_cb (GstBus          *bus,
                          GstMessage      *message,
                          ClutterGstAudio *audio)
 {
+  ClutterGstAudioPrivate *priv = audio->priv;
   GstFormat format;
   gint64 duration;
 
-  gst_message_parse_duration (message,
-			      &format,
-			      &duration);
-
+  gst_message_parse_duration (message, &format, &duration);
   if (format != GST_FORMAT_TIME)
     return;
   
-  audio->priv->duration = duration / GST_SECOND;
+  priv->duration = duration / GST_SECOND;
 
   g_object_notify (G_OBJECT (audio), "duration");
 }
@@ -606,11 +542,11 @@ bus_message_state_change_cb (GstBus          *bus,
                              GstMessage      *message,
                              ClutterGstAudio *audio)
 {
-  gpointer src;
+  ClutterGstAudioPrivate *priv = audio->priv;
   GstState old_state, new_state;
+  gpointer src;
 
   src = GST_MESSAGE_SRC (message);
-        
   if (src != audio->priv->playbin)
     return;
 
@@ -621,48 +557,44 @@ bus_message_state_change_cb (GstBus          *bus,
     {
       GstQuery *query;
       
-      /**
-       * Determine whether we can seek.
-       **/
+      /* Determine whether we can seek */
       query = gst_query_new_seeking (GST_FORMAT_TIME);
       
-      if (gst_element_query (audio->priv->playbin, query)) {
-	gst_query_parse_seeking (query,
-				 NULL,
-				 &audio->priv->can_seek,
-				 NULL,
-				 NULL);
-      } else {
-	/*
-	 * Could not query for ability to seek. Determine
-	 * using URI.
-	 */
-	
-	if (g_str_has_prefix (audio->priv->uri,
-			      "http://")) {
-	  audio->priv->can_seek = FALSE;
-	} else {
-	  audio->priv->can_seek = TRUE;
+      if (gst_element_query (audio->priv->playbin, query))
+        {
+          gboolean can_seek = FALSE;
+
+	  gst_query_parse_seeking (query, NULL, &can_seek,
+                                   NULL,
+                                   NULL);
+
+          priv->can_seek = (can_seek == TRUE) ? TRUE : FALSE;
+        }
+      else
+        {
+	  /* could not query for ability to seek by querying the
+           * playbin; let's crudely try by using the URI
+	   */
+          if (priv->uri && g_str_has_prefix (priv->uri, "http://"))
+            priv->can_seek = FALSE;
+          else
+            priv->can_seek = TRUE;
 	}
-      }
-      
+
       gst_query_unref (query);
       
       g_object_notify (G_OBJECT (audio), "can-seek");
       
-      /**
-       * Determine the duration.
-       **/
+      /* Determine the duration */
       query = gst_query_new_duration (GST_FORMAT_TIME);
-      
+
       if (gst_element_query (audio->priv->playbin, query)) 
 	{
 	  gint64 duration;
 	  
 	  gst_query_parse_duration (query, NULL, &duration);
+	  priv->duration = duration / GST_SECOND;
 
-	  audio->priv->duration = duration / GST_SECOND;
-                        
 	  g_object_notify (G_OBJECT (audio), "duration");
 	}
 
@@ -671,29 +603,23 @@ bus_message_state_change_cb (GstBus          *bus,
 }
 
 static gboolean
-tick_timeout (ClutterGstAudio *audio)
-{
-  g_object_notify (G_OBJECT (audio), "position");
-
-  return TRUE;
-}
-
-static gboolean
 lay_pipeline (ClutterGstAudio *audio)
 {
-  ClutterGstAudioPrivate *priv;
-  GstElement             *audio_sink = NULL;
-
-  priv = audio->priv;
+  ClutterGstAudioPrivate *priv = audio->priv;
+  GstElement *audio_sink = NULL;
 
   priv->playbin = gst_element_factory_make ("playbin", "playbin");
 
   if (!priv->playbin) 
     {
-      g_warning ("Unable to create playbin GST element.");
+      g_warning ("Unable to create playbin element");
       return FALSE;
     }
 
+  /* ugh - let's go through the audio sinks
+   *
+   * FIXME - there must be a way to ask gstreamer to do this for us
+   */
   audio_sink = gst_element_factory_make ("gconfaudiosink", "audio-sink");
   if (!audio_sink) 
     {
@@ -704,14 +630,13 @@ lay_pipeline (ClutterGstAudio *audio)
 	  g_warning ("Could not create a GST audio_sink. "
 		     "Audio unavailable.");
 
-	  if (!audio_sink) 	/* Need to bother ? */
+          /* do we even need to bother? */
+	  if (!audio_sink)
 	    audio_sink = gst_element_factory_make ("fakesink", "audio-sink");
 	}
     }
 
-  g_object_set (G_OBJECT (priv->playbin),
-		"audio-sink", audio_sink,
-		NULL);
+  g_object_set (G_OBJECT (priv->playbin), "audio-sink", audio_sink, NULL);
 
   return TRUE;
 }
@@ -720,12 +645,13 @@ static void
 clutter_gst_audio_init (ClutterGstAudio *audio)
 {
   ClutterGstAudioPrivate *priv;
-  GstBus                 *bus;
+  GstBus *bus;
 
-  priv         = g_new0 (ClutterGstAudioPrivate, 1);
-  audio->priv  = priv;
+  audio->priv = priv =
+    G_TYPE_INSTANCE_GET_PRIVATE (audio, CLUTTER_GST_TYPE_AUDIO,
+                                 ClutterGstAudioPrivate);
 
-  if (!lay_pipeline(audio))
+  if (!lay_pipeline (audio))
     {
       g_warning("Failed to initiate suitable playback pipeline.");
       return;
@@ -735,45 +661,23 @@ clutter_gst_audio_init (ClutterGstAudio *audio)
 
   gst_bus_add_signal_watch (bus);
 
-  g_signal_connect_object (bus,
-			   "message::error",
+  g_signal_connect_object (bus, "message::error",
 			   G_CALLBACK (bus_message_error_cb),
-			   audio,
-			   0);
-
-  g_signal_connect_object (bus,
-			   "message::eos",
+			   audio, 0);
+  g_signal_connect_object (bus, "message::eos",
 			   G_CALLBACK (bus_message_eos_cb),
-			   audio,
-			   0);
-
-  g_signal_connect_object (bus,
-			   "message::tag",
-			   G_CALLBACK (bus_message_tag_cb),
-			   audio,
-			   0);
-
-  g_signal_connect_object (bus,
-			   "message::buffering",
+			   audio, 0);
+  g_signal_connect_object (bus, "message::buffering",
 			   G_CALLBACK (bus_message_buffering_cb),
-			   audio,
-			   0);
-
-  g_signal_connect_object (bus,
-			   "message::duration",
+			   audio, 0);
+  g_signal_connect_object (bus, "message::duration",
 			   G_CALLBACK (bus_message_duration_cb),
-			   audio,
-			   0);
-
-  g_signal_connect_object (bus,
-			   "message::state-changed",
+			   audio, 0);
+  g_signal_connect_object (bus, "message::state-changed",
 			   G_CALLBACK (bus_message_state_change_cb),
-			   audio,
-			   0);
+			   audio, 0);
 
   gst_object_unref (GST_OBJECT (bus));
-
-  return;
 }
 
 /**

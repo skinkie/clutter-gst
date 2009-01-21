@@ -44,31 +44,34 @@
 struct _ClutterGstVideoTexturePrivate
 {
   GstElement *playbin;
-  char       *uri;
-  gboolean    can_seek;
-  int         buffer_percent;
-  int         duration;
-  guint       tick_timeout_id;
+
+  gchar *uri;
+
+  guint can_seek : 1;
+
+  guint tick_timeout_id;
+
+  gdouble buffer_fill;
+  guint duration;
 };
 
 enum {
   PROP_0,
+
   /* ClutterMedia proprs */
   PROP_URI,
   PROP_PLAYING,
-  PROP_POSITION,
-  PROP_VOLUME,
+  PROP_PROGRESS,
+  PROP_AUDIO_VOLUME,
   PROP_CAN_SEEK,
-  PROP_BUFFER_PERCENT,
+  PROP_BUFFER_FILL,
   PROP_DURATION
 };
 
 
 #define TICK_TIMEOUT 0.5
 
-static void clutter_media_init (ClutterMediaInterface *iface);
-
-static gboolean tick_timeout (ClutterGstVideoTexture *video_texture);
+static void clutter_media_init (ClutterMediaIface *iface);
 
 G_DEFINE_TYPE_WITH_CODE (ClutterGstVideoTexture,
                          clutter_gst_video_texture,
@@ -78,17 +81,23 @@ G_DEFINE_TYPE_WITH_CODE (ClutterGstVideoTexture,
 
 /* Interface implementation */
 
-static void
-set_uri (ClutterMedia *media,
-	 const char      *uri)
+static gboolean
+tick_timeout (gpointer data)
 {
-  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
-  ClutterGstVideoTexturePrivate *priv; 
+  GObject *video_texture = data;
+
+  g_object_notify (video_texture, "progress");
+
+  return TRUE;
+}
+
+static void
+set_uri (ClutterGstVideoTexture *video_texture,
+         const gchar            *uri)
+{
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+  GObject *self = G_OBJECT (video_texture);
   GstState state, pending;
-
-  g_return_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (video_texture));
-
-  priv = video_texture->priv;
 
   if (!priv->playbin)
     return;
@@ -98,31 +107,29 @@ set_uri (ClutterMedia *media,
   if (uri) 
     {
       priv->uri = g_strdup (uri);
-    
-      /**
-       * Ensure the tick timeout is installed.
+
+      /* Ensure the tick timeout is installed.
        * 
        * We also have it installed in PAUSED state, because
        * seeks etc may have a delayed effect on the position.
-       **/
-    if (priv->tick_timeout_id == 0)
-      {
-	priv->tick_timeout_id = g_timeout_add (TICK_TIMEOUT * 1000,
-					       (GSourceFunc) tick_timeout,
-					       video_texture);
-      }
-    } 
+       */
+      if (priv->tick_timeout_id == 0)
+        {
+          priv->tick_timeout_id =
+            g_timeout_add (TICK_TIMEOUT * 1000, tick_timeout, self);
+        }
+    }
   else 
     {
       priv->uri = NULL;
-    
-      if (priv->tick_timeout_id > 0) 
+
+      if (priv->tick_timeout_id != 0)
 	{
 	  g_source_remove (priv->tick_timeout_id);
 	  priv->tick_timeout_id = 0;
 	}
     }
-  
+
   priv->can_seek = FALSE;
   priv->duration = 0;
 
@@ -130,88 +137,60 @@ set_uri (ClutterMedia *media,
 
   if (pending)
     state = pending;
-  
+
   gst_element_set_state (priv->playbin, GST_STATE_NULL);
-  
-  g_object_set (priv->playbin,
-		"uri", uri,
-		NULL);
-  
-  /**
+
+  g_object_set (priv->playbin, "uri", uri, NULL);
+
+  /*
    * Restore state.
-   **/
-  if (uri) 
+   */
+  if (uri)
     gst_element_set_state (priv->playbin, state);
-  
+
   /*
    * Emit notififications for all these to make sure UI is not showing
    * any properties of the old URI.
    */
-  g_object_notify (G_OBJECT (video_texture), "uri");
-  g_object_notify (G_OBJECT (video_texture), "can-seek");
-  g_object_notify (G_OBJECT (video_texture), "duration");
-  g_object_notify (G_OBJECT (video_texture), "position");
-  
-}
-
-static const char *
-get_uri (ClutterMedia *media)
-{
-  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
-  ClutterGstVideoTexturePrivate *priv; 
-
-  g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (video_texture), NULL);
-
-  priv = video_texture->priv;
-
-  return priv->uri;
+  g_object_notify (self, "uri");
+  g_object_notify (self, "can-seek");
+  g_object_notify (self, "duration");
+  g_object_notify (self, "progress");
 }
 
 static void
-set_playing (ClutterMedia *media,
-	     gboolean         playing)
+set_playing (ClutterGstVideoTexture *video_texture,
+             gboolean                playing)
 {
-  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
-  ClutterGstVideoTexturePrivate *priv; 
-
-  g_return_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (video_texture));
-
-  priv = video_texture->priv;
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
 
   if (!priv->playbin)
     return;
-        
+
   if (priv->uri) 
     {
-      GstState state;
-    
+      GstState state = GST_STATE_PAUSED;
+
       if (playing)
 	state = GST_STATE_PLAYING;
-      else
-	state = GST_STATE_PAUSED;
-    
-      gst_element_set_state (video_texture->priv->playbin, state);
+
+      gst_element_set_state (priv->playbin, state);
     } 
   else 
     {
       if (playing)
-	g_warning ("Tried to play, but no URI is loaded.");
+	g_warning ("Unable to start playing: no URI is set");
     }
   
   g_object_notify (G_OBJECT (video_texture), "playing");
-  g_object_notify (G_OBJECT (video_texture), "position");
+  g_object_notify (G_OBJECT (video_texture), "progress");
 }
 
 static gboolean
-get_playing (ClutterMedia *media)
+get_playing (ClutterGstVideoTexture *video_texture)
 {
-  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
-  ClutterGstVideoTexturePrivate *priv; 
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
   GstState state, pending;
-
-  g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (video_texture), FALSE);
-	
-  priv = video_texture->priv;
 
   if (!priv->playbin)
     return FALSE;
@@ -225,16 +204,13 @@ get_playing (ClutterMedia *media)
 }
 
 static void
-set_position (ClutterMedia *media,
-	      int              position) /* seconds */
+set_progress (ClutterGstVideoTexture *video_texture,
+              gdouble                 progress)
 {
-  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
-  ClutterGstVideoTexturePrivate *priv; 
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
   GstState state, pending;
-
-  g_return_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (video_texture));
-
-  priv = video_texture->priv;
+  GstQuery *duration_q;
+  gint64 position;
 
   if (!priv->playbin)
     return;
@@ -246,136 +222,100 @@ set_position (ClutterMedia *media,
 
   gst_element_set_state (priv->playbin, GST_STATE_PAUSED);
 
+  duration_q = gst_query_new_duration (GST_FORMAT_TIME);
+
+  if (gst_element_query (priv->playbin, duration_q))
+    {
+      gint64 duration = 0;
+
+      gst_query_parse_duration (duration_q, NULL, &duration);
+
+      position = progress * duration;
+    }
+  else
+    position = 0;
+
+  gst_query_unref (duration_q);
+
   gst_element_seek (priv->playbin,
 		    1.0,
 		    GST_FORMAT_TIME,
 		    GST_SEEK_FLAG_FLUSH,
 		    GST_SEEK_TYPE_SET,
-		    position * GST_SECOND,
+		    position,
 		    0, 0);
 
   gst_element_set_state (priv->playbin, state);
+
+  g_object_notify (G_OBJECT (video_texture), "progress");
 }
 
-static int
-get_position (ClutterMedia *media)
+static gdouble
+get_progress (ClutterGstVideoTexture *video_texture)
 {
-  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
-  ClutterGstVideoTexturePrivate *priv; 
-  GstQuery *query;
-  gint64 position;
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+  GstQuery *position_q, *duration_q;
+  gdouble progress;
 
-  g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (video_texture), -1);
-
-  priv = video_texture->priv;
-
-  if (!priv->playbin)
-    return -1;
-  
-  query = gst_query_new_position (GST_FORMAT_TIME);
-  
-  if (gst_element_query (priv->playbin, query)) 
-    gst_query_parse_position (query, NULL, &position);
-  else
-    position = 0;
-  
-  gst_query_unref (query);
-  
-  return (position / GST_SECOND);
-}
-
-static void
-set_volume (ClutterMedia *media,
-	    double           volume)
-{
-  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
-  ClutterGstVideoTexturePrivate *priv; 
-
-  g_return_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (video_texture));
-  // g_return_if_fail (volume >= 0.0 && volume <= GST_VOL_MAX);
-
-  priv = video_texture->priv;
-  
-  if (!priv->playbin)
-    return;
-  
-  if (volume > 1.0)
-    volume = 1.0;
-  else if (volume <= 0.0)
-    volume = 0.0;
-
-  g_object_set (G_OBJECT (video_texture->priv->playbin),
-		"volume", volume * 10.0,
-		NULL);
-
-  g_object_notify (G_OBJECT (video_texture), "volume");
-}
-
-static double
-get_volume (ClutterMedia *media)
-{
-  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
-  ClutterGstVideoTexturePrivate *priv; 
-  double volume;
-
-  g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (video_texture), 0.0);
-
-  priv = video_texture->priv;
-  
   if (!priv->playbin)
     return 0.0;
 
-  g_object_get (priv->playbin,
-		"volume", &volume,
-		NULL);
+  position_q = gst_query_new_position (GST_FORMAT_TIME);
+  duration_q = gst_query_new_duration (GST_FORMAT_TIME);
 
-  return volume * 0.1;
-}
+  if (gst_element_query (priv->playbin, position_q) &&
+      gst_element_query (priv->playbin, duration_q))
+    {
+      gint64 position, duration;
 
-static gboolean
-can_seek (ClutterMedia *media)
-{
-  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
+      position = duration = 0;
 
-  g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (video_texture), FALSE);
+      gst_query_parse_position (position_q, NULL, &position);
+      gst_query_parse_duration (duration_q, NULL, &duration);
+
+      progress = CLAMP ((gdouble) position / (gdouble) duration, 0.0, 1.0);
+    }
+  else
+    progress = 0.0;
   
-  return video_texture->priv->can_seek;
-}
+  gst_query_unref (position_q);
+  gst_query_unref (duration_q);
 
-static int
-get_buffer_percent (ClutterMedia *media)
-{
-  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
-
-  g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (video_texture), -1);
-  
-  return video_texture->priv->buffer_percent;
-}
-
-static int
-get_duration (ClutterMedia *media)
-{
-  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE(media);
-
-  g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (video_texture), -1);
-
-  return video_texture->priv->duration;
+  return progress;
 }
 
 static void
-clutter_media_init (ClutterMediaInterface *iface)
+set_audio_volume (ClutterGstVideoTexture *video_texture,
+                  gdouble                 volume)
 {
-  iface->set_uri            = set_uri;
-  iface->get_uri            = get_uri;
-  iface->set_playing        = set_playing;
-  iface->get_playing        = get_playing;
-  iface->set_position       = set_position;
-  iface->get_position       = get_position;
-  iface->set_volume         = set_volume;
-  iface->get_volume         = get_volume;
-  iface->can_seek           = can_seek;
-  iface->get_buffer_percent = get_buffer_percent;
-  iface->get_duration       = get_duration;
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+
+  if (!priv->playbin)
+    return;
+
+  /* the :volume property is in the [0, 10] interval */
+  g_object_set (G_OBJECT (priv->playbin), "volume", volume * 10.0, NULL);
+  g_object_notify (G_OBJECT (video_texture), "audio-volume");
+}
+
+static gdouble
+get_audio_volume (ClutterGstVideoTexture *video_texture)
+{
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+  gdouble volume = 0.0;
+
+  if (!priv->playbin)
+    return 0.0;
+
+  /* the :volume property is in the [0, 10] interval */
+  g_object_get (priv->playbin, "volume", &volume, NULL);
+
+  return CLAMP (volume / 10.0, 0.0, 1.0);
+}
+
+static void
+clutter_media_init (ClutterMediaIface *iface)
+{
 }
 
 static void
@@ -412,11 +352,10 @@ clutter_gst_video_texture_finalize (GObject *object)
   ClutterGstVideoTexture        *self;
   ClutterGstVideoTexturePrivate *priv; 
 
-  self = CLUTTER_GST_VIDEO_TEXTURE(object); 
+  self = CLUTTER_GST_VIDEO_TEXTURE (object);
   priv = self->priv;
 
-  if (priv->uri)
-    g_free (priv->uri);
+  g_free (priv->uri);
 
   G_OBJECT_CLASS (clutter_gst_video_texture_parent_class)->finalize (object);
 }
@@ -429,26 +368,26 @@ clutter_gst_video_texture_set_property (GObject      *object,
 {
   ClutterGstVideoTexture *video_texture;
 
-  video_texture = CLUTTER_GST_VIDEO_TEXTURE(object);
+  video_texture = CLUTTER_GST_VIDEO_TEXTURE (object);
 
   switch (property_id)
     {
     case PROP_URI:
-      clutter_media_set_uri (CLUTTER_MEDIA(video_texture), 
-			     g_value_get_string (value));
+      set_uri (video_texture, g_value_get_string (value));
       break;
+
     case PROP_PLAYING:
-      clutter_media_set_playing (CLUTTER_MEDIA(video_texture),
-				 g_value_get_boolean (value));
+      set_playing (video_texture, g_value_get_boolean (value));
       break;
-    case PROP_POSITION:
-      clutter_media_set_position (CLUTTER_MEDIA(video_texture),
-				  g_value_get_int (value));
+
+    case PROP_PROGRESS:
+      set_progress (video_texture, g_value_get_double (value));
       break;
-    case PROP_VOLUME:
-      clutter_media_set_volume (CLUTTER_MEDIA(video_texture),
-				g_value_get_double (value));
+
+    case PROP_AUDIO_VOLUME:
+      set_audio_volume (video_texture, g_value_get_double (value));
       break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
@@ -461,34 +400,41 @@ clutter_gst_video_texture_get_property (GObject    *object,
 				        GParamSpec *pspec)
 {
   ClutterGstVideoTexture *video_texture;
-  ClutterMedia           *media;
+  ClutterGstVideoTexturePrivate *priv;
 
   video_texture = CLUTTER_GST_VIDEO_TEXTURE (object);
-  media         = CLUTTER_MEDIA (video_texture);
+  priv = video_texture->priv;
 
   switch (property_id)
     {
     case PROP_URI:
-      g_value_set_string (value, clutter_media_get_uri (media));
+      g_value_set_string (value, priv->uri);
       break;
+
     case PROP_PLAYING:
-      g_value_set_boolean (value, clutter_media_get_playing (media));
+      g_value_set_boolean (value, get_playing (video_texture));
       break;
-    case PROP_POSITION:
-      g_value_set_int (value, clutter_media_get_position (media));
+
+    case PROP_PROGRESS:
+      g_value_set_double (value, get_progress (video_texture));
       break;
-    case PROP_VOLUME:
-      g_value_set_double (value, clutter_media_get_volume (media));
+
+    case PROP_AUDIO_VOLUME:
+      g_value_set_double (value, get_audio_volume (video_texture));
       break;
+
     case PROP_CAN_SEEK:
-      g_value_set_boolean (value, clutter_media_get_can_seek (media));
+      g_value_set_boolean (value, priv->can_seek);
       break;
-    case PROP_BUFFER_PERCENT:
-      g_value_set_int (value, clutter_media_get_buffer_percent (media));
+
+    case PROP_BUFFER_FILL:
+      g_value_set_double (value, priv->buffer_fill);
       break;
+
     case PROP_DURATION:
-      g_value_set_int (value, clutter_media_get_duration (media));
+      g_value_set_int (value, priv->duration);
       break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
@@ -506,15 +452,20 @@ clutter_gst_video_texture_class_init (ClutterGstVideoTextureClass *klass)
   object_class->set_property = clutter_gst_video_texture_set_property;
   object_class->get_property = clutter_gst_video_texture_get_property;
 
-  /* Interface props */
-  g_object_class_override_property (object_class, PROP_URI, "uri");
-  g_object_class_override_property (object_class, PROP_PLAYING, "playing");
-  g_object_class_override_property (object_class, PROP_POSITION, "position");
-  g_object_class_override_property (object_class, PROP_VOLUME, "volume");
-  g_object_class_override_property (object_class, PROP_CAN_SEEK, "can-seek");
-  g_object_class_override_property (object_class, PROP_DURATION, "duration");
-  g_object_class_override_property (object_class, PROP_BUFFER_PERCENT, 
-				    "buffer-percent" );
+  g_object_class_override_property (object_class,
+                                    PROP_URI, "uri");
+  g_object_class_override_property (object_class,
+                                    PROP_PLAYING, "playing");
+  g_object_class_override_property (object_class,
+                                    PROP_PROGRESS, "progress");
+  g_object_class_override_property (object_class,
+                                    PROP_AUDIO_VOLUME, "audio-volume");
+  g_object_class_override_property (object_class,
+                                    PROP_CAN_SEEK, "can-seek");
+  g_object_class_override_property (object_class,
+                                    PROP_DURATION, "duration");
+  g_object_class_override_property (object_class,
+                                    PROP_BUFFER_FILL, "buffer-fill");
 }
 
 static void
@@ -522,12 +473,11 @@ bus_message_error_cb (GstBus                 *bus,
                       GstMessage             *message,
                       ClutterGstVideoTexture *video_texture)
 {
-  GError *error;
+  GError *error = NULL;
 
-  error = NULL;
   gst_message_parse_error (message, &error, NULL);
         
-  g_signal_emit_by_name (CLUTTER_MEDIA(video_texture), "error", error);
+  g_signal_emit_by_name (video_texture, "error", error);
 
   g_error_free (error);
 }
@@ -537,45 +487,34 @@ bus_message_eos_cb (GstBus                 *bus,
                     GstMessage             *message,
                     ClutterGstVideoTexture *video_texture)
 {
-  g_object_notify (G_OBJECT (video_texture), "position");
+  g_object_notify (G_OBJECT (video_texture), "progress");
 
-  g_signal_emit_by_name (CLUTTER_MEDIA(video_texture), "eos");
+  g_signal_emit_by_name (video_texture, "eos");
 }
-
-#if 0
-static void
-bus_message_tag_cb (GstBus                 *bus,
-                    GstMessage             *message,
-                    ClutterGstVideoTexture *video_texture)
-{
-  GstTagList *tag_list;
-
-  gst_message_parse_tag (message, &tag_list);
-
-  g_signal_emit_by_name (CLUTTER_MEDIA(video_texture), 
-			 "metadata-available", 
-			 tag_list);
-  gst_tag_list_free (tag_list);
-}
-#endif
 
 static void
 bus_message_buffering_cb (GstBus                 *bus,
                           GstMessage             *message,
                           ClutterGstVideoTexture *video_texture)
 {
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
   const GstStructure *str;
-  
+  gint buffer_percent;
+  gboolean res;
+
   str = gst_message_get_structure (message);
   if (!str)
     return;
 
-  if (!gst_structure_get_int (str,
-			      "buffer-percent",
-			      &video_texture->priv->buffer_percent))
-    return;
-        
-  g_object_notify (G_OBJECT (video_texture), "buffer-percent");
+  res = gst_structure_get_int (str, "buffer-percent", &buffer_percent);
+  if (res)
+    {
+      priv->buffer_fill = CLAMP ((gdouble) buffer_percent / 100.0,
+                                 0.0,
+                                 1.0);
+
+      g_object_notify (G_OBJECT (video_texture), "buffer-fill");
+    }
 }
 
 static void
@@ -583,6 +522,7 @@ bus_message_duration_cb (GstBus                 *bus,
                          GstMessage             *message,
                          ClutterGstVideoTexture *video_texture)
 {
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
   GstFormat format;
   gint64 duration;
 
@@ -590,7 +530,7 @@ bus_message_duration_cb (GstBus                 *bus,
   if (format != GST_FORMAT_TIME)
     return;
   
-  video_texture->priv->duration = duration / GST_SECOND;
+  priv->duration = duration / GST_SECOND;
 
   g_object_notify (G_OBJECT (video_texture), "duration");
 }
@@ -600,14 +540,11 @@ bus_message_state_change_cb (GstBus                 *bus,
                              GstMessage             *message,
                              ClutterGstVideoTexture *video_texture)
 {
-  ClutterGstVideoTexturePrivate *priv;
-  gpointer src;
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
   GstState old_state, new_state;
+  gpointer src;
 
   src = GST_MESSAGE_SRC (message);
-
-  priv = video_texture->priv;
-        
   if (src != priv->playbin)
     return;
 
@@ -617,48 +554,45 @@ bus_message_state_change_cb (GstBus                 *bus,
       new_state == GST_STATE_PAUSED) 
     {
       GstQuery *query;
-      
-      /**
-       * Determine whether we can seek.
-       **/
+
+      /* Determine whether we can seek */
       query = gst_query_new_seeking (GST_FORMAT_TIME);
-      
+
       if (gst_element_query (priv->playbin, query))
         {
-	  gst_query_parse_seeking (query, NULL,
-                                   &priv->can_seek,
+          gboolean can_seek = FALSE;
+
+          gst_query_parse_seeking (query, NULL, &can_seek,
                                    NULL,
                                    NULL);
+
+          priv->can_seek = (can_seek == TRUE) ? TRUE : FALSE;
         }
       else
         {
-	  /*
-	   * Could not query for ability to seek. Determine
-	   * using URI.
+	  /* could not query for ability to seek by querying the
+           * playbin; let's crudely try by using the URI
 	   */
-	
-	  if (g_str_has_prefix (priv->uri, "http://"))
+	  if (priv->uri && g_str_has_prefix (priv->uri, "http://"))
             priv->can_seek = FALSE;
           else
             priv->can_seek = TRUE;
 	}
-      
+
       gst_query_unref (query);
-      
+
       g_object_notify (G_OBJECT (video_texture), "can-seek");
       
-      /**
-       * Determine the duration.
-       **/
+      /* Determine the duration */
       query = gst_query_new_duration (GST_FORMAT_TIME);
-      
+
       if (gst_element_query (priv->playbin, query)) 
 	{
 	  gint64 duration;
-	  
+
 	  gst_query_parse_duration (query, NULL, &duration);
 	  priv->duration = duration / GST_SECOND;
-                        
+
 	  g_object_notify (G_OBJECT (video_texture), "duration");
 	}
 
@@ -667,30 +601,23 @@ bus_message_state_change_cb (GstBus                 *bus,
 }
 
 static gboolean
-tick_timeout (ClutterGstVideoTexture *video_texture)
-{
-  g_object_notify (G_OBJECT (video_texture), "position");
-
-  return TRUE;
-}
-
-static gboolean
 lay_pipeline (ClutterGstVideoTexture *video_texture)
 {
-  ClutterGstVideoTexturePrivate *priv;
-  GstElement                    *audio_sink = NULL;
-  GstElement                    *video_sink = NULL;
-
-  priv = video_texture->priv;
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+  GstElement *audio_sink = NULL;
+  GstElement *video_sink = NULL;
 
   priv->playbin = gst_element_factory_make ("playbin", "playbin");
-
   if (!priv->playbin) 
     {
-      g_warning ("Unable to create playbin GST actor.");
+      g_critical ("Unable to create playbin element");
       return FALSE;
     }
 
+  /* ugh - let's go through the audio sinks
+   *
+   * FIXME - there must be a way to ask gstreamer to do this for us
+   */
   audio_sink = gst_element_factory_make ("gconfaudiosink", "audio-sink");
   if (!audio_sink) 
     {
@@ -701,7 +628,8 @@ lay_pipeline (ClutterGstVideoTexture *video_texture)
 	  g_warning ("Could not create a GST audio_sink. "
 		     "Audio unavailable.");
 
-	  if (!audio_sink) 	/* Need to bother ? */
+          /* do we even need to bother? */
+	  if (!audio_sink)
 	    audio_sink = gst_element_factory_make ("fakesink", "audio-sink");
 	}
     }
@@ -720,16 +648,16 @@ static void
 clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
 {
   ClutterGstVideoTexturePrivate *priv;
-  GstBus                        *bus;
+  GstBus *bus;
 
-  video_texture->priv  = priv =
+  video_texture->priv = priv =
     G_TYPE_INSTANCE_GET_PRIVATE (video_texture,
                                  CLUTTER_GST_TYPE_VIDEO_TEXTURE,
                                  ClutterGstVideoTexturePrivate);
 
   if (!lay_pipeline (video_texture))
     {
-      g_warning("Failed to initiate suitable playback pipeline.");
+      g_warning ("Failed to initiate suitable playback pipeline.");
       return;
     }
 
@@ -739,35 +667,19 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
 
   g_signal_connect_object (bus, "message::error",
 			   G_CALLBACK (bus_message_error_cb),
-			   video_texture,
-			   0);
-
+			   video_texture, 0);
   g_signal_connect_object (bus, "message::eos",
 			   G_CALLBACK (bus_message_eos_cb),
-			   video_texture,
-			   0);
-
-#if 0
-  g_signal_connect_object (bus, "message::tag",
-			   G_CALLBACK (bus_message_tag_cb),
-			   video_texture,
-			   0);
-#endif
-
+			   video_texture, 0);
   g_signal_connect_object (bus, "message::buffering",
 			   G_CALLBACK (bus_message_buffering_cb),
-			   video_texture,
-			   0);
-
+			   video_texture, 0);
   g_signal_connect_object (bus, "message::duration",
 			   G_CALLBACK (bus_message_duration_cb),
-			   video_texture,
-			   0);
-
+			   video_texture, 0);
   g_signal_connect_object (bus, "message::state-changed",
 			   G_CALLBACK (bus_message_state_change_cb),
-			   video_texture,
-			   0);
+			   video_texture, 0);
 
   gst_object_unref (GST_OBJECT (bus));
 }
@@ -777,7 +689,7 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
  *
  * Creates a video texture.
  *
- * Return value: A #ClutterActor implementing a displaying a video texture.
+ * Return value: the newly created video texture actor
  */
 ClutterActor*
 clutter_gst_video_texture_new (void)
