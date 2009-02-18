@@ -57,7 +57,7 @@ show_controls (VideoApp *app, gboolean vis)
       app->controls_showing = TRUE;
 
       clutter_stage_show_cursor (CLUTTER_STAGE (app->stage));
-      clutter_actor_animate (app->control, CLUTTER_EASE_OUT, 250,
+      clutter_actor_animate (app->control, CLUTTER_EASE_OUT_QUINT, 250,
                              "opacity", 224,
                              NULL);
 
@@ -69,7 +69,7 @@ show_controls (VideoApp *app, gboolean vis)
       app->controls_showing = FALSE;
 
       clutter_stage_hide_cursor (CLUTTER_STAGE (app->stage));
-      clutter_actor_animate (app->control, CLUTTER_EASE_OUT, 250,
+      clutter_actor_animate (app->control, CLUTTER_EASE_OUT_QUINT, 250,
                              "opacity", 0,
                              NULL);
       return;
@@ -362,7 +362,7 @@ main (int argc, char *argv[])
   g_print ("stop\n");
 
   clutter_stage_hide_cursor (CLUTTER_STAGE (stage));
-  clutter_actor_animate (app->control, CLUTTER_EASE_OUT, 1000,
+  clutter_actor_animate (app->control, CLUTTER_EASE_OUT_QUINT, 1000,
                          "opacity", 0,
                          NULL);
 
