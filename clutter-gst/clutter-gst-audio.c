@@ -53,8 +53,7 @@ struct _ClutterGstAudioPrivate
   guint can_seek : 1;
 
   gdouble buffer_fill;
-
-  guint duration;
+  gdouble duration;
 
   guint tick_timeout_id;
 };
@@ -135,7 +134,7 @@ set_uri (ClutterGstAudio *audio,
     }
 
   priv->can_seek = FALSE;
-  priv->duration = 0;
+  priv->duration = 0.0;
 
   gst_element_get_state (priv->playbin, &state, &pending, 0);
 
@@ -431,7 +430,7 @@ clutter_gst_audio_get_property (GObject    *object,
       break;
 
     case PROP_DURATION:
-      g_value_set_uint (value, priv->duration);
+      g_value_set_double (value, priv->duration);
       break;
 
     default:
@@ -532,7 +531,7 @@ bus_message_duration_cb (GstBus          *bus,
   if (format != GST_FORMAT_TIME)
     return;
   
-  priv->duration = duration / GST_SECOND;
+  priv->duration = (gdouble) duration / GST_SECOND;
 
   g_object_notify (G_OBJECT (audio), "duration");
 }
@@ -593,7 +592,7 @@ bus_message_state_change_cb (GstBus          *bus,
 	  gint64 duration;
 	  
 	  gst_query_parse_duration (query, NULL, &duration);
-	  priv->duration = duration / GST_SECOND;
+	  priv->duration = (gdouble) duration / GST_SECOND;
 
 	  g_object_notify (G_OBJECT (audio), "duration");
 	}

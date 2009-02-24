@@ -52,7 +52,7 @@ struct _ClutterGstVideoTexturePrivate
   guint tick_timeout_id;
 
   gdouble buffer_fill;
-  guint duration;
+  gdouble duration;
 };
 
 enum {
@@ -131,7 +131,7 @@ set_uri (ClutterGstVideoTexture *video_texture,
     }
 
   priv->can_seek = FALSE;
-  priv->duration = 0;
+  priv->duration = 0.0;
 
   gst_element_get_state (priv->playbin, &state, &pending, 0);
 
@@ -432,7 +432,7 @@ clutter_gst_video_texture_get_property (GObject    *object,
       break;
 
     case PROP_DURATION:
-      g_value_set_int (value, priv->duration);
+      g_value_set_double (value, priv->duration);
       break;
 
     default:
@@ -530,7 +530,7 @@ bus_message_duration_cb (GstBus                 *bus,
   if (format != GST_FORMAT_TIME)
     return;
   
-  priv->duration = duration / GST_SECOND;
+  priv->duration = (gdouble) duration / GST_SECOND;
 
   g_object_notify (G_OBJECT (video_texture), "duration");
 }
@@ -591,7 +591,7 @@ bus_message_state_change_cb (GstBus                 *bus,
 	  gint64 duration;
 
 	  gst_query_parse_duration (query, NULL, &duration);
-	  priv->duration = duration / GST_SECOND;
+	  priv->duration = (gdouble) duration / GST_SECOND;
 
 	  g_object_notify (G_OBJECT (video_texture), "duration");
 	}
