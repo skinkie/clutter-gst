@@ -1,0 +1,16 @@
+*.stamp
+clutter-gst-decl-list.txt
+clutter-gst-decl.txt
+clutter-gst-overrides.txt
+clutter-gst-undeclared.txt
+clutter-gst-undocumented.txt
+clutter-gst-unused.txt
+clutter-gst.args
+clutter-gst.hierarchy
+clutter-gst.interfaces
+clutter-gst.prerequisites
+clutter-gst.signals
+html
+tmpl
+version.xml
+xml
