@@ -1,10 +1,12 @@
-SUBDIRS = clutter-gst examples
+SUBDIRS = build clutter-gst examples
 
 if BUILD_GTK_DOC
 SUBDIRS += doc
 endif
 
-DIST_SUBDIRS = clutter-gst examples doc
+DIST_SUBDIRS = build clutter-gst examples doc
+
+ACLOCAL_AMFLAGS = -I build/autotools
 
 clutter-gst-0.9.pc: clutter-gst.pc
 	@cp -f clutter-gst.pc clutter-gst-0.9.pc

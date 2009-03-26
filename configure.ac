@@ -20,6 +20,7 @@ AC_PREREQ(2.53)
 
 AC_INIT([clutter-gst], [clutter_gst_version],
         [http://bugzilla.o-hand.com/enter_bug.cgi?product=Clutter-gst])
+AC_CONFIG_MACRO_DIR([build/autotools])
 AC_CONFIG_SRCDIR([clutter-gst/clutter-gst.h])
 AM_CONFIG_HEADER([config.h])
 
@@ -108,8 +109,14 @@ AC_SUBST(GST_LIBS)
 AC_SUBST(CLUTTER_GST_CFLAGS)
 AC_SUBST(CLUTTER_GST_LIBS)
 
+SHAVE_INIT([build/autotools], [enable])
+
 AC_OUTPUT([
         Makefile
+	build/Makefile
+	build/autotools/Makefile
+	build/autotools/shave
+	build/autotools/shave-libtool
         clutter-gst/Makefile
         clutter-gst/clutter-gst-version.h
         examples/Makefile
