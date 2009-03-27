@@ -56,7 +56,7 @@ main (int argc, char *argv[])
 
   /* Make a timeline */
   timeline = clutter_timeline_new (100, 30); /* num frames, fps */
-  g_object_set(timeline, "loop", TRUE, 0);
+  g_object_set(timeline, "loop", TRUE, NULL);
 
   /* We need to set certain props on the target texture currently for
    * efficient/corrent playback onto the texture (which sucks a bit)  
