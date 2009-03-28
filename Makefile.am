@@ -1,3 +1,5 @@
+QUIET_GEN = $(Q:@=@echo '  GEN   '$@;)
+
 SUBDIRS = build clutter-gst examples
 
 if BUILD_GTK_DOC
@@ -9,7 +11,7 @@ DIST_SUBDIRS = build clutter-gst examples doc
 ACLOCAL_AMFLAGS = -I build/autotools
 
 clutter-gst-0.9.pc: clutter-gst.pc
-	@cp -f clutter-gst.pc clutter-gst-0.9.pc
+	$(QUIET_GEN)cp -f clutter-gst.pc clutter-gst-0.9.pc
 
 pkgconfig_DATA = clutter-gst-0.9.pc
 pkgconfigdir   = $(libdir)/pkgconfig
