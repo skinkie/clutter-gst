@@ -33,7 +33,9 @@
  * #ClutterGstVideoTexture is a #ClutterTexture that plays video files.
  */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include "clutter-gst-video-texture.h"
 #include "clutter-gst-video-sink.h"

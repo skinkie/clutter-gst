@@ -35,7 +35,9 @@
  * data to a #ClutterTexture.
  */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include "clutter-gst-video-sink.h"
 #include "clutter-gst-shaders.h"
