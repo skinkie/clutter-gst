@@ -10,6 +10,7 @@ clutter-gst.hierarchy
 clutter-gst.interfaces
 clutter-gst.prerequisites
 clutter-gst.signals
+clutter-gst.types
 html
 tmpl
 version.xml
