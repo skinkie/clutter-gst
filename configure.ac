@@ -21,6 +21,7 @@ AC_PREREQ(2.53)
 AC_INIT([clutter-gst], [clutter_gst_version],
         [http://bugzilla.o-hand.com/enter_bug.cgi?product=Clutter-gst])
 AC_CONFIG_MACRO_DIR([build/autotools])
+AC_CONFIG_AUX_DIR([build/autotools])
 AC_CONFIG_SRCDIR([clutter-gst/clutter-gst.h])
 AM_CONFIG_HEADER([config.h])
 
