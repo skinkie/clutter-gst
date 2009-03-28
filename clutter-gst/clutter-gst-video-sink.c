@@ -786,4 +786,4 @@ GST_PLUGIN_DEFINE_STATIC (GST_VERSION_MAJOR,
                           VERSION,
                           "LGPL", /* license */
                           PACKAGE,
-                          "");
+                          "http://www.clutter-project.org");
