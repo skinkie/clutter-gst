@@ -16,9 +16,9 @@ pkgconfigdir   = $(libdir)/pkgconfig
 
 EXTRA_DIST = clutter-gst.pc.in
 
-CLEANFILES = clutter-gst-0.9.pc
+CLEANFILES = clutter-gst.pc clutter-gst-0.9.pc
 
-DISTCLEANFILES = clutter-gst.pc
+DISTCLEANFILES = doltcompile doltlibtool
 
 DISTCHECK_CONFIGURE_FLAGS = --enable-gtk-doc
 
