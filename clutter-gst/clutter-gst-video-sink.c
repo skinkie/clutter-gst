@@ -105,9 +105,11 @@ static GstStaticPadTemplate sinktemplate
  */
 
 #ifdef CLUTTER_COGL_HAS_GL
-#define YUV_CAPS GST_VIDEO_CAPS_YUV("AYUV") ";" GST_VIDEO_CAPS_YUV("YV12") ";"
+#define YUV_CAPS    GST_VIDEO_CAPS_YUV("AYUV") ";"	\
+                    GST_VIDEO_CAPS_YUV("YV12") ";"	\
+                    GST_VIDEO_CAPS_YUV("I420") ";"
 #else
-#define YUV_CAPS GST_VIDEO_CAPS_YUV("AYUV") ";"
+#define YUV_CAPS    GST_VIDEO_CAPS_YUV("AYUV") ";"
 #endif
 
 /* Don't advertise RGB/BGR as it seems to override yv12, even when it's the
@@ -158,6 +160,7 @@ typedef enum
   CLUTTER_GST_RGB24,
   CLUTTER_GST_AYUV,
   CLUTTER_GST_YV12,
+  CLUTTER_GST_I420,
 } ClutterGstVideoFormat;
 
 typedef void (*GLUNIFORM1IPROC)(COGLint location, COGLint value);
@@ -387,7 +390,7 @@ clutter_gst_video_sink_idle_func (gpointer data)
                                          CLUTTER_TEXTURE_RGB_FLAG_BGR : 0,
                                          NULL);
     }
-  else if (priv->format == CLUTTER_GST_YV12)
+  else if (priv->format == CLUTTER_GST_YV12 || priv->format == CLUTTER_GST_I420)
     {
       CoglHandle y_tex =
         cogl_texture_new_from_data (priv->width,
@@ -444,10 +447,24 @@ clutter_gst_video_sink_idle_func (gpointer data)
           cogl_program_use (priv->program);
           location = cogl_program_get_uniform_location (priv->program, "ytex");
           priv->glUniform1iARB (location, 0);
-          location = cogl_program_get_uniform_location (priv->program, "utex");
-          priv->glUniform1iARB (location, 1);
-          location = cogl_program_get_uniform_location (priv->program, "vtex");
-          priv->glUniform1iARB (location, 2);
+          if (priv->format == CLUTTER_GST_YV12)
+            {
+              location = cogl_program_get_uniform_location (priv->program,
+                                                            "utex");
+              priv->glUniform1iARB (location, 1);
+              location = cogl_program_get_uniform_location (priv->program,
+                                                            "vtex");
+              priv->glUniform1iARB (location, 2);
+            }
+          else /* I420 */
+            {
+              location = cogl_program_get_uniform_location (priv->program,
+                                                            "vtex");
+              priv->glUniform1iARB (location, 1);
+              location = cogl_program_get_uniform_location (priv->program,
+                                                            "utex");
+              priv->glUniform1iARB (location, 2);
+            }
           cogl_program_use (COGL_INVALID_HANDLE);
           
           g_signal_connect (priv->texture,
@@ -565,6 +582,10 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
   if (ret && (fourcc == GST_RIFF_YV12))
     {
       priv->format = CLUTTER_GST_YV12;
+    }
+  else if (ret && (fourcc == GST_MAKE_FOURCC ('I', '4', '2', '0')))
+    {
+      priv->format = CLUTTER_GST_I420;
     }
   else if (ret && (fourcc == GST_MAKE_FOURCC ('A', 'Y', 'U', 'V')))
     {
