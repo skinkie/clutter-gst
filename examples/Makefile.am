@@ -1,4 +1,4 @@
-noinst_PROGRAMS = video-player video-sink audio
+noinst_PROGRAMS = video-player video-sink audio test-colorspace
 
 INCLUDES = -I$(top_srcdir)/
 
@@ -15,6 +15,13 @@ video_sink_LDFLAGS = \
     $(CLUTTER_GST_LIBS) \
     $(GST_LIBS)   \
     $(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la 
+
+test_colorspace_SOURCES = test-colorspace.c
+test_colorspace_CFLAGS  = $(CLUTTER_GST_CFLAGS) $(GST_CFLAGS)
+test_colorspace_LDFLAGS = \
+    $(CLUTTER_GST_LIBS)   \
+    $(GST_LIBS)           \
+    $(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la
 
 audio_SOURCES = audio.c
 audio_CFLAGS = $(CLUTTER_GST_CFLAGS) $(GST_CFLAGS)
