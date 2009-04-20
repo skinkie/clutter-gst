@@ -173,7 +173,12 @@ struct _ClutterGstVideoSinkPrivate
   CoglHandle             v_tex;
   CoglHandle             program;
   CoglHandle             shader;
-  GAsyncQueue           *async_queue;
+
+  GMutex                *buffer_lock;   /* mutex for the buffer and idle_id */
+  GstBuffer             *buffer;
+  guint                  idle_id;
+
+
   ClutterGstVideoFormat  format;
   gboolean               bgr;
   int                    width;
@@ -223,7 +228,7 @@ clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
     G_TYPE_INSTANCE_GET_PRIVATE (sink, CLUTTER_GST_TYPE_VIDEO_SINK,
                                  ClutterGstVideoSinkPrivate);
 
-  priv->async_queue = g_async_queue_new ();
+  priv->buffer_lock = g_mutex_new ();
 
 #ifdef CLUTTER_COGL_HAS_GL
   priv->glUniform1iARB = (GLUNIFORM1IPROC)
@@ -353,11 +358,27 @@ clutter_gst_video_sink_idle_func (gpointer data)
   sink = data;
   priv = sink->priv;
 
-  buffer = g_async_queue_try_pop (priv->async_queue);
-  if (buffer == NULL || G_UNLIKELY (!GST_IS_BUFFER (buffer)))
+  g_mutex_lock (priv->buffer_lock);
+  if (!priv->buffer)
     {
+      priv->idle_id = 0;
+      g_mutex_unlock (priv->buffer_lock);
       return FALSE;
     }
+
+  buffer = priv->buffer;
+  priv->buffer = NULL;
+
+  if (G_UNLIKELY (!GST_IS_BUFFER (buffer)))
+    {
+      priv->idle_id = 0;
+      g_mutex_unlock (priv->buffer_lock);
+      return FALSE;
+    }
+
+  priv->idle_id = 0;
+  g_mutex_unlock (priv->buffer_lock);
+
 
   if ((priv->format == CLUTTER_GST_RGB32) || (priv->format == CLUTTER_GST_AYUV))
     {
@@ -494,12 +515,25 @@ clutter_gst_video_sink_render (GstBaseSink *bsink,
   sink = CLUTTER_GST_VIDEO_SINK (bsink);
   priv = sink->priv;
 
-  g_async_queue_push (priv->async_queue, gst_buffer_ref (buffer));
 
-  clutter_threads_add_idle_full (G_PRIORITY_HIGH_IDLE,
-                                 clutter_gst_video_sink_idle_func,
-                                 sink,
-                                 NULL);
+  g_mutex_lock (priv->buffer_lock);
+  if (priv->buffer)
+    { 
+      gst_buffer_unref (priv->buffer);
+    }
+  priv->buffer = gst_buffer_ref (buffer);
+
+  if (priv->idle_id == 0)
+    {
+      priv->idle_id = clutter_threads_add_idle_full (G_PRIORITY_HIGH_IDLE,
+                                     clutter_gst_video_sink_idle_func,
+                                     sink,
+                                     NULL);
+      /* the lock must be held when adding this idle, if it is not the idle
+       * callback would be invoked before priv->idle_id had been assigned
+       */
+    }
+  g_mutex_unlock (priv->buffer_lock);
 
   return GST_FLOW_OK;
 }
@@ -625,16 +659,22 @@ clutter_gst_video_sink_dispose (GObject *object)
 
   clutter_gst_video_sink_set_shader (self, NULL);
 
+  if (priv->idle_id > 0)
+    {
+      g_source_remove (priv->idle_id);
+      priv->idle_id = 0;
+    }
+
   if (priv->texture)
     {
       g_object_unref (priv->texture);
       priv->texture = NULL;
     }
 
-  if (priv->async_queue)
+  if (priv->buffer_lock)
     {
-      g_async_queue_unref (priv->async_queue);
-      priv->async_queue = NULL;
+      g_mutex_free (priv->buffer_lock);
+      priv->buffer_lock = NULL;
     }
 
   G_OBJECT_CLASS (parent_class)->dispose (object);
@@ -715,21 +755,15 @@ static gboolean
 clutter_gst_video_sink_stop (GstBaseSink *base_sink)
 {
   ClutterGstVideoSinkPrivate *priv;
-  GstBuffer *buffer;
 
   priv = CLUTTER_GST_VIDEO_SINK (base_sink)->priv;
 
-  g_async_queue_lock (priv->async_queue);
+  g_mutex_lock (priv->buffer_lock);
+  if (priv->buffer)
+    gst_buffer_unref (priv->buffer);
+  priv->buffer = NULL;
+  g_mutex_unlock (priv->buffer_lock);
 
-  /* Remove all remaining objects from the queue */
-  do
-    {
-      buffer = g_async_queue_try_pop_unlocked (priv->async_queue);
-      if (buffer)
-        gst_buffer_unref (buffer);
-    } while (buffer != NULL);
-
-  g_async_queue_unlock (priv->async_queue);
 
   return TRUE;
 }
