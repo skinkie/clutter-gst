@@ -1,0 +1,52 @@
+/*
+ * Clutter-gst
+ *
+ * GStreamer integration library for Clutter.
+ *
+ * Authored By: Damien Lespiau <damien.lespiau@intel.com>
+ *
+ * Copyright (C) 2009 Intel Corporation.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+struct YV12_output
+{
+  float4 color : COLOR;
+};
+
+struct YV12_input
+{
+  float2 Y : TEXCOORD0;
+  sampler2D Y_tex : TEXUNIT0;
+  sampler2D U_tex : TEXUNIT1;
+  sampler2D V_tex : TEXUNIT2;
+};
+
+YV12_output YV12_main (YV12_input IN)
+{
+  YV12_output OUT;
+
+  float y = 1.1640625 * (tex2D (IN.Y_tex, IN.Y).g - 0.0625);
+  float u = tex2D (IN.U_tex, IN.Y).g - 0.5;
+  float v = tex2D (IN.V_tex, IN.Y).g - 0.5;
+
+  OUT.color.r = y + 1.59765625 * v;
+  OUT.color.g = y - 0.390625 * u - 0.8125 * v;
+  OUT.color.b = y + 2.015625 * u;
+  OUT.color.a = 1.0;
+
+  return OUT;
+}
+

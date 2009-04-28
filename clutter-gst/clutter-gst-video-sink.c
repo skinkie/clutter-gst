@@ -43,6 +43,7 @@
 #include "clutter-gst-shaders.h"
 /* include assembly shaders */
 #include "I420.h"
+#include "YV12.h"
 
 #include <gst/gst.h>
 #include <gst/gstvalue.h>
@@ -225,6 +226,24 @@ GST_BOILERPLATE_FULL (ClutterGstVideoSink,
                       GstBaseSink,
                       GST_TYPE_BASE_SINK,
                       _do_init);
+
+/*
+ * Small helpers
+ */
+
+static void
+_string_array_to_char_array (char	*dst,
+                             const char *src[])
+{
+  int i, n;
+
+  for (i = 0; src[i]; i++) {
+      n = strlen (src[i]);
+      memcpy (dst, src[i], n);
+      dst += n;
+  }
+  *dst = '\0';
+}
 
 static void
 clutter_gst_video_sink_fp_paint (ClutterActor        *actor,
@@ -538,6 +557,56 @@ static ClutterGstRenderer yv12_glsl_renderer =
 };
 
 /*
+ * YV12 (fragment program version)
+ *
+ * 8 bit Y plane followed by 8 bit 2x2 subsampled V and U planes.
+ */
+
+static void
+clutter_gst_yv12_fp_init (ClutterActor        *actor,
+                          ClutterGstVideoSink *sink)
+{
+  gchar *shader;
+
+  shader = g_malloc(YV12_FP_SZ + 1);
+  _string_array_to_char_array (shader, YV12_fp);
+
+  /* the size given to glProgramStringARB is without the trailing '\0', which
+   * is precisely YV12_FP_SZ */
+  clutter_gst_video_sink_set_fp_shader (sink, shader, YV12_FP_SZ);
+  g_free(shader);
+}
+
+static void
+clutter_gst_yv12_fp_post_paint (ClutterActor        *actor,
+                                ClutterGstVideoSink *sink)
+{
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+
+  /* Disable the extra texture units */
+  priv->syms.glActiveTextureARB (GL_TEXTURE1);
+  glDisable (GL_TEXTURE_2D);
+  priv->syms.glActiveTextureARB (GL_TEXTURE2);
+  glDisable (GL_TEXTURE_2D);
+  priv->syms.glActiveTextureARB (GL_TEXTURE0);
+
+  /* Disable the shader */
+  glDisable (GL_FRAGMENT_PROGRAM_ARB);
+}
+
+static ClutterGstRenderer yv12_fp_renderer =
+{
+  "YV12 fp",
+  CLUTTER_GST_YV12,
+  CLUTTER_GST_FP | CLUTTER_GST_MULTI_TEXTURE,
+  GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("YV12")),
+  clutter_gst_yv12_fp_init,
+  clutter_gst_yv12_upload,
+  clutter_gst_yv12_paint,
+  clutter_gst_yv12_fp_post_paint,
+};
+
+/*
  * I420
  *
  * 8 bit Y plane followed by 8 bit 2x2 subsampled U and V planes.
@@ -584,20 +653,6 @@ static ClutterGstRenderer i420_glsl_renderer =
  */
 
 static void
-_string_array_to_char_array (char	*dst,
-                             const char *src[])
-{
-  int i, n;
-
-  for (i = 0; src[i]; i++) {
-      n = strlen (src[i]);
-      memcpy (dst, src[i], n);
-      dst += n;
-  }
-  *dst = '\0';
-}
-
-static void
 clutter_gst_i420_fp_init (ClutterActor        *actor,
                           ClutterGstVideoSink *sink)
 {
@@ -612,23 +667,6 @@ clutter_gst_i420_fp_init (ClutterActor        *actor,
   g_free(shader);
 }
 
-static void
-clutter_gst_i420_fp_post_paint (ClutterActor        *actor,
-                                ClutterGstVideoSink *sink)
-{
-  ClutterGstVideoSinkPrivate *priv = sink->priv;
-
-  /* Disable the extra texture units */
-  priv->syms.glActiveTextureARB (GL_TEXTURE1);
-  glDisable (GL_TEXTURE_2D);
-  priv->syms.glActiveTextureARB (GL_TEXTURE2);
-  glDisable (GL_TEXTURE_2D);
-  priv->syms.glActiveTextureARB (GL_TEXTURE0);
-
-  /* Disable the shader */
-  glDisable (GL_FRAGMENT_PROGRAM_ARB);
-}
-
 static ClutterGstRenderer i420_fp_renderer =
 {
   "I420 fp",
@@ -638,7 +676,7 @@ static ClutterGstRenderer i420_fp_renderer =
   clutter_gst_i420_fp_init,
   clutter_gst_yv12_upload,
   clutter_gst_yv12_paint,
-  clutter_gst_i420_fp_post_paint,
+  clutter_gst_yv12_fp_post_paint,
 };
 
 #endif /* CLUTTER_COGL_HAS_GL */
@@ -703,6 +741,7 @@ clutter_gst_build_renderers_list (ClutterGstSymbols *syms)
       &rgb24_renderer,
       &rgb32_renderer,
       &yv12_glsl_renderer,
+      &yv12_fp_renderer,
       &i420_glsl_renderer,
       &i420_fp_renderer,
       &ayuv_glsl_renderer,
