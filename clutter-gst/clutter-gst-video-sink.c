@@ -229,6 +229,7 @@ clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
                                  ClutterGstVideoSinkPrivate);
 
   priv->buffer_lock = g_mutex_new ();
+  priv->use_shaders = TRUE;
 
 #ifdef CLUTTER_COGL_HAS_GL
   priv->glUniform1iARB = (GLUNIFORM1IPROC)
@@ -802,7 +803,7 @@ clutter_gst_video_sink_class_init (ClutterGstVideoSinkClass *klass)
                                      "Use shaders",
                                      "Use a fragment shader to accelerate "
                                      "colour-space conversion.",
-                                     FALSE,
+                                     TRUE,
                                      G_PARAM_READWRITE));
 }
 

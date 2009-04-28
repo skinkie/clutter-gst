@@ -116,8 +116,6 @@ main (int argc, char *argv[])
          NULL);
   g_object_set (capsfilter, "caps", caps, NULL);
 
-  g_object_set (sink, "use-shaders", TRUE, NULL);
-
   g_printf ("%s: [caps] %s\n", __FILE__, gst_caps_to_string (caps));
   gst_bin_add_many (GST_BIN (pipeline), src, capsfilter, sink, NULL);
   result = gst_element_link_many (src, capsfilter, sink, NULL);
