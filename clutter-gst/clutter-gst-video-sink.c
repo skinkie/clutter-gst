@@ -148,9 +148,10 @@ typedef enum _ClutterGstFeatures
  */
 typedef struct _ClutterGstRenderer
 {
- ClutterGstVideoFormat format;  /* the format handled by this renderer */
- int flags;                     /* ClutterGstFeatures ORed flags */
- GstStaticCaps caps;            /* caps handled by the renderer */
+ const char            *name;     /* user friendly name */
+ ClutterGstVideoFormat  format;   /* the format handled by this renderer */
+ int                    flags;    /* ClutterGstFeatures ORed flags */
+ GstStaticCaps          caps;     /* caps handled by the renderer */
 
  void (*init)       (ClutterActor        *actor,
                      ClutterGstVideoSink *sink);
@@ -186,6 +187,7 @@ struct _ClutterGstVideoSinkPrivate
   GLUNIFORM1IPROC        glUniform1iARB;
   GLACTIVETEXTUREPROC    glActiveTexture;
 
+  GSList                *renderers;
   GstCaps               *caps;
   ClutterGstRenderer    *renderer;
 };
@@ -300,6 +302,7 @@ clutter_gst_rgb24_upload (ClutterGstVideoSink *sink,
 
 static ClutterGstRenderer rgb24_renderer =
 {
+  "RGB 24",
   CLUTTER_GST_RGB24,
   0,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_RGB ";" GST_VIDEO_CAPS_BGR),
@@ -333,6 +336,7 @@ clutter_gst_rgb32_upload (ClutterGstVideoSink *sink,
 
 static ClutterGstRenderer rgb32_renderer =
 {
+  "RGB 32",
   CLUTTER_GST_RGB32,
   0,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_RGBA ";" GST_VIDEO_CAPS_BGRA),
@@ -463,6 +467,7 @@ clutter_gst_yv12_glsl_post_paint (ClutterActor        *actor,
 
 static ClutterGstRenderer yv12_glsl_renderer =
 {
+  "YV12 glsl",
   CLUTTER_GST_YV12,
   CLUTTER_GST_GLSL | CLUTTER_GST_MULTI_TEXTURE,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("YV12")),
@@ -501,6 +506,7 @@ clutter_gst_i420_glsl_init (ClutterActor        *actor,
 
 static ClutterGstRenderer i420_glsl_renderer =
 {
+  "I420 glsl",
   CLUTTER_GST_I420,
   CLUTTER_GST_GLSL | CLUTTER_GST_MULTI_TEXTURE,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("I420")),
@@ -546,6 +552,7 @@ clutter_gst_ayuv_upload (ClutterGstVideoSink *sink,
 
 static ClutterGstRenderer ayuv_glsl_renderer =
 {
+  "AYUV glsl",
   CLUTTER_GST_AYUV,
   CLUTTER_GST_GLSL,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("AYUV")),
@@ -611,19 +618,37 @@ append_cap (gpointer data, gpointer user_data)
 }
 
 static GstCaps *
-clutter_gst_build_caps (void)
+clutter_gst_build_caps (GSList *renderers)
 {
-  GSList *renderers;
   GstCaps *caps;
 
   caps = gst_caps_new_empty ();
-  renderers = clutter_gst_build_renderers_list ();
 
   g_slist_foreach (renderers, append_cap, caps);
 
-  g_slist_free (renderers);
-
   return caps;
+}
+
+ClutterGstRenderer *
+clutter_gst_find_renderer_by_format (ClutterGstVideoSink  *sink,
+                                     ClutterGstVideoFormat format)
+{
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+  ClutterGstRenderer *renderer = NULL;
+  GSList *element;
+
+  for (element = priv->renderers; element; element = g_slist_next(element))
+    {
+      ClutterGstRenderer *candidate = (ClutterGstRenderer *)element->data;
+
+      if (candidate->format == format)
+        {
+          renderer = candidate;
+          break;
+        }
+    }
+
+  return renderer;
 }
 
 static gboolean
@@ -720,7 +745,8 @@ clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
 
   priv->buffer_lock = g_mutex_new ();
   priv->use_shaders = TRUE;
-  priv->caps = clutter_gst_build_caps ();
+  priv->renderers = clutter_gst_build_renderers_list ();
+  priv->caps = clutter_gst_build_caps (priv->renderers);
 
 #ifdef CLUTTER_COGL_HAS_GL
   priv->glUniform1iARB = (GLUNIFORM1IPROC)
@@ -831,18 +857,15 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
   if (ret && (fourcc == GST_MAKE_FOURCC ('Y', 'V', '1', '2')))
     {
       priv->format = CLUTTER_GST_YV12;
-      priv->renderer = &yv12_glsl_renderer;
     }
   else if (ret && (fourcc == GST_MAKE_FOURCC ('I', '4', '2', '0')))
     {
       priv->format = CLUTTER_GST_I420;
-      priv->renderer = &i420_glsl_renderer;
     }
   else if (ret && (fourcc == GST_MAKE_FOURCC ('A', 'Y', 'U', 'V')))
     {
       priv->format = CLUTTER_GST_AYUV;
       priv->bgr = FALSE;
-      priv->renderer = &ayuv_glsl_renderer;
     }
   else
 #endif
@@ -856,15 +879,22 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
         {
           priv->format = CLUTTER_GST_RGB24;
           priv->bgr = (red_mask == 0xff0000) ? FALSE : TRUE;
-          priv->renderer = &rgb24_renderer;
         }
       else
         {
           priv->format = CLUTTER_GST_RGB32;
           priv->bgr = (red_mask == 0xff000000) ? FALSE : TRUE;
-          priv->renderer = &rgb32_renderer;
         }
     }
+
+  priv->renderer = clutter_gst_find_renderer_by_format (sink, priv->format);
+  if (G_UNLIKELY (priv->renderer == NULL))
+    {
+      GST_ERROR_OBJECT (sink, "could not find a suitable renderer");
+      return FALSE;
+    }
+
+  GST_INFO_OBJECT (sink, "using the %s renderer", priv->renderer->name);
 
   return TRUE;
 }
@@ -915,6 +945,8 @@ clutter_gst_video_sink_finalize (GObject *object)
 
   self = CLUTTER_GST_VIDEO_SINK (object);
   priv = self->priv;
+
+  g_slist_free (priv->renderers);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
