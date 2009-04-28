@@ -90,49 +90,16 @@ static gchar *yv12_to_rgba_shader = \
      FRAGMENT_SHADER_END
      "}";
 
-static GstStaticPadTemplate sinktemplate 
- = GST_STATIC_PAD_TEMPLATE ("sink",
-                            GST_PAD_SINK,
-                            GST_PAD_ALWAYS,
-                            GST_STATIC_CAPS (GST_VIDEO_CAPS_RGBx ";"   \
-                                             GST_VIDEO_CAPS_BGRx "; " \
-                                             GST_VIDEO_CAPS_RGB ";"   \
-                                             GST_VIDEO_CAPS_BGR \
-                                             ));
-
-/* Multi-texturing will only be available on GL, so decide on capabilties
- * accordingly.
- */
-
-#ifdef CLUTTER_COGL_HAS_GL
-#define YUV_CAPS    GST_VIDEO_CAPS_YUV("AYUV") ";"	\
-                    GST_VIDEO_CAPS_YUV("YV12") ";"	\
-                    GST_VIDEO_CAPS_YUV("I420") ";"
-#else
-#define YUV_CAPS    GST_VIDEO_CAPS_YUV("AYUV") ";"
-#endif
-
-/* Don't advertise RGB/BGR as it seems to override yv12, even when it's the
- * better choice. Unfortunately, RGBx/BGRx also override AYUV when it's the
- * better choice too, but that's not quite as bad.
- */
-
-static GstStaticPadTemplate sinktemplate_shaders 
- = GST_STATIC_PAD_TEMPLATE ("sink",
-                            GST_PAD_SINK,
-                            GST_PAD_ALWAYS,
-                            GST_STATIC_CAPS (YUV_CAPS \
-                                             GST_VIDEO_CAPS_RGBx ";" \
-                                             GST_VIDEO_CAPS_BGRx));
-
 static GstStaticPadTemplate sinktemplate_all 
  = GST_STATIC_PAD_TEMPLATE ("sink",
                             GST_PAD_SINK,
                             GST_PAD_ALWAYS,
-                            GST_STATIC_CAPS (YUV_CAPS \
-                                             GST_VIDEO_CAPS_RGBx ";" \
-                                             GST_VIDEO_CAPS_BGRx ";" \
-                                             GST_VIDEO_CAPS_RGB ";" \
+                            GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV("AYUV") ";" \
+                                             GST_VIDEO_CAPS_YUV("YV12") ";" \
+                                             GST_VIDEO_CAPS_YUV("I420") ";" \
+                                             GST_VIDEO_CAPS_RGBA        ";" \
+                                             GST_VIDEO_CAPS_BGRA        ";" \
+                                             GST_VIDEO_CAPS_RGB         ";" \
                                              GST_VIDEO_CAPS_BGR));
 
 GST_DEBUG_CATEGORY_STATIC (clutter_gst_video_sink_debug);
@@ -183,6 +150,7 @@ typedef struct _ClutterGstRenderer
 {
  ClutterGstVideoFormat format;  /* the format handled by this renderer */
  int flags;                     /* ClutterGstFeatures ORed flags */
+ GstStaticCaps caps;            /* caps handled by the renderer */
 
  void (*init)       (ClutterActor        *actor,
                      ClutterGstVideoSink *sink);
@@ -218,6 +186,7 @@ struct _ClutterGstVideoSinkPrivate
   GLUNIFORM1IPROC        glUniform1iARB;
   GLACTIVETEXTUREPROC    glActiveTexture;
 
+  GstCaps               *caps;
   ClutterGstRenderer    *renderer;
 };
 
@@ -333,6 +302,7 @@ static ClutterGstRenderer rgb24_renderer =
 {
   CLUTTER_GST_RGB24,
   0,
+  GST_STATIC_CAPS (GST_VIDEO_CAPS_RGB ";" GST_VIDEO_CAPS_BGR),
   clutter_gst_dummy_init,
   clutter_gst_rgb24_upload,
   NULL,
@@ -365,6 +335,7 @@ static ClutterGstRenderer rgb32_renderer =
 {
   CLUTTER_GST_RGB32,
   0,
+  GST_STATIC_CAPS (GST_VIDEO_CAPS_RGBA ";" GST_VIDEO_CAPS_BGRA),
   clutter_gst_dummy_init,
   clutter_gst_rgb32_upload,
   NULL,
@@ -476,7 +447,6 @@ clutter_gst_yv12_glsl_paint (ClutterActor        *actor,
   priv->glActiveTexture (GL_TEXTURE0_ARB);
 }
 
-
 static void
 clutter_gst_yv12_glsl_post_paint (ClutterActor        *actor,
                                   ClutterGstVideoSink *sink)
@@ -495,6 +465,7 @@ static ClutterGstRenderer yv12_glsl_renderer =
 {
   CLUTTER_GST_YV12,
   CLUTTER_GST_GLSL | CLUTTER_GST_MULTI_TEXTURE,
+  GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("YV12")),
   clutter_gst_yv12_glsl_init,
   clutter_gst_yv12_glsl_upload,
   clutter_gst_yv12_glsl_paint,
@@ -532,6 +503,7 @@ static ClutterGstRenderer i420_glsl_renderer =
 {
   CLUTTER_GST_I420,
   CLUTTER_GST_GLSL | CLUTTER_GST_MULTI_TEXTURE,
+  GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("I420")),
   clutter_gst_i420_glsl_init,
   clutter_gst_yv12_glsl_upload,
   clutter_gst_yv12_glsl_paint,
@@ -576,11 +548,83 @@ static ClutterGstRenderer ayuv_glsl_renderer =
 {
   CLUTTER_GST_AYUV,
   CLUTTER_GST_GLSL,
+  GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("AYUV")),
   clutter_gst_ayuv_glsl_init,
   clutter_gst_ayuv_upload,
   NULL,
   NULL,
 };
+
+static GSList *
+clutter_gst_build_renderers_list (void)
+{
+  GSList             *list = NULL;
+  const gchar        *gl_extensions;
+  GLint               nb_texture_units;
+  gint                features = 0, i;
+  ClutterGstRenderer *renderers[] =
+    {
+      &rgb24_renderer,
+      &rgb32_renderer,
+      &yv12_glsl_renderer,
+      &i420_glsl_renderer,
+      &ayuv_glsl_renderer,
+      NULL
+    };
+
+  /* get the features */
+  gl_extensions = (const gchar*) glGetString (GL_EXTENSIONS);
+  if (cogl_check_extension ("GL_ARB_multitexture", gl_extensions))
+    {
+      glGetIntegerv (GL_MAX_TEXTURE_UNITS_ARB, &nb_texture_units);
+      /* we need 3 texture units for planar YUV */
+      if (nb_texture_units >= 3)
+        features |= CLUTTER_GST_MULTI_TEXTURE;
+    }
+
+  if (cogl_features_available (COGL_FEATURE_SHADERS_GLSL))
+    features |= CLUTTER_GST_GLSL;
+
+  GST_INFO ("GL features: 0x%08x", features);
+
+  for (i = 0; renderers[i]; i++)
+    {
+      gint needed = renderers[i]->flags;
+
+      if ((needed & features) == needed)
+        list = g_slist_prepend (list, renderers[i]);
+    }
+
+  return list;
+}
+
+static void
+append_cap (gpointer data, gpointer user_data)
+{
+  ClutterGstRenderer *renderer = (ClutterGstRenderer *)data;
+  GstCaps *caps = (GstCaps *)user_data;
+  GstCaps *writable_caps;
+
+  writable_caps =
+    gst_caps_make_writable (gst_static_caps_get (&renderer->caps));
+  gst_caps_append (caps, writable_caps);
+}
+
+static GstCaps *
+clutter_gst_build_caps (void)
+{
+  GSList *renderers;
+  GstCaps *caps;
+
+  caps = gst_caps_new_empty ();
+  renderers = clutter_gst_build_renderers_list ();
+
+  g_slist_foreach (renderers, append_cap, caps);
+
+  g_slist_free (renderers);
+
+  return caps;
+}
 
 static gboolean
 clutter_gst_video_sink_idle_func (gpointer data)
@@ -676,6 +720,7 @@ clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
 
   priv->buffer_lock = g_mutex_new ();
   priv->use_shaders = TRUE;
+  priv->caps = clutter_gst_build_caps ();
 
 #ifdef CLUTTER_COGL_HAS_GL
   priv->glUniform1iARB = (GLUNIFORM1IPROC)
@@ -720,14 +765,12 @@ clutter_gst_video_sink_render (GstBaseSink *bsink,
 }
 
 static GstCaps *
-clutter_gst_video_sink_get_caps (GstBaseSink *sink)
+clutter_gst_video_sink_get_caps (GstBaseSink *bsink)
 {
-  ClutterGstVideoSinkPrivate *priv = CLUTTER_GST_VIDEO_SINK (sink)->priv;
-  
-  if (priv->use_shaders && cogl_features_available (COGL_FEATURE_SHADERS_GLSL))
-    return gst_static_pad_template_get_caps (&sinktemplate_shaders);
-  else
-    return gst_static_pad_template_get_caps (&sinktemplate);
+  ClutterGstVideoSink *sink;
+
+  sink = CLUTTER_GST_VIDEO_SINK (bsink);
+  return gst_caps_copy (sink->priv->caps);
 }
 
 static gboolean
@@ -750,17 +793,7 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
 
   clutter_gst_video_sink_set_shader (sink, NULL);
 
-  if (priv->use_shaders && cogl_features_available (COGL_FEATURE_SHADERS_GLSL))
-    intersection 
-      = gst_caps_intersect 
-            (gst_static_pad_template_get_caps (&sinktemplate_shaders), 
-             caps);
-  else
-    intersection 
-      = gst_caps_intersect 
-            (gst_static_pad_template_get_caps (&sinktemplate), 
-             caps);
-
+  intersection = gst_caps_intersect (priv->caps, caps);
   if (gst_caps_is_empty (intersection)) 
     return FALSE;
 
@@ -863,6 +896,12 @@ clutter_gst_video_sink_dispose (GObject *object)
     {
       g_mutex_free (priv->buffer_lock);
       priv->buffer_lock = NULL;
+    }
+
+  if (priv->caps)
+    {
+      gst_caps_unref (priv->caps);
+      priv->caps = NULL;
     }
 
   G_OBJECT_CLASS (parent_class)->dispose (object);
