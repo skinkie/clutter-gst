@@ -124,10 +124,10 @@ SHAVE_INIT([build/autotools], [enable])
 
 AC_OUTPUT([
         Makefile
-	build/Makefile
-	build/autotools/Makefile
-	build/autotools/shave
-	build/autotools/shave-libtool
+        build/Makefile
+        build/autotools/Makefile
+        build/autotools/shave
+        build/autotools/shave-libtool
         scripts/Makefile
         clutter-gst/Makefile
         clutter-gst/clutter-gst-version.h
