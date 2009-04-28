@@ -699,7 +699,7 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
 
 #if CLUTTER_COGL_HAS_GL
   ret = gst_structure_get_fourcc (structure, "format", &fourcc);
-  if (ret && (fourcc == GST_RIFF_YV12))
+  if (ret && (fourcc == GST_MAKE_FOURCC ('Y', 'V', '1', '2')))
     {
       priv->format = CLUTTER_GST_YV12;
       priv->renderer = &yv12_glsl_renderer;
