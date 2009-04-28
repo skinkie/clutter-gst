@@ -339,6 +339,38 @@ static ClutterGstRenderer rgb24_renderer =
   NULL,
 };
 
+/*
+ * RGBA / BGRA 8888
+ */
+
+static void
+clutter_gst_rgb32_upload (ClutterGstVideoSink *sink,
+                          GstBuffer           *buffer)
+{
+  ClutterGstVideoSinkPrivate *priv= sink->priv;
+
+  clutter_texture_set_from_rgb_data (priv->texture,
+                                     GST_BUFFER_DATA (buffer),
+                                     TRUE,
+                                     priv->width,
+                                     priv->height,
+                                     GST_ROUND_UP_4 (4 * priv->width),
+                                     4,
+                                     priv->bgr ?
+                                     CLUTTER_TEXTURE_RGB_FLAG_BGR : 0,
+                                     NULL);
+}
+
+static ClutterGstRenderer rgb32_renderer =
+{
+  CLUTTER_GST_RGB32,
+  0,
+  clutter_gst_dummy_init,
+  clutter_gst_rgb32_upload,
+  NULL,
+  NULL,
+};
+
 #ifdef CLUTTER_COGL_HAS_GL
 
 /*
@@ -508,6 +540,48 @@ static ClutterGstRenderer i420_glsl_renderer =
 
 #endif /* CLUTTER_COGL_HAS_GL */
 
+/*
+ * AYUV
+ *
+ * This is a 4:4:4 YUV format with 8 bit samples for each component along
+ * with an 8 bit alpha blend value per pixel. Component ordering is A Y U V
+ * (as the name suggests).
+ */
+
+static void
+clutter_gst_ayuv_glsl_init(ClutterActor        *actor,
+                           ClutterGstVideoSink *sink)
+{
+  clutter_gst_video_sink_set_shader (sink, ayuv_to_rgba_shader);
+}
+
+static void
+clutter_gst_ayuv_upload (ClutterGstVideoSink *sink,
+                         GstBuffer           *buffer)
+{
+  ClutterGstVideoSinkPrivate *priv= sink->priv;
+
+  clutter_texture_set_from_rgb_data (priv->texture,
+                                     GST_BUFFER_DATA (buffer),
+                                     TRUE,
+                                     priv->width,
+                                     priv->height,
+                                     GST_ROUND_UP_4 (4 * priv->width),
+                                     4,
+                                     0,
+                                     NULL);
+}
+
+static ClutterGstRenderer ayuv_glsl_renderer =
+{
+  CLUTTER_GST_AYUV,
+  CLUTTER_GST_GLSL,
+  clutter_gst_ayuv_glsl_init,
+  clutter_gst_ayuv_upload,
+  NULL,
+  NULL,
+};
+
 static gboolean
 clutter_gst_video_sink_idle_func (gpointer data)
 {
@@ -542,21 +616,11 @@ clutter_gst_video_sink_idle_func (gpointer data)
 
   if ((priv->format == CLUTTER_GST_RGB32) || (priv->format == CLUTTER_GST_AYUV))
     {
-      clutter_texture_set_from_rgb_data (priv->texture,
-                                         GST_BUFFER_DATA (buffer),
-                                         TRUE,
-                                         priv->width,
-                                         priv->height,
-                                         GST_ROUND_UP_4 (4 * priv->width),
-                                         4,
-                                         priv->bgr ?
-                                         CLUTTER_TEXTURE_RGB_FLAG_BGR : 0,
-                                         NULL);
+      priv->renderer->upload (sink, buffer);
 
       /* Initialise AYUV shader */
       if ((priv->format == CLUTTER_GST_AYUV) && !priv->shaders_init)
-        clutter_gst_video_sink_set_shader (sink,
-                                           ayuv_to_rgba_shader);
+        priv->renderer->upload (sink, buffer);
     }
   else if (priv->format == CLUTTER_GST_RGB24)
     {
@@ -745,6 +809,7 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
     {
       priv->format = CLUTTER_GST_AYUV;
       priv->bgr = FALSE;
+      priv->renderer = &ayuv_glsl_renderer;
     }
   else
 #endif
@@ -764,6 +829,7 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
         {
           priv->format = CLUTTER_GST_RGB32;
           priv->bgr = (red_mask == 0xff000000) ? FALSE : TRUE;
+          priv->renderer = &rgb32_renderer;
         }
     }
 
