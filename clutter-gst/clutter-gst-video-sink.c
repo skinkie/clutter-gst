@@ -166,6 +166,34 @@ typedef enum
 typedef void (*GLUNIFORM1IPROC)(COGLint location, COGLint value);
 typedef void (*GLACTIVETEXTUREPROC)(GLenum unit);
 
+/*
+ * features: what does the underlaying video card supports ?
+ */
+typedef enum _ClutterGstFeatures
+{
+  CLUTTER_GST_FP             = 0x1, /* fragment programs (ARB fp1.0) */
+  CLUTTER_GST_GLSL           = 0x2, /* GLSL */
+  CLUTTER_GST_MULTI_TEXTURE  = 0x4, /* multi-texturing */
+} ClutterGstFeatures;
+
+/*
+ * renderer: abstracts a backend to render a frame.
+ */
+typedef struct _ClutterGstRenderer
+{
+ ClutterGstVideoFormat format;  /* the format handled by this renderer */
+ int flags;                     /* ClutterGstFeatures ORed flags */
+
+ void (*init)       (ClutterActor        *actor,
+                     ClutterGstVideoSink *sink);
+ void (*upload)     (ClutterGstVideoSink *sink,
+                     GstBuffer           *buffer);
+ void (*paint)      (ClutterActor        *actor,
+                     ClutterGstVideoSink *sink);
+ void (*post_paint) (ClutterActor        *actor,
+                     ClutterGstVideoSink *sink);
+} ClutterGstRenderer;
+
 struct _ClutterGstVideoSinkPrivate
 {
   ClutterTexture        *texture;
@@ -178,7 +206,6 @@ struct _ClutterGstVideoSinkPrivate
   GstBuffer             *buffer;
   guint                  idle_id;
 
-
   ClutterGstVideoFormat  format;
   gboolean               bgr;
   int                    width;
@@ -190,6 +217,8 @@ struct _ClutterGstVideoSinkPrivate
   
   GLUNIFORM1IPROC        glUniform1iARB;
   GLACTIVETEXTUREPROC    glActiveTexture;
+
+  ClutterGstRenderer    *renderer;
 };
 
 
@@ -206,92 +235,12 @@ GST_BOILERPLATE_FULL (ClutterGstVideoSink,
                       _do_init);
 
 static void
-clutter_gst_video_sink_base_init (gpointer g_class)
-{
-  GstElementClass *element_class = GST_ELEMENT_CLASS (g_class);
-
-  gst_element_class_add_pad_template 
-                     (element_class,
-                      gst_static_pad_template_get (&sinktemplate_all));
-
-  gst_element_class_set_details (element_class, 
-                                 &clutter_gst_video_sink_details);
-}
-
-static void
-clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
-                             ClutterGstVideoSinkClass *klass)
-{
-  ClutterGstVideoSinkPrivate *priv;
-
-  sink->priv = priv =
-    G_TYPE_INSTANCE_GET_PRIVATE (sink, CLUTTER_GST_TYPE_VIDEO_SINK,
-                                 ClutterGstVideoSinkPrivate);
-
-  priv->buffer_lock = g_mutex_new ();
-  priv->use_shaders = TRUE;
-
-#ifdef CLUTTER_COGL_HAS_GL
-  priv->glUniform1iARB = (GLUNIFORM1IPROC)
-    cogl_get_proc_address ("glUniform1iARB");
-
-  priv->glActiveTexture = (GLACTIVETEXTUREPROC)
-    cogl_get_proc_address ("glActiveTexture");
-#endif
-}
-
-static void
 clutter_gst_video_sink_paint (ClutterActor        *actor,
                               ClutterGstVideoSink *sink)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
   if (priv->program)
     cogl_program_use (priv->program);
-}
-
-static void
-clutter_gst_yv12_paint (ClutterActor        *actor,
-                        ClutterGstVideoSink *sink)
-{
-#ifdef CLUTTER_COGL_HAS_GL
-  ClutterGstVideoSinkPrivate *priv = sink->priv;
-  GLuint texture;
-  
-  /* Bind the U and V textures in texture units 1 and 2 */
-  if (priv->u_tex)
-    {
-      cogl_texture_get_gl_texture (priv->u_tex, &texture, NULL);
-      priv->glActiveTexture (GL_TEXTURE1);
-      glEnable (GL_TEXTURE_2D);
-      glBindTexture (GL_TEXTURE_2D, texture);
-    }
-
-  if (priv->v_tex)
-    {
-      cogl_texture_get_gl_texture (priv->v_tex, &texture, NULL);
-      priv->glActiveTexture (GL_TEXTURE2);
-      glEnable (GL_TEXTURE_2D);
-      glBindTexture (GL_TEXTURE_2D, texture);
-    }
-  
-  priv->glActiveTexture (GL_TEXTURE0_ARB);
-#endif
-}
-
-static void
-clutter_gst_yv12_post_paint (ClutterActor        *actor,
-                             ClutterGstVideoSink *sink)
-{
-#ifdef CLUTTER_COGL_HAS_GL
-  ClutterGstVideoSinkPrivate *priv = sink->priv;
-
-  /* Disable the extra texture units */
-  priv->glActiveTexture (GL_TEXTURE1);
-  glDisable (GL_TEXTURE_2D);
-  priv->glActiveTexture (GL_TEXTURE2);
-  glDisable (GL_TEXTURE_2D);
-  priv->glActiveTexture (GL_TEXTURE0);
-#endif
 }
 
 static void
@@ -348,6 +297,175 @@ clutter_gst_video_sink_set_shader (ClutterGstVideoSink *sink,
       priv->shaders_init = TRUE;
     }
 }
+
+#ifdef CLUTTER_COGL_HAS_GL
+
+/*
+ * YV12
+ *
+ * 8 bit Y plane followed by 8 bit 2x2 subsampled V and U planes.
+ */
+
+static void
+clutter_gst_yv12_glsl_init (ClutterActor        *actor,
+                            ClutterGstVideoSink *sink)
+{
+  ClutterGstVideoSinkPrivate *priv= sink->priv;
+  COGLint location;
+
+  clutter_gst_video_sink_set_shader (sink,
+                                     yv12_to_rgba_shader);
+
+  cogl_program_use (priv->program);
+  location = cogl_program_get_uniform_location (priv->program, "ytex");
+  priv->glUniform1iARB (location, 0);
+  location = cogl_program_get_uniform_location (priv->program, "utex");
+  priv->glUniform1iARB (location, 1);
+  location = cogl_program_get_uniform_location (priv->program, "vtex");
+  priv->glUniform1iARB (location, 2);
+
+  cogl_program_use (COGL_INVALID_HANDLE);
+}
+
+static void
+clutter_gst_yv12_glsl_upload (ClutterGstVideoSink *sink,
+                              GstBuffer           *buffer)
+{
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+
+  CoglHandle y_tex = cogl_texture_new_from_data (priv->width,
+                                                 priv->height,
+                                                 -1,
+                                                 FALSE,
+                                                 COGL_PIXEL_FORMAT_G_8,
+                                                 COGL_PIXEL_FORMAT_G_8,
+                                                 priv->width,
+                                                 GST_BUFFER_DATA (buffer));
+  cogl_texture_set_filters (y_tex, CGL_LINEAR, CGL_LINEAR);
+  clutter_texture_set_cogl_texture (priv->texture, y_tex);
+  cogl_texture_unref (y_tex);
+
+  if (priv->u_tex)
+    cogl_texture_unref (priv->u_tex);
+
+  if (priv->v_tex)
+    cogl_texture_unref (priv->v_tex);
+
+  priv->v_tex = cogl_texture_new_from_data (priv->width/2,
+                                            priv->height/2,
+                                            -1,
+                                            FALSE,
+                                            COGL_PIXEL_FORMAT_G_8,
+                                            COGL_PIXEL_FORMAT_G_8,
+                                            priv->width/2,
+                                            GST_BUFFER_DATA (buffer) +
+                                            (priv->width * priv->height));
+  cogl_texture_set_filters (priv->v_tex, CGL_LINEAR, CGL_LINEAR);
+
+  priv->u_tex =
+    cogl_texture_new_from_data (priv->width/2,
+                                priv->height/2,
+                                -1,
+                                FALSE,
+                                COGL_PIXEL_FORMAT_G_8,
+                                COGL_PIXEL_FORMAT_G_8,
+                                priv->width/2,
+                                GST_BUFFER_DATA (buffer) +
+                                (priv->width * priv->height) +
+                                (priv->width/2 * priv->height/2));
+  cogl_texture_set_filters (priv->u_tex, CGL_LINEAR, CGL_LINEAR);
+}
+
+static void
+clutter_gst_yv12_glsl_paint (ClutterActor        *actor,
+                             ClutterGstVideoSink *sink)
+{
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+  GLuint texture;
+
+  /* Bind the U and V textures in texture units 1 and 2 */
+  if (priv->u_tex)
+    {
+      cogl_texture_get_gl_texture (priv->u_tex, &texture, NULL);
+      priv->glActiveTexture (GL_TEXTURE1);
+      glEnable (GL_TEXTURE_2D);
+      glBindTexture (GL_TEXTURE_2D, texture);
+    }
+
+  if (priv->v_tex)
+    {
+      cogl_texture_get_gl_texture (priv->v_tex, &texture, NULL);
+      priv->glActiveTexture (GL_TEXTURE2);
+      glEnable (GL_TEXTURE_2D);
+      glBindTexture (GL_TEXTURE_2D, texture);
+    }
+
+  priv->glActiveTexture (GL_TEXTURE0_ARB);
+}
+
+
+static void
+clutter_gst_yv12_glsl_post_paint (ClutterActor        *actor,
+                                  ClutterGstVideoSink *sink)
+{
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+
+  /* Disable the extra texture units */
+  priv->glActiveTexture (GL_TEXTURE1);
+  glDisable (GL_TEXTURE_2D);
+  priv->glActiveTexture (GL_TEXTURE2);
+  glDisable (GL_TEXTURE_2D);
+  priv->glActiveTexture (GL_TEXTURE0);
+}
+
+static ClutterGstRenderer yv12_glsl_renderer =
+{
+  CLUTTER_GST_YV12,
+  CLUTTER_GST_GLSL | CLUTTER_GST_MULTI_TEXTURE,
+  clutter_gst_yv12_glsl_init,
+  clutter_gst_yv12_glsl_upload,
+  clutter_gst_yv12_glsl_paint,
+  clutter_gst_yv12_glsl_post_paint,
+};
+
+/*
+ * I420
+ *
+ * 8 bit Y plane followed by 8 bit 2x2 subsampled U and V planes.
+ * Basically the same as YV12, but with the 2 chroma planes switched.
+ */
+
+static void
+clutter_gst_i420_glsl_init (ClutterActor        *actor,
+                            ClutterGstVideoSink *sink)
+{
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+  COGLint location;
+
+  clutter_gst_video_sink_set_shader (sink,
+                                     yv12_to_rgba_shader);
+
+  cogl_program_use (priv->program);
+  location = cogl_program_get_uniform_location (priv->program, "ytex");
+  priv->glUniform1iARB (location, 0);
+  location = cogl_program_get_uniform_location (priv->program, "vtex");
+  priv->glUniform1iARB (location, 1);
+  location = cogl_program_get_uniform_location (priv->program, "utex");
+  priv->glUniform1iARB (location, 2);
+  cogl_program_use (COGL_INVALID_HANDLE);
+}
+
+static ClutterGstRenderer i420_glsl_renderer =
+{
+  CLUTTER_GST_I420,
+  CLUTTER_GST_GLSL | CLUTTER_GST_MULTI_TEXTURE,
+  clutter_gst_i420_glsl_init,
+  clutter_gst_yv12_glsl_upload,
+  clutter_gst_yv12_glsl_paint,
+  clutter_gst_yv12_glsl_post_paint,
+};
+
+#endif /* CLUTTER_COGL_HAS_GL */
 
 static gboolean
 clutter_gst_video_sink_idle_func (gpointer data)
@@ -414,96 +532,62 @@ clutter_gst_video_sink_idle_func (gpointer data)
     }
   else if (priv->format == CLUTTER_GST_YV12 || priv->format == CLUTTER_GST_I420)
     {
-      CoglHandle y_tex =
-        cogl_texture_new_from_data (priv->width,
-                                    priv->height,
-                                    -1,
-                                    FALSE,
-                                    COGL_PIXEL_FORMAT_G_8,
-                                    COGL_PIXEL_FORMAT_G_8,
-                                    priv->width,
-                                    GST_BUFFER_DATA (buffer));
-      cogl_texture_set_filters (y_tex, CGL_LINEAR, CGL_LINEAR);
-      clutter_texture_set_cogl_texture (priv->texture, y_tex);
-      cogl_texture_unref (y_tex);
       
-      if (priv->u_tex)
-        cogl_texture_unref (priv->u_tex);
-      
-      if (priv->v_tex)
-        cogl_texture_unref (priv->v_tex);
-      
-      priv->v_tex =
-        cogl_texture_new_from_data (priv->width/2,
-                                    priv->height/2,
-                                    -1,
-                                    FALSE,
-                                    COGL_PIXEL_FORMAT_G_8,
-                                    COGL_PIXEL_FORMAT_G_8,
-                                    priv->width/2,
-                                    GST_BUFFER_DATA (buffer) +
-                                      (priv->width * priv->height));
-      cogl_texture_set_filters (priv->v_tex, CGL_LINEAR, CGL_LINEAR);
+      priv->renderer->upload (sink, buffer);
 
-      priv->u_tex =
-        cogl_texture_new_from_data (priv->width/2,
-                                    priv->height/2,
-                                    -1,
-                                    FALSE,
-                                    COGL_PIXEL_FORMAT_G_8,
-                                    COGL_PIXEL_FORMAT_G_8,
-                                    priv->width/2,
-                                    GST_BUFFER_DATA (buffer) +
-                                      (priv->width * priv->height) +
-                                      (priv->width/2 * priv->height/2));
-      cogl_texture_set_filters (priv->u_tex, CGL_LINEAR, CGL_LINEAR);
-      
-      /* Initialise YV12 shader */
+      /* Initialize renderer */
       if (!priv->shaders_init)
         {
-#ifdef CLUTTER_COGL_HAS_GL
-          COGLint location;
-          clutter_gst_video_sink_set_shader (sink,
-                                             yv12_to_rgba_shader);
-          
-          cogl_program_use (priv->program);
-          location = cogl_program_get_uniform_location (priv->program, "ytex");
-          priv->glUniform1iARB (location, 0);
-          if (priv->format == CLUTTER_GST_YV12)
-            {
-              location = cogl_program_get_uniform_location (priv->program,
-                                                            "utex");
-              priv->glUniform1iARB (location, 1);
-              location = cogl_program_get_uniform_location (priv->program,
-                                                            "vtex");
-              priv->glUniform1iARB (location, 2);
-            }
-          else /* I420 */
-            {
-              location = cogl_program_get_uniform_location (priv->program,
-                                                            "vtex");
-              priv->glUniform1iARB (location, 1);
-              location = cogl_program_get_uniform_location (priv->program,
-                                                            "utex");
-              priv->glUniform1iARB (location, 2);
-            }
-          cogl_program_use (COGL_INVALID_HANDLE);
-          
+          priv->renderer->init (CLUTTER_ACTOR (priv->texture), sink);
           g_signal_connect (priv->texture,
                             "paint",
-                            G_CALLBACK (clutter_gst_yv12_paint),
+                            G_CALLBACK (priv->renderer->paint),
                             sink);
           g_signal_connect_after (priv->texture,
                                   "paint",
-                                  G_CALLBACK (clutter_gst_yv12_post_paint),
+                                  G_CALLBACK (priv->renderer->post_paint),
                                   sink);
-#endif
         }
     }
 
   gst_buffer_unref (buffer);
   
   return FALSE;
+}
+
+static void
+clutter_gst_video_sink_base_init (gpointer g_class)
+{
+  GstElementClass *element_class = GST_ELEMENT_CLASS (g_class);
+
+  gst_element_class_add_pad_template
+                     (element_class,
+                      gst_static_pad_template_get (&sinktemplate_all));
+
+  gst_element_class_set_details (element_class,
+                                 &clutter_gst_video_sink_details);
+}
+
+static void
+clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
+                             ClutterGstVideoSinkClass *klass)
+{
+  ClutterGstVideoSinkPrivate *priv;
+
+  sink->priv = priv =
+    G_TYPE_INSTANCE_GET_PRIVATE (sink, CLUTTER_GST_TYPE_VIDEO_SINK,
+                                 ClutterGstVideoSinkPrivate);
+
+  priv->buffer_lock = g_mutex_new ();
+  priv->use_shaders = TRUE;
+
+#ifdef CLUTTER_COGL_HAS_GL
+  priv->glUniform1iARB = (GLUNIFORM1IPROC)
+    cogl_get_proc_address ("glUniform1iARB");
+
+  priv->glActiveTexture = (GLACTIVETEXTUREPROC)
+    cogl_get_proc_address ("glActiveTexture");
+#endif
 }
 
 static GstFlowReturn
@@ -613,14 +697,17 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
   else 
     priv->par_n = priv->par_d = 1;
 
+#if CLUTTER_COGL_HAS_GL
   ret = gst_structure_get_fourcc (structure, "format", &fourcc);
   if (ret && (fourcc == GST_RIFF_YV12))
     {
       priv->format = CLUTTER_GST_YV12;
+      priv->renderer = &yv12_glsl_renderer;
     }
   else if (ret && (fourcc == GST_MAKE_FOURCC ('I', '4', '2', '0')))
     {
       priv->format = CLUTTER_GST_I420;
+      priv->renderer = &i420_glsl_renderer;
     }
   else if (ret && (fourcc == GST_MAKE_FOURCC ('A', 'Y', 'U', 'V')))
     {
@@ -628,6 +715,7 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
       priv->bgr = FALSE;
     }
   else
+#endif
     {
       guint32 width;
       gst_structure_get_int (structure, "red_mask", &red_mask);
