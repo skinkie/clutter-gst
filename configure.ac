@@ -122,6 +122,7 @@ AC_OUTPUT([
 	build/autotools/shave-libtool
         clutter-gst/Makefile
         clutter-gst/clutter-gst-version.h
+        tests/Makefile
         examples/Makefile
         doc/Makefile
         doc/reference/Makefile
