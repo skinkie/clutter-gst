@@ -1,3 +1,6 @@
+
+SUBDIRS = shaders
+
 source_h = 					\
 	$(srcdir)/clutter-gst-video-texture.h 	\
 	$(srcdir)/clutter-gst-video-sink.h 	\
@@ -20,6 +23,7 @@ libclutter_gst_@CLUTTER_GST_MAJORMINOR@_la_SOURCES = $(MARSHALFILES)  \
 
 INCLUDES = \
 	-I$(top_srcdir) \
+	-I$(top_builddir)/clutter-gst/shaders \
 	-DG_LOG_DOMAIN=\"Clutter-Gst\" \
 	@GCC_FLAGS@ \
 	@CLUTTER_GST_CFLAGS@ \

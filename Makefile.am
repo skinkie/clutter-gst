@@ -1,12 +1,12 @@
 QUIET_GEN = $(Q:@=@echo '  GEN   '$@;)
 
-SUBDIRS = build clutter-gst tests examples
+SUBDIRS = build scripts clutter-gst tests examples
 
 if BUILD_GTK_DOC
 SUBDIRS += doc
 endif
 
-DIST_SUBDIRS = build clutter-gst tests examples doc
+DIST_SUBDIRS = build scripts clutter-gst tests examples doc
 
 ACLOCAL_AMFLAGS = -I build/autotools
 

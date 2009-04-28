@@ -75,6 +75,14 @@ AC_FUNC_MALLOC
 AC_FUNC_MMAP
 AC_CHECK_FUNCS([memset munmap strcasecmp strdup])
 
+dnl ========================================================================
+
+AC_CHECK_PROG(CGC, [cgc], [cgc], [no])
+have_cgc="no"
+if test "x$CGC" = "xcgc"; then
+        have_cgc="yes"
+fi
+AM_CONDITIONAL([HAVE_CGC], [test "x$have_cgc" = "xyes"])
 
 dnl ========================================================================
 
@@ -120,8 +128,10 @@ AC_OUTPUT([
 	build/autotools/Makefile
 	build/autotools/shave
 	build/autotools/shave-libtool
+        scripts/Makefile
         clutter-gst/Makefile
         clutter-gst/clutter-gst-version.h
+        clutter-gst/shaders/Makefile
         tests/Makefile
         examples/Makefile
         doc/Makefile
@@ -137,6 +147,8 @@ echo "                  Clutter-GST $VERSION"
 echo "                 ==================="
 echo ""
 echo "                   prefix:   ${prefix}"
+echo ""
+echo "              Cg compiler:   ${have_cgc}"
 echo ""
 echo "            Documentation:   ${enable_gtk_doc}"
 echo ""

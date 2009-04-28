@@ -41,6 +41,8 @@
 
 #include "clutter-gst-video-sink.h"
 #include "clutter-gst-shaders.h"
+/* include assembly shaders */
+#include "I420.h"
 
 #include <gst/gst.h>
 #include <gst/gstvalue.h>
@@ -56,7 +58,6 @@ static gchar *ayuv_to_rgba_shader = \
      "void main () {"
      "  vec4 color = texture2D (tex, vec2(" TEX_COORD "));"
      "  float y = 1.1640625 * (color.g - 0.0625);"
-     "  float u = color.b - 0.5;"
      "  float v = color.a - 0.5;"
      "  color.a = color.r;"
      "  color.r = y + 1.59765625 * v;"
@@ -131,7 +132,26 @@ typedef enum
 } ClutterGstVideoFormat;
 
 typedef void (*GLUNIFORM1IPROC)(COGLint location, COGLint value);
+/* GL_ARB_fragment_program */
+typedef void (*GLGENPROGRAMSPROC)(GLsizei n, COGLuint *programs);
+typedef void (*GLBINDPROGRAMPROC)(GLenum target, COGLint program);
+typedef void (*GLPROGRAMSTRINGPROC)(GLenum target, GLenum format, GLsizei len,
+                                    const void *string);
+/* multi-texturing */
 typedef void (*GLACTIVETEXTUREPROC)(GLenum unit);
+typedef void (*GLMULTITEXCOORD2FPROC)(GLenum target, GLfloat s, GLfloat t);
+
+typedef struct _ClutterGstSymbols
+{
+  /* GL_ARB_fragment_program */
+  GLGENPROGRAMSPROC   glGenProgramsARB;
+  GLBINDPROGRAMPROC   glBindProgramARB;
+  GLPROGRAMSTRINGPROC glProgramStringARB;
+
+  /* multi-texturing */
+  GLACTIVETEXTUREPROC glActiveTextureARB;
+  GLMULTITEXCOORD2FPROC glMultiTexCoord2fARB;
+} ClutterGstSymbols;
 
 /*
  * features: what does the underlaying video card supports ?
@@ -170,6 +190,7 @@ struct _ClutterGstVideoSinkPrivate
   CoglHandle             v_tex;
   CoglHandle             program;
   CoglHandle             shader;
+  COGLuint               fp;
 
   GMutex                *buffer_lock;   /* mutex for the buffer and idle_id */
   GstBuffer             *buffer;
@@ -184,8 +205,8 @@ struct _ClutterGstVideoSinkPrivate
   gboolean               use_shaders;
   gboolean               shaders_init;
   
+  ClutterGstSymbols      syms;          /* extra OpenGL functions */
   GLUNIFORM1IPROC        glUniform1iARB;
-  GLACTIVETEXTUREPROC    glActiveTexture;
 
   GSList                *renderers;
   GstCaps               *caps;
@@ -204,6 +225,45 @@ GST_BOILERPLATE_FULL (ClutterGstVideoSink,
                       GstBaseSink,
                       GST_TYPE_BASE_SINK,
                       _do_init);
+
+static void
+clutter_gst_video_sink_fp_paint (ClutterActor        *actor,
+                                ClutterGstVideoSink *sink)
+{
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+
+  glEnable (GL_FRAGMENT_PROGRAM_ARB);
+  priv->syms.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, priv->fp);
+
+}
+
+static void
+clutter_gst_video_sink_set_fp_shader (ClutterGstVideoSink *sink,
+                                      const gchar         *shader_src,
+                                      const int            size)
+{
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+
+  priv->shaders_init = FALSE;
+
+  glEnable (GL_FRAGMENT_PROGRAM_ARB);
+  priv->syms.glGenProgramsARB (1, &priv->fp);
+  priv->syms.glBindProgramARB (GL_FRAGMENT_PROGRAM_ARB, priv->fp);
+  priv->syms.glProgramStringARB (GL_FRAGMENT_PROGRAM_ARB,
+                                  GL_PROGRAM_FORMAT_ASCII_ARB,
+                                  size,
+                                  (const GLbyte *)shader_src);
+
+  glDisable(GL_FRAGMENT_PROGRAM_ARB);
+
+  /* Hook onto the pre-paint signal to bind the shader. */
+  g_signal_connect (priv->texture,
+                    "paint",
+                    G_CALLBACK (clutter_gst_video_sink_fp_paint),
+                    sink);
+  priv->shaders_init = TRUE;
+
+}
 
 static void
 clutter_gst_video_sink_paint (ClutterActor        *actor,
@@ -376,8 +436,8 @@ clutter_gst_yv12_glsl_init (ClutterActor        *actor,
 }
 
 static void
-clutter_gst_yv12_glsl_upload (ClutterGstVideoSink *sink,
-                              GstBuffer           *buffer)
+clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
+                         GstBuffer           *buffer)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
 
@@ -425,8 +485,8 @@ clutter_gst_yv12_glsl_upload (ClutterGstVideoSink *sink,
 }
 
 static void
-clutter_gst_yv12_glsl_paint (ClutterActor        *actor,
-                             ClutterGstVideoSink *sink)
+clutter_gst_yv12_paint (ClutterActor        *actor,
+                        ClutterGstVideoSink *sink)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
   GLuint texture;
@@ -435,7 +495,7 @@ clutter_gst_yv12_glsl_paint (ClutterActor        *actor,
   if (priv->u_tex)
     {
       cogl_texture_get_gl_texture (priv->u_tex, &texture, NULL);
-      priv->glActiveTexture (GL_TEXTURE1);
+      priv->syms.glActiveTextureARB (GL_TEXTURE1);
       glEnable (GL_TEXTURE_2D);
       glBindTexture (GL_TEXTURE_2D, texture);
     }
@@ -443,12 +503,12 @@ clutter_gst_yv12_glsl_paint (ClutterActor        *actor,
   if (priv->v_tex)
     {
       cogl_texture_get_gl_texture (priv->v_tex, &texture, NULL);
-      priv->glActiveTexture (GL_TEXTURE2);
+      priv->syms.glActiveTextureARB (GL_TEXTURE2);
       glEnable (GL_TEXTURE_2D);
       glBindTexture (GL_TEXTURE_2D, texture);
     }
 
-  priv->glActiveTexture (GL_TEXTURE0_ARB);
+  priv->syms.glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 static void
@@ -458,11 +518,11 @@ clutter_gst_yv12_glsl_post_paint (ClutterActor        *actor,
   ClutterGstVideoSinkPrivate *priv = sink->priv;
 
   /* Disable the extra texture units */
-  priv->glActiveTexture (GL_TEXTURE1);
+  priv->syms.glActiveTextureARB (GL_TEXTURE1);
   glDisable (GL_TEXTURE_2D);
-  priv->glActiveTexture (GL_TEXTURE2);
+  priv->syms.glActiveTextureARB (GL_TEXTURE2);
   glDisable (GL_TEXTURE_2D);
-  priv->glActiveTexture (GL_TEXTURE0);
+  priv->syms.glActiveTextureARB (GL_TEXTURE0);
 }
 
 static ClutterGstRenderer yv12_glsl_renderer =
@@ -472,8 +532,8 @@ static ClutterGstRenderer yv12_glsl_renderer =
   CLUTTER_GST_GLSL | CLUTTER_GST_MULTI_TEXTURE,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("YV12")),
   clutter_gst_yv12_glsl_init,
-  clutter_gst_yv12_glsl_upload,
-  clutter_gst_yv12_glsl_paint,
+  clutter_gst_yv12_upload,
+  clutter_gst_yv12_paint,
   clutter_gst_yv12_glsl_post_paint,
 };
 
@@ -511,9 +571,74 @@ static ClutterGstRenderer i420_glsl_renderer =
   CLUTTER_GST_GLSL | CLUTTER_GST_MULTI_TEXTURE,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("I420")),
   clutter_gst_i420_glsl_init,
-  clutter_gst_yv12_glsl_upload,
-  clutter_gst_yv12_glsl_paint,
+  clutter_gst_yv12_upload,
+  clutter_gst_yv12_paint,
   clutter_gst_yv12_glsl_post_paint,
+};
+
+/*
+ * I420 (fragment program version)
+ *
+ * 8 bit Y plane followed by 8 bit 2x2 subsampled U and V planes.
+ * Basically the same as YV12, but with the 2 chroma planes switched.
+ */
+
+static void
+_string_array_to_char_array (char	*dst,
+                             const char *src[])
+{
+  int i, n;
+
+  for (i = 0; src[i]; i++) {
+      n = strlen (src[i]);
+      memcpy (dst, src[i], n);
+      dst += n;
+  }
+  *dst = '\0';
+}
+
+static void
+clutter_gst_i420_fp_init (ClutterActor        *actor,
+                          ClutterGstVideoSink *sink)
+{
+  gchar *shader;
+
+  shader = g_malloc(I420_FP_SZ + 1);
+  _string_array_to_char_array (shader, I420_fp);
+
+  /* the size given to glProgramStringARB is without the trailing '\0', which
+   * is precisely I420_FP_SZ */
+  clutter_gst_video_sink_set_fp_shader (sink, shader, I420_FP_SZ);
+  g_free(shader);
+}
+
+static void
+clutter_gst_i420_fp_post_paint (ClutterActor        *actor,
+                                ClutterGstVideoSink *sink)
+{
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+
+  /* Disable the extra texture units */
+  priv->syms.glActiveTextureARB (GL_TEXTURE1);
+  glDisable (GL_TEXTURE_2D);
+  priv->syms.glActiveTextureARB (GL_TEXTURE2);
+  glDisable (GL_TEXTURE_2D);
+  priv->syms.glActiveTextureARB (GL_TEXTURE0);
+
+  /* Disable the shader */
+  glDisable (GL_FRAGMENT_PROGRAM_ARB);
+}
+
+static ClutterGstRenderer i420_fp_renderer =
+{
+  "I420 fp",
+  CLUTTER_GST_I420,
+  CLUTTER_GST_FP | CLUTTER_GST_MULTI_TEXTURE,
+  GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("I420")),
+  clutter_gst_i420_fp_init,
+  clutter_gst_yv12_upload,
+  clutter_gst_yv12_paint,
+  clutter_gst_i420_fp_post_paint,
 };
 
 #endif /* CLUTTER_COGL_HAS_GL */
@@ -563,18 +688,23 @@ static ClutterGstRenderer ayuv_glsl_renderer =
 };
 
 static GSList *
-clutter_gst_build_renderers_list (void)
+clutter_gst_build_renderers_list (ClutterGstSymbols *syms)
 {
   GSList             *list = NULL;
   const gchar        *gl_extensions;
   GLint               nb_texture_units;
   gint                features = 0, i;
+  /* The order of the list of renderers is important. They will be prepended
+   * to a GSList and we'll iterate over that list to choose the first matching
+   * renderer. Thus if you want to use the fp renderer over the glsl one, the
+   * fp renderer has to be put after the glsl one in this array */
   ClutterGstRenderer *renderers[] =
     {
       &rgb24_renderer,
       &rgb32_renderer,
       &yv12_glsl_renderer,
       &i420_glsl_renderer,
+      &i420_fp_renderer,
       &ayuv_glsl_renderer,
       NULL
     };
@@ -583,10 +713,40 @@ clutter_gst_build_renderers_list (void)
   gl_extensions = (const gchar*) glGetString (GL_EXTENSIONS);
   if (cogl_check_extension ("GL_ARB_multitexture", gl_extensions))
     {
-      glGetIntegerv (GL_MAX_TEXTURE_UNITS_ARB, &nb_texture_units);
       /* we need 3 texture units for planar YUV */
-      if (nb_texture_units >= 3)
-        features |= CLUTTER_GST_MULTI_TEXTURE;
+      glGetIntegerv (GL_MAX_TEXTURE_UNITS_ARB, &nb_texture_units);
+
+      syms->glActiveTextureARB = (GLACTIVETEXTUREPROC)
+        cogl_get_proc_address ("glActiveTextureARB");
+      syms->glMultiTexCoord2fARB = (GLMULTITEXCOORD2FPROC)
+        cogl_get_proc_address ("glMultiTexCoord2fARB");
+
+      if (nb_texture_units >= 3 &&
+          syms->glActiveTextureARB &&
+          syms->glMultiTexCoord2fARB)
+        {
+          features |= CLUTTER_GST_MULTI_TEXTURE;
+        }
+    }
+
+  if (cogl_check_extension ("GL_ARB_fragment_program", gl_extensions))
+    {
+      /* the shaders we'll feed to the GPU are simple enough, we don't need
+       * to check GL limits for GL_FRAGMENT_PROGRAM_ARB */
+
+      syms->glGenProgramsARB = (GLGENPROGRAMSPROC)
+        cogl_get_proc_address ("glGenProgramsARB");
+      syms->glBindProgramARB = (GLBINDPROGRAMPROC)
+        cogl_get_proc_address ("glBindProgramARB");
+      syms->glProgramStringARB = (GLPROGRAMSTRINGPROC)
+        cogl_get_proc_address ("glProgramStringARB");
+
+      if (syms->glGenProgramsARB &&
+          syms->glBindProgramARB &&
+          syms->glProgramStringARB)
+        {
+          features |= CLUTTER_GST_FP;
+        }
     }
 
   if (cogl_features_available (COGL_FEATURE_SHADERS_GLSL))
@@ -745,15 +905,12 @@ clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
 
   priv->buffer_lock = g_mutex_new ();
   priv->use_shaders = TRUE;
-  priv->renderers = clutter_gst_build_renderers_list ();
+  priv->renderers = clutter_gst_build_renderers_list (&priv->syms);
   priv->caps = clutter_gst_build_caps (priv->renderers);
 
 #ifdef CLUTTER_COGL_HAS_GL
   priv->glUniform1iARB = (GLUNIFORM1IPROC)
     cogl_get_proc_address ("glUniform1iARB");
-
-  priv->glActiveTexture = (GLACTIVETEXTUREPROC)
-    cogl_get_proc_address ("glActiveTexture");
 #endif
 }
 
