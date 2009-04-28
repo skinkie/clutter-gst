@@ -718,7 +718,7 @@ clutter_gst_video_sink_set_property (GObject *object,
       if (priv->use_shaders != use_shaders)
         {
           priv->use_shaders = use_shaders;
-          g_object_notify (object, "use_shaders");
+          g_object_notify (object, "use-shaders");
         }
       break;
     default:
@@ -798,7 +798,7 @@ clutter_gst_video_sink_class_init (ClutterGstVideoSinkClass *klass)
 
   g_object_class_install_property 
               (gobject_class, PROP_USE_SHADERS,
-               g_param_spec_boolean ("use_shaders",
+               g_param_spec_boolean ("use-shaders",
                                      "Use shaders",
                                      "Use a fragment shader to accelerate "
                                      "colour-space conversion.",
