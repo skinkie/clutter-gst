@@ -298,6 +298,47 @@ clutter_gst_video_sink_set_shader (ClutterGstVideoSink *sink,
     }
 }
 
+/* some renderers don't need all the ClutterGstRenderer vtable */
+static void
+clutter_gst_dummy_init (ClutterActor        *actor,
+                        ClutterGstVideoSink *sink)
+{
+}
+
+/*
+ * RGB 24 / BGR 24
+ *
+ * 3 bytes per pixel, stride % 4 = 0.
+ */
+
+static void
+clutter_gst_rgb24_upload (ClutterGstVideoSink *sink,
+                          GstBuffer           *buffer)
+{
+  ClutterGstVideoSinkPrivate *priv= sink->priv;
+
+  clutter_texture_set_from_rgb_data (priv->texture,
+                                     GST_BUFFER_DATA (buffer),
+                                     FALSE,
+                                     priv->width,
+                                     priv->height,
+                                     GST_ROUND_UP_4 (3 * priv->width),
+                                     3,
+                                     priv->bgr ?
+                                     CLUTTER_TEXTURE_RGB_FLAG_BGR : 0,
+                                     NULL);
+}
+
+static ClutterGstRenderer rgb24_renderer =
+{
+  CLUTTER_GST_RGB24,
+  0,
+  clutter_gst_dummy_init,
+  clutter_gst_rgb24_upload,
+  NULL,
+  NULL,
+};
+
 #ifdef CLUTTER_COGL_HAS_GL
 
 /*
@@ -519,16 +560,7 @@ clutter_gst_video_sink_idle_func (gpointer data)
     }
   else if (priv->format == CLUTTER_GST_RGB24)
     {
-      clutter_texture_set_from_rgb_data (priv->texture,
-                                         GST_BUFFER_DATA (buffer),
-                                         FALSE,
-                                         priv->width,
-                                         priv->height,
-                                         GST_ROUND_UP_4 (3 * priv->width),
-                                         3,
-                                         priv->bgr ?
-                                         CLUTTER_TEXTURE_RGB_FLAG_BGR : 0,
-                                         NULL);
+      priv->renderer->upload (sink, buffer);
     }
   else if (priv->format == CLUTTER_GST_YV12 || priv->format == CLUTTER_GST_I420)
     {
@@ -726,6 +758,7 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
         {
           priv->format = CLUTTER_GST_RGB24;
           priv->bgr = (red_mask == 0xff0000) ? FALSE : TRUE;
+          priv->renderer = &rgb24_renderer;
         }
       else
         {
