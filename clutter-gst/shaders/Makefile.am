@@ -2,13 +2,21 @@ QUIET_GEN = $(Q:@=@echo '  GEN   '$@;)
 QUIET_CGC = $(Q:@=@echo '  CGC   '$@;)
 NULL =
 
-BUILT_SOURCES = I420.h \
-                YV12.h \
-                $(NULL)
-
+CLEANFILES =
 EXTRA_DIST = I420.cg I420.pso I420.h \
              YV12.cg YV12.pso YV12.h \
              $(NULL)
+
+#
+# If we have python we are able to build the headers holding the fragment
+# programs.
+#
+
+if HAVE_PYTHON
+
+BUILT_SOURCES = I420.h \
+                YV12.h \
+                $(NULL)
 
 CLEANFILES = I420.h \
              YV12.h \
@@ -22,6 +30,9 @@ I420.h: I420.pso
 
 YV12.h: YV12.pso
 	$(QUIET_GEN)$(top_srcdir)/scripts/pso2h.py -n YV12_fp -o $@ $^
+
+endif
+
 #
 # Only add those targets if we the Cg compiler is around.
 #

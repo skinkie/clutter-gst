@@ -85,6 +85,16 @@ fi
 AM_CONDITIONAL([HAVE_CGC], [test "x$have_cgc" = "xyes"])
 
 dnl ========================================================================
+dnl check for python (pso2h.py needs it)
+
+AC_CHECK_PROG(PYTHON, [python], [python], [no])
+have_python="no"
+if test "x$PYTHON" = "xpython"; then
+        have_python="yes"
+fi
+AM_CONDITIONAL([HAVE_PYTHON], [test "x$have_python" = "xyes"])
+
+dnl ========================================================================
 
 pkg_modules="clutter-0.9 >= 0.9.0"
 PKG_CHECK_MODULES(CLUTTER_GST, [$pkg_modules])
