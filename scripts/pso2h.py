@@ -38,7 +38,8 @@ _template = """/*
 
 static const char *%s[] =
 {
-%s};
+%s  NULL
+};
 
 #endif
 """

@@ -30,6 +30,7 @@ static const char *I420_fp[] =
   "MAD result.color.x, R0.y, c[1].w, R0;\n",
   "MOV result.color.w, c[0].x;\n",
   "END\n",
+  NULL
 };
 
 #endif
