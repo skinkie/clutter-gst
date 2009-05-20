@@ -123,9 +123,11 @@ input_cb (ClutterStage *stage,
 	  ClutterActor       *actor;
 	  ClutterButtonEvent *bev = (ClutterButtonEvent *) event;
 
-	  actor = clutter_stage_get_actor_at_pos (stage, bev->x, bev->y);
+	  actor = clutter_stage_get_actor_at_pos (stage, CLUTTER_PICK_ALL,
+                                                  bev->x,
+                                                  bev->y);
 
-	  printf("got actor %p at pos %ix%i\n", actor, bev->x, bev->y);
+	  printf("got actor %p at pos %.2fx%.2f\n", actor, bev->x, bev->y);
 
 	  if (actor == app->control_pause || actor == app->control_play)
 	    {
@@ -137,7 +139,7 @@ input_cb (ClutterStage *stage,
               actor == app->control_seek2 ||
               actor == app->control_seekbar)
 	    {
-	      gint x, y, dist;
+	      gfloat x, y, dist;
               gdouble progress;
 
 	      clutter_actor_get_transformed_position (app->control_seekbar,
@@ -161,7 +163,7 @@ input_cb (ClutterStage *stage,
         ClutterVertex center = { 0, };
         ClutterAnimation *animation = NULL;
 
-        center.x = clutter_actor_get_widthu (app->vtexture) / 2;
+        center.x = clutter_actor_get_width (app->vtexture) / 2;
 	
 	switch (clutter_key_event_symbol (kev))
 	  {
@@ -200,8 +202,8 @@ size_change (ClutterTexture *texture,
 	     VideoApp       *app)
 {
   ClutterActor *stage = app->stage;
-  gint new_x, new_y, new_width, new_height;
-  guint stage_width, stage_height;
+  gfloat new_x, new_y, new_width, new_height;
+  gfloat stage_width, stage_height;
 
   clutter_actor_get_size (stage, &stage_width, &stage_height);
 
@@ -251,7 +253,7 @@ main (int argc, char *argv[])
   ClutterColor         control_color1 = { 73, 74, 77, 0xee };
   ClutterColor         control_color2 = { 0xcc, 0xcc, 0xcc, 0xff };
   ClutterGstVideoSink *sink;
-  gint                 x,y;
+  gfloat               x,y;
 
   if (argc < 2)
     g_error("%s <video file>", argv[0]);
@@ -346,7 +348,7 @@ main (int argc, char *argv[])
   g_print ("start\n");
 
   {
-    guint stage_width, stage_height;
+    gfloat stage_width, stage_height;
 
     clutter_actor_get_size (stage, &stage_width, &stage_height);
 
@@ -354,7 +356,7 @@ main (int argc, char *argv[])
     y = stage_height - (stage_height / 3);
   }
 
-  g_print ("setting x = %i, y = %i, width = %i\n",
+  g_print ("setting x = %.2f, y = %.2f, width = %.2f\n",
            x, y, clutter_actor_get_width (app->control));
 
   clutter_actor_set_position (app->control, x, y);

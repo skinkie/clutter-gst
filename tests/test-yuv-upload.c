@@ -38,22 +38,30 @@ size_change (ClutterTexture *texture,
 	     gint            height,
 	     gpointer        user_data)
 {
-  gint           new_x, new_y, new_width, new_height;
+  ClutterActor *stage;
+  gfloat new_x, new_y, new_width, new_height;
+  gfloat stage_width, stage_height;
 
-  new_height = ( height * CLUTTER_STAGE_WIDTH() ) / width;
-  if (new_height <= CLUTTER_STAGE_HEIGHT())
+  stage = clutter_actor_get_stage (CLUTTER_ACTOR (texture));
+  if (stage == NULL)
+    return;
+
+  clutter_actor_get_size (stage, &stage_width, &stage_height);
+
+  new_height = ( height * stage_width ) / width;
+  if (new_height <= stage_height)
     {
-      new_width = CLUTTER_STAGE_WIDTH();
+      new_width = stage_width;
 
       new_x = 0;
-      new_y = (CLUTTER_STAGE_HEIGHT() - new_height) / 2;
+      new_y = (stage_height - new_height) / 2;
     }
   else
     {
-      new_width  = ( width * CLUTTER_STAGE_HEIGHT() ) / height;
-      new_height = CLUTTER_STAGE_HEIGHT();
+      new_width  = ( width * stage_height ) / height;
+      new_height = stage_height;
 
-      new_x = (CLUTTER_STAGE_WIDTH() - new_width) / 2;
+      new_x = (stage_width - new_width) / 2;
       new_y = 0;
     }
 
