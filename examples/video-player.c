@@ -197,9 +197,9 @@ input_cb (ClutterStage *stage,
 
 static void
 size_change (ClutterTexture *texture, 
-	     gint            width,
-	     gint            height,
-	     VideoApp       *app)
+             gfloat          width,
+             gfloat          height,
+             VideoApp       *app)
 {
   ClutterActor *stage = app->stage;
   gfloat new_x, new_y, new_width, new_height;
@@ -225,10 +225,7 @@ size_change (ClutterTexture *texture,
     }
 
   clutter_actor_set_position (CLUTTER_ACTOR (texture), new_x, new_y);
-
-  clutter_actor_set_size (CLUTTER_ACTOR (texture),
-			  new_width,
-			  new_height);
+  clutter_actor_set_size (CLUTTER_ACTOR (texture), new_width, new_height);
 }
 
 static void

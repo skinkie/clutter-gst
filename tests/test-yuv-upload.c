@@ -34,9 +34,9 @@ parse_fourcc (const gchar *fourcc)
 
 void
 size_change (ClutterTexture *texture,
-	     gint            width,
-	     gint            height,
-	     gpointer        user_data)
+             gfloat          width,
+             gfloat          height,
+             gpointer        user_data)
 {
   ClutterActor *stage;
   gfloat new_x, new_y, new_width, new_height;
@@ -48,7 +48,7 @@ size_change (ClutterTexture *texture,
 
   clutter_actor_get_size (stage, &stage_width, &stage_height);
 
-  new_height = ( height * stage_width ) / width;
+  new_height = (height * stage_width) / width;
   if (new_height <= stage_height)
     {
       new_width = stage_width;
@@ -58,7 +58,7 @@ size_change (ClutterTexture *texture,
     }
   else
     {
-      new_width  = ( width * stage_height ) / height;
+      new_width  = (width * stage_height) / height;
       new_height = stage_height;
 
       new_x = (stage_width - new_width) / 2;
@@ -66,10 +66,7 @@ size_change (ClutterTexture *texture,
     }
 
   clutter_actor_set_position (CLUTTER_ACTOR (texture), new_x, new_y);
-
-  clutter_actor_set_size (CLUTTER_ACTOR (texture),
-			  new_width,
-			  new_height);
+  clutter_actor_set_size (CLUTTER_ACTOR (texture), new_width, new_height);
 }
 
 int
