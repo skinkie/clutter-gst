@@ -462,8 +462,7 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
 
   CoglHandle y_tex = cogl_texture_new_from_data (priv->width,
                                                  priv->height,
-                                                 -1,
-                                                 COGL_TEXTURE_NONE,
+                                                 COGL_TEXTURE_NO_SLICING,
                                                  COGL_PIXEL_FORMAT_G_8,
                                                  COGL_PIXEL_FORMAT_G_8,
                                                  priv->width,
@@ -480,30 +479,27 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
   if (priv->v_tex)
     cogl_texture_unref (priv->v_tex);
 
-  priv->v_tex = cogl_texture_new_from_data (priv->width/2,
-                                            priv->height/2,
-                                            -1,
-                                            COGL_TEXTURE_NONE,
+  priv->v_tex = cogl_texture_new_from_data (priv->width / 2,
+                                            priv->height / 2,
+                                            COGL_TEXTURE_NO_SLICING,
                                             COGL_PIXEL_FORMAT_G_8,
                                             COGL_PIXEL_FORMAT_G_8,
-                                            priv->width/2,
+                                            priv->width / 2,
                                             GST_BUFFER_DATA (buffer) +
                                             (priv->width * priv->height));
   cogl_texture_set_filters (priv->v_tex,
                             COGL_TEXTURE_FILTER_LINEAR,
                             COGL_TEXTURE_FILTER_LINEAR);
 
-  priv->u_tex =
-    cogl_texture_new_from_data (priv->width/2,
-                                priv->height/2,
-                                -1,
-                                COGL_TEXTURE_NONE,
-                                COGL_PIXEL_FORMAT_G_8,
-                                COGL_PIXEL_FORMAT_G_8,
-                                priv->width/2,
-                                GST_BUFFER_DATA (buffer) +
-                                (priv->width * priv->height) +
-                                (priv->width/2 * priv->height/2));
+  priv->u_tex = cogl_texture_new_from_data (priv->width / 2,
+                                            priv->height / 2,
+                                            COGL_TEXTURE_NO_SLICING,
+                                            COGL_PIXEL_FORMAT_G_8,
+                                            COGL_PIXEL_FORMAT_G_8,
+                                            priv->width / 2,
+                                            GST_BUFFER_DATA (buffer)
+                                            + (priv->width * priv->height)
+                                            + (priv->width / 2 * priv->height / 2));
   cogl_texture_set_filters (priv->u_tex,
                             COGL_TEXTURE_FILTER_LINEAR,
                             COGL_TEXTURE_FILTER_LINEAR);
