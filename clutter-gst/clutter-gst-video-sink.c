@@ -138,20 +138,12 @@ typedef void (*GLGENPROGRAMSPROC)(GLsizei n, GLuint *programs);
 typedef void (*GLBINDPROGRAMPROC)(GLenum target, GLint program);
 typedef void (*GLPROGRAMSTRINGPROC)(GLenum target, GLenum format, GLsizei len,
                                     const void *string);
-/* multi-texturing */
-typedef void (*GLACTIVETEXTUREPROC)(GLenum unit);
-typedef void (*GLMULTITEXCOORD2FPROC)(GLenum target, GLfloat s, GLfloat t);
-
 typedef struct _ClutterGstSymbols
 {
   /* GL_ARB_fragment_program */
   GLGENPROGRAMSPROC   glGenProgramsARB;
   GLBINDPROGRAMPROC   glBindProgramARB;
   GLPROGRAMSTRINGPROC glProgramStringARB;
-
-  /* multi-texturing */
-  GLACTIVETEXTUREPROC glActiveTextureARB;
-  GLMULTITEXCOORD2FPROC glMultiTexCoord2fARB;
 } ClutterGstSymbols;
 
 /*
@@ -502,40 +494,27 @@ clutter_gst_yv12_paint (ClutterActor        *actor,
                         ClutterGstVideoSink *sink)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
-  GLuint texture;
+  CoglHandle material;
 
-  /* Bind the U and V textures in texture units 1 and 2 */
+  material = clutter_texture_get_cogl_material (CLUTTER_TEXTURE (actor));
+
+  /* Bind the U and V textures in layers 1 and 2 */
   if (priv->u_tex)
-    {
-      cogl_texture_get_gl_texture (priv->u_tex, &texture, NULL);
-      priv->syms.glActiveTextureARB (GL_TEXTURE1);
-      glEnable (GL_TEXTURE_2D);
-      glBindTexture (GL_TEXTURE_2D, texture);
-    }
-
+    cogl_material_set_layer (material, 1, priv->u_tex);
   if (priv->v_tex)
-    {
-      cogl_texture_get_gl_texture (priv->v_tex, &texture, NULL);
-      priv->syms.glActiveTextureARB (GL_TEXTURE2);
-      glEnable (GL_TEXTURE_2D);
-      glBindTexture (GL_TEXTURE_2D, texture);
-    }
-
-  priv->syms.glActiveTextureARB (GL_TEXTURE0_ARB);
+    cogl_material_set_layer (material, 2, priv->v_tex);
 }
 
 static void
 clutter_gst_yv12_glsl_post_paint (ClutterActor        *actor,
                                   ClutterGstVideoSink *sink)
 {
-  ClutterGstVideoSinkPrivate *priv = sink->priv;
+  CoglHandle material;
 
-  /* Disable the extra texture units */
-  priv->syms.glActiveTextureARB (GL_TEXTURE1);
-  glDisable (GL_TEXTURE_2D);
-  priv->syms.glActiveTextureARB (GL_TEXTURE2);
-  glDisable (GL_TEXTURE_2D);
-  priv->syms.glActiveTextureARB (GL_TEXTURE0);
+  /* Remove the extra layers */
+  material = clutter_texture_get_cogl_material (CLUTTER_TEXTURE (actor));
+  cogl_material_remove_layer (material, 1);
+  cogl_material_remove_layer (material, 2);
 }
 
 static ClutterGstRenderer yv12_glsl_renderer =
@@ -575,14 +554,12 @@ static void
 clutter_gst_yv12_fp_post_paint (ClutterActor        *actor,
                                 ClutterGstVideoSink *sink)
 {
-  ClutterGstVideoSinkPrivate *priv = sink->priv;
+  CoglHandle material;
 
-  /* Disable the extra texture units */
-  priv->syms.glActiveTextureARB (GL_TEXTURE1);
-  glDisable (GL_TEXTURE_2D);
-  priv->syms.glActiveTextureARB (GL_TEXTURE2);
-  glDisable (GL_TEXTURE_2D);
-  priv->syms.glActiveTextureARB (GL_TEXTURE0);
+  /* Remove the extra layers */
+  material = clutter_texture_get_cogl_material (CLUTTER_TEXTURE (actor));
+  cogl_material_remove_layer (material, 1);
+  cogl_material_remove_layer (material, 2);
 
   /* Disable the shader */
   glDisable (GL_FRAGMENT_PROGRAM_ARB);
@@ -724,7 +701,7 @@ clutter_gst_build_renderers_list (ClutterGstSymbols *syms)
 {
   GSList             *list = NULL;
   const gchar        *gl_extensions;
-  GLint               nb_texture_units;
+  GLint               nb_texture_units = 0;
   gint                features = 0, i;
   /* The order of the list of renderers is important. They will be prepended
    * to a GSList and we'll iterate over that list to choose the first matching
@@ -744,23 +721,11 @@ clutter_gst_build_renderers_list (ClutterGstSymbols *syms)
 
   /* get the features */
   gl_extensions = (const gchar*) glGetString (GL_EXTENSIONS);
-  if (cogl_check_extension ("GL_ARB_multitexture", gl_extensions))
-    {
-      /* we need 3 texture units for planar YUV */
-      glGetIntegerv (GL_MAX_TEXTURE_UNITS_ARB, &nb_texture_units);
 
-      syms->glActiveTextureARB = (GLACTIVETEXTUREPROC)
-        cogl_get_proc_address ("glActiveTextureARB");
-      syms->glMultiTexCoord2fARB = (GLMULTITEXCOORD2FPROC)
-        cogl_get_proc_address ("glMultiTexCoord2fARB");
+  glGetIntegerv (GL_MAX_TEXTURE_UNITS_ARB, &nb_texture_units);
 
-      if (nb_texture_units >= 3 &&
-          syms->glActiveTextureARB &&
-          syms->glMultiTexCoord2fARB)
-        {
-          features |= CLUTTER_GST_MULTI_TEXTURE;
-        }
-    }
+  if (nb_texture_units >= 3)
+    features |= CLUTTER_GST_MULTI_TEXTURE;
 
   if (cogl_check_extension ("GL_ARB_fragment_program", gl_extensions))
     {
