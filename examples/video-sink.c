@@ -60,7 +60,7 @@ main (int argc, char *argv[])
   stage = clutter_stage_get_default ();
 
   /* Make a timeline */
-  timeline = clutter_timeline_new (100, 30); /* num frames, fps */
+  timeline = clutter_timeline_new (1000); 
   g_object_set(timeline, "loop", TRUE, NULL);
 
   /* We need to set certain props on the target texture currently for

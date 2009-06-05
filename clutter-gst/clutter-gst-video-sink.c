@@ -467,9 +467,7 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
                                                  COGL_PIXEL_FORMAT_G_8,
                                                  priv->width,
                                                  GST_BUFFER_DATA (buffer));
-  cogl_texture_set_filters (y_tex,
-                            COGL_TEXTURE_FILTER_LINEAR,
-                            COGL_TEXTURE_FILTER_LINEAR);
+
   clutter_texture_set_cogl_texture (priv->texture, y_tex);
   cogl_texture_unref (y_tex);
 
@@ -487,9 +485,6 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
                                             priv->width / 2,
                                             GST_BUFFER_DATA (buffer) +
                                             (priv->width * priv->height));
-  cogl_texture_set_filters (priv->v_tex,
-                            COGL_TEXTURE_FILTER_LINEAR,
-                            COGL_TEXTURE_FILTER_LINEAR);
 
   priv->u_tex = cogl_texture_new_from_data (priv->width / 2,
                                             priv->height / 2,
@@ -500,9 +495,6 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
                                             GST_BUFFER_DATA (buffer)
                                             + (priv->width * priv->height)
                                             + (priv->width / 2 * priv->height / 2));
-  cogl_texture_set_filters (priv->u_tex,
-                            COGL_TEXTURE_FILTER_LINEAR,
-                            COGL_TEXTURE_FILTER_LINEAR);
 }
 
 static void
