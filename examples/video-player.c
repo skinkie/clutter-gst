@@ -159,13 +159,12 @@ input_cb (ClutterStage *stage,
 
     case CLUTTER_KEY_PRESS:
       {
-	ClutterKeyEvent* kev = (ClutterKeyEvent *) event;
         ClutterVertex center = { 0, };
         ClutterAnimation *animation = NULL;
 
         center.x = clutter_actor_get_width (app->vtexture) / 2;
 	
-	switch (clutter_key_event_symbol (kev))
+	switch (clutter_event_get_key_symbol (event))
 	  {
 	  case CLUTTER_q:
 	  case CLUTTER_Escape:
