@@ -7,5 +7,5 @@ Name: clutter-gst
 Description: Clutter GStreamer integration
 Version: @VERSION@
 Libs: -L${libdir} -lclutter-gst-@CLUTTER_GST_MAJORMINOR@ 
-Cflags: -I${includedir}/clutter-0.9/clutter-gst
+Cflags: -I${includedir}/clutter-0.9
 Requires: clutter-0.9 gstreamer-0.10 gstreamer-base-0.10 gstreamer-plugins-base-0.10
