@@ -24,6 +24,7 @@ libclutter_gst_@CLUTTER_GST_MAJORMINOR@_la_SOURCES = $(MARSHALFILES)  \
 INCLUDES = \
 	-I$(top_srcdir) \
 	-I$(top_builddir)/clutter-gst/shaders \
+	-I$(top_srcdir)/clutter-gst/shaders \
 	-DG_LOG_DOMAIN=\"Clutter-Gst\" \
 	$(MAINTAINER_CFLAGS) \
 	@CLUTTER_GST_CFLAGS@ \
