@@ -1025,12 +1025,12 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
   else
 #endif
     {
-      guint32 width;
+      guint32 mask;
       gst_structure_get_int (structure, "red_mask", &red_mask);
       gst_structure_get_int (structure, "blue_mask", &blue_mask);
       
-      width = red_mask | blue_mask;
-      if (width < 0x1000000)
+      mask = red_mask | blue_mask;
+      if (mask < 0x1000000)
         {
           priv->format = CLUTTER_GST_RGB24;
           priv->bgr = (red_mask == 0xff0000) ? FALSE : TRUE;

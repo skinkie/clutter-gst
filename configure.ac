@@ -110,9 +110,23 @@ GST_LIBS="$GST_LIBS -lgstinterfaces-$GST_MAJORMINOR -lgstvideo-$GST_MAJORMINOR -
 
 dnl ========================================================================
 
-if test "x$GCC" = "xyes"; then
-        GCC_FLAGS="-g -Wall"
-fi
+m4_define([maintainer_flags_default], [yes])
+AC_ARG_ENABLE([maintainer-flags],
+              [AC_HELP_STRING([--enable-maintainer-flags=@<:@no/yes@:>@],
+                              [Use strict compiler flags @<:@default=maintainer_flags_default@:>@])],
+              [],
+              [enable_maintainer_flags=maintainer_flags_default])
+
+AS_IF([test "x$enable_maintainer_flags" = "xyes" && test "x$GCC" = "xyes"],
+      [
+        AS_COMPILER_FLAGS([MAINTAINER_CFLAGS],
+                          ["-Wall -Wshadow -Wcast-align -Wno-uninitialized
+                            -Wno-strict-aliasing -Wempty-body -Wformat-security
+                            -Winit-self"])
+      ]
+)
+
+AC_SUBST(MAINTAINER_CFLAGS)
 
 dnl ========================================================================
 
@@ -157,8 +171,9 @@ echo "                  Clutter-GST $VERSION"
 echo "                 ==================="
 echo ""
 echo "                   prefix:   ${prefix}"
+echo "           Compiler flags:   ${MAINTAINER_CFLAGS} ${CPPFLAGS}"
 echo ""
 echo "              Cg compiler:   ${have_cgc}"
 echo ""
-echo "            Documentation:   ${enable_gtk_doc}"
+echo "  Build API documentation:   ${enable_gtk_doc}"
 echo ""

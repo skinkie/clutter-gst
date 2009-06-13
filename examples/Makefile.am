@@ -3,7 +3,7 @@ NULL = #
 noinst_PROGRAMS = video-player video-sink audio
 
 INCLUDES = -I$(top_srcdir) \
-	   $(GCC_FLAGS)    \
+	   $(MAINTAINER_CFLAGS) \
 	   $(NULL)
 
 video_player_SOURCES = video-player.c

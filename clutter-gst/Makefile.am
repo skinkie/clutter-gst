@@ -25,7 +25,7 @@ INCLUDES = \
 	-I$(top_srcdir) \
 	-I$(top_builddir)/clutter-gst/shaders \
 	-DG_LOG_DOMAIN=\"Clutter-Gst\" \
-	@GCC_FLAGS@ \
+	$(MAINTAINER_CFLAGS) \
 	@CLUTTER_GST_CFLAGS@ \
 	$(GST_CFLAGS)
 

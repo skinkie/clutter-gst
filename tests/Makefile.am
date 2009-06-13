@@ -4,8 +4,8 @@ noinst_PROGRAMS = test-yuv-upload \
                   test-rgb-upload \
 		  $(NULL)
 
-INCLUDES = -I$(top_srcdir) \
-	   $(GCC_FLAGS)	   \
+INCLUDES = -I$(top_srcdir)      \
+	   $(MAINTAINER_CFLAGS) \
 	   $(NULL)
 
 test_yuv_upload_SOURCES = test-yuv-upload.c
