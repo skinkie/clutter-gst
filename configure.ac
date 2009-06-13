@@ -96,7 +96,7 @@ AM_CONDITIONAL([HAVE_PYTHON], [test "x$have_python" = "xyes"])
 
 dnl ========================================================================
 
-pkg_modules="clutter-0.9 >= 0.9.0"
+pkg_modules="clutter-0.9 >= 0.9.3"
 PKG_CHECK_MODULES(CLUTTER_GST, [$pkg_modules])
 
 dnl ========================================================================
