@@ -18,9 +18,9 @@ BUILT_SOURCES = I420.h \
                 YV12.h \
                 $(NULL)
 
-CLEANFILES = I420.h \
-             YV12.h \
-             $(NULL)
+CLEANFILES += I420.h \
+              YV12.h \
+              $(NULL)
 
 # Don't use GNU make extension to avoid automake warnings, yeah I know, that's
 # annoying.
