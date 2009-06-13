@@ -2,7 +2,7 @@
 
 #include <clutter-gst/clutter-gst.h>
 
-static gint   opt_framerate = 25;
+static gint   opt_framerate = 30;
 static gchar *opt_fourcc    = "I420";
 
 static GOptionEntry options[] =
@@ -93,6 +93,7 @@ main (int argc, char *argv[])
   g_option_context_parse (context, &argc, &argv, NULL);
 
   stage = clutter_stage_get_default ();
+  clutter_actor_set_size (CLUTTER_ACTOR(stage), 320.0f, 240.0f);
 
   /* We need to set certain props on the target texture currently for
    * efficient/corrent playback onto the texture (which sucks a bit)
@@ -129,7 +130,7 @@ main (int argc, char *argv[])
   gst_element_set_state (GST_ELEMENT(pipeline), GST_STATE_PLAYING);
 
   clutter_group_add (CLUTTER_GROUP (stage), texture);
-  // clutter_actor_set_opacity (texture, 0x11);
+  /* clutter_actor_set_opacity (texture, 0x11); */
   clutter_actor_show_all (stage);
 
   clutter_main();

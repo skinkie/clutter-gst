@@ -2,7 +2,7 @@
 
 #include <clutter-gst/clutter-gst.h>
 
-static gint   opt_framerate = 25;
+static gint   opt_framerate = 30;
 static gint   opt_bpp       = 24;
 static gint   opt_depth     = 24;
 
@@ -94,6 +94,7 @@ main (int argc, char *argv[])
   g_option_context_parse (context, &argc, &argv, NULL);
 
   stage = clutter_stage_get_default ();
+  clutter_actor_set_size (CLUTTER_ACTOR (stage), 320.0f, 240.0f);
 
   /* We need to set certain props on the target texture currently for
    * efficient/corrent playback onto the texture (which sucks a bit)
