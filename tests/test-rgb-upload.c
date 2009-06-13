@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include <glib/gprintf.h>
 #include <clutter-gst/clutter-gst.h>
 
 static gint   opt_framerate = 30;

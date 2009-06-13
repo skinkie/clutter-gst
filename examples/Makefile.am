@@ -1,6 +1,10 @@
+NULL = #
+
 noinst_PROGRAMS = video-player video-sink audio
 
-INCLUDES = -I$(top_srcdir)/
+INCLUDES = -I$(top_srcdir) \
+	   $(GCC_FLAGS)    \
+	   $(NULL)
 
 video_player_SOURCES = video-player.c
 video_player_CFLAGS = $(CLUTTER_GST_CFLAGS) $(GST_CFLAGS)

@@ -110,11 +110,13 @@ input_cb (ClutterStage *stage,
 	  gpointer      user_data)
 {
   VideoApp *app = (VideoApp*)user_data;
+  gboolean handled = FALSE;
 
   switch (event->type)
     {
     case CLUTTER_MOTION:
       show_controls (app, TRUE);
+      handled = TRUE;
       break;
 
     case CLUTTER_BUTTON_PRESS:
@@ -132,12 +134,10 @@ input_cb (ClutterStage *stage,
 	  if (actor == app->control_pause || actor == app->control_play)
 	    {
 	      toggle_pause_state (app);
-	      return;
 	    }
-
-	  if (actor == app->control_seek1 ||
-              actor == app->control_seek2 ||
-              actor == app->control_seekbar)
+          else if (actor == app->control_seek1 ||
+                   actor == app->control_seek2 ||
+                   actor == app->control_seekbar)
 	    {
 	      gfloat x, y, dist;
               gdouble progress;
@@ -147,7 +147,7 @@ input_cb (ClutterStage *stage,
 
 	      dist = bev->x - x;
 
-	      CLAMP (dist, 0, SEEK_W);
+	      dist = CLAMP (dist, 0, SEEK_W);
 
 	      progress = (gdouble) dist / SEEK_W;
 
@@ -155,6 +155,7 @@ input_cb (ClutterStage *stage,
                                           progress);
 	    }
 	}
+      handled = TRUE;
       break;
 
     case CLUTTER_KEY_PRESS:
@@ -180,10 +181,12 @@ input_cb (ClutterStage *stage,
             g_signal_connect (animation, "completed",
                               G_CALLBACK (reset_animation),
                               app);
+            handled = TRUE;
 	    break;
 
 	  default:
 	    toggle_pause_state (app);
+            handled = TRUE;
 	    break;
 	  }
       }
@@ -191,7 +194,7 @@ input_cb (ClutterStage *stage,
       break;
     }
 
-  return FALSE;
+  return handled;
 }
 
 static void

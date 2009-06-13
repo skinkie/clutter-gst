@@ -1,10 +1,12 @@
-NULL =
+NULL = #
 
 noinst_PROGRAMS = test-yuv-upload \
                   test-rgb-upload \
 		  $(NULL)
 
-INCLUDES = -I$(top_srcdir)/
+INCLUDES = -I$(top_srcdir) \
+	   $(GCC_FLAGS)	   \
+	   $(NULL)
 
 test_yuv_upload_SOURCES = test-yuv-upload.c
 test_yuv_upload_CFLAGS  = $(CLUTTER_GST_CFLAGS) $(GST_CFLAGS)
