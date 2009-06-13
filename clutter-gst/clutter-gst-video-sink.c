@@ -787,7 +787,7 @@ clutter_gst_build_caps (GSList *renderers)
   return caps;
 }
 
-ClutterGstRenderer *
+static ClutterGstRenderer *
 clutter_gst_find_renderer_by_format (ClutterGstVideoSink  *sink,
                                      ClutterGstVideoFormat format)
 {
