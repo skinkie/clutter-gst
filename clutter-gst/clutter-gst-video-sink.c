@@ -199,7 +199,6 @@ struct _ClutterGstVideoSinkPrivate
   gboolean               shaders_init;
   
   ClutterGstSymbols      syms;          /* extra OpenGL functions */
-  GLUNIFORM1IPROC        glUniform1iARB;
 
   GSList                *renderers;
   GstCaps               *caps;
@@ -417,8 +416,6 @@ static ClutterGstRenderer rgb32_renderer =
   NULL,
 };
 
-#ifdef CLUTTER_COGL_HAS_GL
-
 /*
  * YV12
  *
@@ -437,11 +434,11 @@ clutter_gst_yv12_glsl_init (ClutterActor        *actor,
 
   cogl_program_use (priv->program);
   location = cogl_program_get_uniform_location (priv->program, "ytex");
-  priv->glUniform1iARB (location, 0);
+  cogl_program_uniform_1i (location, 0);
   location = cogl_program_get_uniform_location (priv->program, "utex");
-  priv->glUniform1iARB (location, 1);
+  cogl_program_uniform_1i (location, 1);
   location = cogl_program_get_uniform_location (priv->program, "vtex");
-  priv->glUniform1iARB (location, 2);
+  cogl_program_uniform_1i (location, 2);
 
   cogl_program_use (COGL_INVALID_HANDLE);
 }
@@ -596,11 +593,11 @@ clutter_gst_i420_glsl_init (ClutterActor        *actor,
 
   cogl_program_use (priv->program);
   location = cogl_program_get_uniform_location (priv->program, "ytex");
-  priv->glUniform1iARB (location, 0);
+  cogl_program_uniform_1i (location, 0);
   location = cogl_program_get_uniform_location (priv->program, "vtex");
-  priv->glUniform1iARB (location, 1);
+  cogl_program_uniform_1i (location, 1);
   location = cogl_program_get_uniform_location (priv->program, "utex");
-  priv->glUniform1iARB (location, 2);
+  cogl_program_uniform_1i (location, 2);
   cogl_program_use (COGL_INVALID_HANDLE);
 }
 
@@ -649,8 +646,6 @@ static ClutterGstRenderer i420_fp_renderer =
   clutter_gst_yv12_paint,
   clutter_gst_yv12_fp_post_paint,
 };
-
-#endif /* CLUTTER_COGL_HAS_GL */
 
 /*
  * AYUV
@@ -722,7 +717,7 @@ clutter_gst_build_renderers_list (ClutterGstSymbols *syms)
   /* get the features */
   gl_extensions = (const gchar*) glGetString (GL_EXTENSIONS);
 
-  glGetIntegerv (GL_MAX_TEXTURE_UNITS_ARB, &nb_texture_units);
+  glGetIntegerv (GL_MAX_TEXTURE_UNITS, &nb_texture_units);
 
   if (nb_texture_units >= 3)
     features |= CLUTTER_GST_MULTI_TEXTURE;
@@ -905,11 +900,6 @@ clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
   priv->use_shaders = TRUE;
   priv->renderers = clutter_gst_build_renderers_list (&priv->syms);
   priv->caps = clutter_gst_build_caps (priv->renderers);
-
-#ifdef CLUTTER_COGL_HAS_GL
-  priv->glUniform1iARB = (GLUNIFORM1IPROC)
-    cogl_get_proc_address ("glUniform1iARB");
-#endif
 }
 
 static GstFlowReturn
@@ -1007,7 +997,6 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
   else 
     priv->par_n = priv->par_d = 1;
 
-#if CLUTTER_COGL_HAS_GL
   ret = gst_structure_get_fourcc (structure, "format", &fourcc);
   if (ret && (fourcc == GST_MAKE_FOURCC ('Y', 'V', '1', '2')))
     {
@@ -1023,7 +1012,6 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
       priv->bgr = FALSE;
     }
   else
-#endif
     {
       guint32 mask;
       gst_structure_get_int (structure, "red_mask", &red_mask);
