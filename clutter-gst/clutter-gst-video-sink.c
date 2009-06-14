@@ -236,6 +236,7 @@ _string_array_to_char_array (char	*dst,
   *dst = '\0';
 }
 
+#ifdef CLUTTER_COGL_HAS_GL
 static void
 clutter_gst_video_sink_fp_paint (ClutterActor        *actor,
                                 ClutterGstVideoSink *sink)
@@ -274,6 +275,7 @@ clutter_gst_video_sink_set_fp_shader (ClutterGstVideoSink *sink,
   priv->shaders_init = TRUE;
 
 }
+#endif
 
 static void
 clutter_gst_video_sink_paint (ClutterActor        *actor,
@@ -532,6 +534,7 @@ static ClutterGstRenderer yv12_glsl_renderer =
  * 8 bit Y plane followed by 8 bit 2x2 subsampled V and U planes.
  */
 
+#ifdef CLUTTER_COGL_HAS_GL
 static void
 clutter_gst_yv12_fp_init (ClutterActor        *actor,
                           ClutterGstVideoSink *sink)
@@ -573,6 +576,7 @@ static ClutterGstRenderer yv12_fp_renderer =
   clutter_gst_yv12_paint,
   clutter_gst_yv12_fp_post_paint,
 };
+#endif
 
 /*
  * I420
@@ -620,6 +624,7 @@ static ClutterGstRenderer i420_glsl_renderer =
  * Basically the same as YV12, but with the 2 chroma planes switched.
  */
 
+#ifdef CLUTTER_COGL_HAS_GL
 static void
 clutter_gst_i420_fp_init (ClutterActor        *actor,
                           ClutterGstVideoSink *sink)
@@ -646,6 +651,7 @@ static ClutterGstRenderer i420_fp_renderer =
   clutter_gst_yv12_paint,
   clutter_gst_yv12_fp_post_paint,
 };
+#endif
 
 /*
  * AYUV
@@ -707,9 +713,11 @@ clutter_gst_build_renderers_list (ClutterGstSymbols *syms)
       &rgb24_renderer,
       &rgb32_renderer,
       &yv12_glsl_renderer,
-      &yv12_fp_renderer,
       &i420_glsl_renderer,
+#ifdef CLUTTER_COGL_HAS_GL
+      &yv12_fp_renderer,
       &i420_fp_renderer,
+#endif
       &ayuv_glsl_renderer,
       NULL
     };
@@ -717,11 +725,12 @@ clutter_gst_build_renderers_list (ClutterGstSymbols *syms)
   /* get the features */
   gl_extensions = (const gchar*) glGetString (GL_EXTENSIONS);
 
-  glGetIntegerv (GL_MAX_TEXTURE_UNITS, &nb_texture_units);
+  glGetIntegerv (CGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &nb_texture_units);
 
   if (nb_texture_units >= 3)
     features |= CLUTTER_GST_MULTI_TEXTURE;
 
+#ifdef CLUTTER_COGL_HAS_GL
   if (cogl_check_extension ("GL_ARB_fragment_program", gl_extensions))
     {
       /* the shaders we'll feed to the GPU are simple enough, we don't need
@@ -741,6 +750,7 @@ clutter_gst_build_renderers_list (ClutterGstSymbols *syms)
           features |= CLUTTER_GST_FP;
         }
     }
+#endif
 
   if (cogl_features_available (COGL_FEATURE_SHADERS_GLSL))
     features |= CLUTTER_GST_GLSL;
