@@ -132,12 +132,12 @@ typedef enum
   CLUTTER_GST_I420,
 } ClutterGstVideoFormat;
 
-typedef void (*GLUNIFORM1IPROC)(GLint location, GLint value);
+typedef void (APIENTRYP GLUNIFORM1IPROC)(GLint location, GLint value);
 /* GL_ARB_fragment_program */
-typedef void (*GLGENPROGRAMSPROC)(GLsizei n, GLuint *programs);
-typedef void (*GLBINDPROGRAMPROC)(GLenum target, GLint program);
-typedef void (*GLPROGRAMSTRINGPROC)(GLenum target, GLenum format, GLsizei len,
-                                    const void *string);
+typedef void (APIENTRYP GLGENPROGRAMSPROC)(GLsizei n, GLuint *programs);
+typedef void (APIENTRYP GLBINDPROGRAMPROC)(GLenum target, GLint program);
+typedef void (APIENTRYP GLPROGRAMSTRINGPROC)(GLenum target, GLenum format,
+                                             GLsizei len, const void *string);
 typedef struct _ClutterGstSymbols
 {
   /* GL_ARB_fragment_program */
