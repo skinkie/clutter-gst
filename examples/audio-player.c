@@ -3,7 +3,7 @@
  *
  * GStreamer integration library for Clutter.
  *
- * audio.c - A simple audio player.
+ * audio-player.c - A simple audio player.
  *
  * Copyright (C) 2007,2008 OpenedHand
  *

@@ -1,6 +1,6 @@
 NULL = #
 
-noinst_PROGRAMS = video-player video-sink audio
+noinst_PROGRAMS = video-player video-sink audio-player
 
 INCLUDES = -I$(top_srcdir) \
 	   $(MAINTAINER_CFLAGS) \
@@ -20,9 +20,9 @@ video_sink_LDFLAGS = \
     $(GST_LIBS)   \
     $(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la 
 
-audio_SOURCES = audio.c
-audio_CFLAGS = $(CLUTTER_GST_CFLAGS) $(GST_CFLAGS)
-audio_LDFLAGS = \
+audio_player_SOURCES = audio-player.c
+audio_player_CFLAGS = $(CLUTTER_GST_CFLAGS) $(GST_CFLAGS)
+audio_player_LDFLAGS = \
     $(CLUTTER_GST_LIBS) \
     $(GST_LIBS)   \
     $(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la 
