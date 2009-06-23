@@ -203,6 +203,8 @@ struct _ClutterGstVideoSinkPrivate
   GSList                *renderers;
   GstCaps               *caps;
   ClutterGstRenderer    *renderer;
+
+  GArray                *signal_handler_ids;
 };
 
 
@@ -254,6 +256,7 @@ clutter_gst_video_sink_set_fp_shader (ClutterGstVideoSink *sink,
                                       const int            size)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
+  gulong handler_id;
 
   priv->shaders_init = FALSE;
 
@@ -268,10 +271,12 @@ clutter_gst_video_sink_set_fp_shader (ClutterGstVideoSink *sink,
   glDisable(GL_FRAGMENT_PROGRAM_ARB);
 
   /* Hook onto the pre-paint signal to bind the shader. */
-  g_signal_connect (priv->texture,
-                    "paint",
-                    G_CALLBACK (clutter_gst_video_sink_fp_paint),
-                    sink);
+  handler_id = g_signal_connect (priv->texture,
+                                 "paint",
+                                 G_CALLBACK (clutter_gst_video_sink_fp_paint),
+                                 sink);
+  g_array_append_val (priv->signal_handler_ids, handler_id);
+
   priv->shaders_init = TRUE;
 
 }
@@ -311,6 +316,7 @@ clutter_gst_video_sink_set_shader (ClutterGstVideoSink *sink,
   if (shader_src)
     {
       ClutterShader *shader;
+      gulong handler_id;
 
       /* Set a dummy shader so we don't interfere with the shader stack */
       shader = clutter_shader_new ();
@@ -332,10 +338,11 @@ clutter_gst_video_sink_set_shader (ClutterGstVideoSink *sink,
       /* Hook onto the pre-paint signal to replace the dummy shader with
        * the real shader.
        */
-      g_signal_connect (priv->texture,
-                        "paint",
-                        G_CALLBACK (clutter_gst_video_sink_paint),
-                        sink);
+      handler_id = g_signal_connect (priv->texture,
+                                     "paint",
+                                     G_CALLBACK (clutter_gst_video_sink_paint),
+                                     sink);
+      g_array_append_val (priv->signal_handler_ids, handler_id);
       
       priv->shaders_init = TRUE;
     }
@@ -866,15 +873,23 @@ clutter_gst_video_sink_idle_func (gpointer data)
       /* Initialize renderer */
       if (!priv->shaders_init)
         {
+          gulong handler_id;
+
           priv->renderer->init (CLUTTER_ACTOR (priv->texture), sink);
-          g_signal_connect (priv->texture,
-                            "paint",
-                            G_CALLBACK (priv->renderer->paint),
-                            sink);
-          g_signal_connect_after (priv->texture,
-                                  "paint",
-                                  G_CALLBACK (priv->renderer->post_paint),
-                                  sink);
+
+          handler_id =
+              g_signal_connect (priv->texture,
+                                "paint",
+                                G_CALLBACK (priv->renderer->paint),
+                                sink);
+          g_array_append_val (priv->signal_handler_ids, handler_id);
+
+          handler_id =
+              g_signal_connect_after (priv->texture,
+                                      "paint",
+                                      G_CALLBACK (priv->renderer->post_paint),
+                                      sink);
+          g_array_append_val (priv->signal_handler_ids, handler_id);
         }
     }
 
@@ -910,6 +925,8 @@ clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
   priv->use_shaders = TRUE;
   priv->renderers = clutter_gst_build_renderers_list (&priv->syms);
   priv->caps = clutter_gst_build_caps (priv->renderers);
+
+  priv->signal_handler_ids = g_array_new (FALSE, FALSE, sizeof (gulong));
 }
 
 static GstFlowReturn
@@ -1101,6 +1118,8 @@ clutter_gst_video_sink_finalize (GObject *object)
 
   g_slist_free (priv->renderers);
 
+  g_array_free (priv->signal_handler_ids, TRUE);
+
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
 
@@ -1167,6 +1186,7 @@ static gboolean
 clutter_gst_video_sink_stop (GstBaseSink *base_sink)
 {
   ClutterGstVideoSinkPrivate *priv;
+  guint i;
 
   priv = CLUTTER_GST_VIDEO_SINK (base_sink)->priv;
 
@@ -1176,6 +1196,13 @@ clutter_gst_video_sink_stop (GstBaseSink *base_sink)
   priv->buffer = NULL;
   g_mutex_unlock (priv->buffer_lock);
 
+  for (i = 0; i < priv->signal_handler_ids->len; i++)
+    {
+      gulong id = g_array_index (priv->signal_handler_ids, gulong, i);
+
+      g_signal_handler_disconnect (priv->texture, id);
+    }
+  g_array_set_size (priv->signal_handler_ids, 0);
 
   return TRUE;
 }
