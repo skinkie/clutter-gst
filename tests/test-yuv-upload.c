@@ -80,7 +80,6 @@ main (int argc, char *argv[])
   GstPipeline      *pipeline;
   GstElement       *src;
   GstElement       *capsfilter;
-  GstElement       *colorspace;
   GstElement       *sink;
   GstCaps          *caps;
 
@@ -113,7 +112,6 @@ main (int argc, char *argv[])
 
   src = gst_element_factory_make ("videotestsrc", NULL);
   capsfilter = gst_element_factory_make ("capsfilter", NULL);
-  colorspace = gst_element_factory_make ("ffmpegcolorspace", NULL);
   sink = clutter_gst_video_sink_new (CLUTTER_TEXTURE (texture));
 
   /* make videotestsrc spit the format we want */
