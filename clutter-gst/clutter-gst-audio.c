@@ -3,7 +3,7 @@
  *
  * GStreamer integration library for Clutter.
  *
- * clutter-gst-audio.h - Audio streaming object
+ * clutter-gst-audio.c - Audio streaming object.
  *
  * Authored By Matthew Allum  <mallum@openedhand.com>
  *             Jorn Baayen <jorn@openedhand.com>

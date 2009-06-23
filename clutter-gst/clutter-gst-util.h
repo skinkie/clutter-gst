@@ -3,7 +3,7 @@
  *
  * GStreamer integration library for Clutter.
  *
- * clutter-gst-util.h - Miscellaneous functions
+ * clutter-gst-util.h - Miscellaneous functions.
  *
  * Authored By Matthew Allum  <mallum@openedhand.com>
  *
