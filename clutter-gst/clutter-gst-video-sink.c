@@ -121,7 +121,6 @@ enum
 {
   PROP_0,
   PROP_TEXTURE,
-  PROP_USE_SHADERS,
 };
 
 typedef enum
@@ -197,7 +196,6 @@ struct _ClutterGstVideoSinkPrivate
   int                    height;
   int                    fps_n, fps_d;
   int                    par_n, par_d;
-  gboolean               use_shaders;
   gboolean               shaders_init;
   
   ClutterGstSymbols      syms;          /* extra OpenGL functions */
@@ -924,7 +922,6 @@ clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
                                  ClutterGstVideoSinkPrivate);
 
   priv->buffer_lock = g_mutex_new ();
-  priv->use_shaders = TRUE;
   priv->renderers = clutter_gst_build_renderers_list (&priv->syms);
   priv->caps = clutter_gst_build_caps (priv->renderers);
 
@@ -1133,7 +1130,6 @@ clutter_gst_video_sink_set_property (GObject *object,
 {
   ClutterGstVideoSink *sink;
   ClutterGstVideoSinkPrivate *priv;
-  gboolean use_shaders;
 
   sink = CLUTTER_GST_VIDEO_SINK (object);
   priv = sink->priv;
@@ -1145,14 +1141,6 @@ clutter_gst_video_sink_set_property (GObject *object,
         g_object_unref (priv->texture);
 
       priv->texture = CLUTTER_TEXTURE (g_value_dup_object (value));
-      break;
-    case PROP_USE_SHADERS:
-      use_shaders = g_value_get_boolean (value);
-      if (priv->use_shaders != use_shaders)
-        {
-          priv->use_shaders = use_shaders;
-          g_object_notify (object, "use-shaders");
-        }
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -1174,9 +1162,6 @@ clutter_gst_video_sink_get_property (GObject *object,
     {
     case PROP_TEXTURE:
       g_value_set_object (value, sink->priv->texture);
-      break;
-    case PROP_USE_SHADERS:
-      g_value_set_boolean (value, sink->priv->use_shaders);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -1236,15 +1221,6 @@ clutter_gst_video_sink_class_init (ClutterGstVideoSinkClass *klass)
                                     "Target ClutterTexture object",
                                     CLUTTER_TYPE_TEXTURE,
                                     G_PARAM_READWRITE));
-
-  g_object_class_install_property 
-              (gobject_class, PROP_USE_SHADERS,
-               g_param_spec_boolean ("use-shaders",
-                                     "Use shaders",
-                                     "Use a fragment shader to accelerate "
-                                     "colour-space conversion.",
-                                     TRUE,
-                                     G_PARAM_READWRITE));
 }
 
 /**

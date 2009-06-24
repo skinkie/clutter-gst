@@ -276,8 +276,6 @@ main (int argc, char *argv[])
   ClutterColor         stage_color = { 0x00, 0x00, 0x00, 0x00 };
   ClutterColor         control_color1 = { 73, 74, 77, 0xee };
   ClutterColor         control_color2 = { 0xcc, 0xcc, 0xcc, 0xff };
-  ClutterGstVideoSink *sink;
-  GstElement          *playbin;
   gfloat               x,y;
 
   if (argc < 2)
@@ -296,12 +294,6 @@ main (int argc, char *argv[])
 
   if (app->vtexture == NULL)
     g_error("failed to create vtexture");
-
-  /* Use shaders if they're available */
-  playbin = clutter_gst_video_texture_get_playbin (
-              CLUTTER_GST_VIDEO_TEXTURE (app->vtexture));
-  g_object_get (G_OBJECT (playbin), "video-sink", &sink, NULL);
-  g_object_set (G_OBJECT (sink), "use-shaders", TRUE, NULL);
 
   /* Dont let the underlying pixbuf dictate size */
   g_object_set (G_OBJECT(app->vtexture), "sync-size", FALSE, NULL);

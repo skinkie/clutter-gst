@@ -142,8 +142,6 @@ main (int argc, char *argv[])
   capsfilter = gst_element_factory_make ("capsfilter", NULL);
   sink = clutter_gst_video_sink_new (CLUTTER_TEXTURE (texture));
 
-  g_object_set (G_OBJECT (sink), "use-shaders", FALSE, NULL);
-
   /* make videotestsrc spit the format we want */
   caps = gst_caps_new_simple ("video/x-raw-rgb",
                               "bpp", G_TYPE_INT, opt_bpp,
