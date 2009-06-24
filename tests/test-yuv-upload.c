@@ -124,15 +124,15 @@ main (int argc, char *argv[])
 
   /* We need to set certain props on the target texture currently for
    * efficient/corrent playback onto the texture (which sucks a bit)
-  */
+   */
   texture = g_object_new (CLUTTER_TYPE_TEXTURE,
                           "sync-size",       FALSE,
                           "disable-slicing", TRUE,
                           NULL);
 
   g_signal_connect (CLUTTER_TEXTURE (texture),
-		    "size-change",
-		    G_CALLBACK (size_change), NULL);
+                    "size-change",
+                    G_CALLBACK (size_change), NULL);
 
   /* Set up pipeline */
   pipeline = GST_PIPELINE(gst_pipeline_new (NULL));
@@ -143,16 +143,17 @@ main (int argc, char *argv[])
 
   /* make videotestsrc spit the format we want */
   caps = gst_caps_new_simple ("video/x-raw-yuv",
-         "format", GST_TYPE_FOURCC, parse_fourcc (opt_fourcc),
-         "framerate", GST_TYPE_FRACTION, opt_framerate, 1,
-         NULL);
+                              "format", GST_TYPE_FOURCC,
+                                        parse_fourcc (opt_fourcc),
+                              "framerate", GST_TYPE_FRACTION, opt_framerate, 1,
+                              NULL);
   g_object_set (capsfilter, "caps", caps, NULL);
 
   g_printf ("%s: [caps] %s\n", __FILE__, gst_caps_to_string (caps));
   gst_bin_add_many (GST_BIN (pipeline), src, capsfilter, sink, NULL);
   result = gst_element_link_many (src, capsfilter, sink, NULL);
   if (result == FALSE)
-      g_critical("Could not link elements");
+    g_critical("Could not link elements");
   gst_element_set_state (GST_ELEMENT(pipeline), GST_STATE_PLAYING);
 
   clutter_group_add (CLUTTER_GROUP (stage), texture);

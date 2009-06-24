@@ -107,7 +107,7 @@ toggle_pause_state (VideoApp *app)
   if (app->paused)
     {
       clutter_media_set_playing (CLUTTER_MEDIA(app->vtexture), 
-				     TRUE);
+                                 TRUE);
       app->paused = FALSE;
       clutter_actor_hide (app->control_play);
       clutter_actor_show (app->control_pause);
@@ -115,7 +115,7 @@ toggle_pause_state (VideoApp *app)
   else
     {
       clutter_media_set_playing (CLUTTER_MEDIA(app->vtexture), 
-				     FALSE);
+                                 FALSE);
       app->paused = TRUE;
       clutter_actor_hide (app->control_pause);
       clutter_actor_show (app->control_play);
@@ -131,8 +131,8 @@ reset_animation (ClutterAnimation *animation,
 
 static gboolean
 input_cb (ClutterStage *stage, 
-	  ClutterEvent *event,
-	  gpointer      user_data)
+          ClutterEvent *event,
+          gpointer      user_data)
 {
   VideoApp *app = (VideoApp*)user_data;
   gboolean handled = FALSE;
@@ -146,40 +146,40 @@ input_cb (ClutterStage *stage,
 
     case CLUTTER_BUTTON_PRESS:
       if (app->controls_showing)
-	{
-	  ClutterActor       *actor;
-	  ClutterButtonEvent *bev = (ClutterButtonEvent *) event;
+        {
+          ClutterActor       *actor;
+          ClutterButtonEvent *bev = (ClutterButtonEvent *) event;
 
-	  actor = clutter_stage_get_actor_at_pos (stage, CLUTTER_PICK_ALL,
+          actor = clutter_stage_get_actor_at_pos (stage, CLUTTER_PICK_ALL,
                                                   bev->x,
                                                   bev->y);
 
-	  printf("got actor %p at pos %.2fx%.2f\n", actor, bev->x, bev->y);
+          printf("got actor %p at pos %.2fx%.2f\n", actor, bev->x, bev->y);
 
-	  if (actor == app->control_pause || actor == app->control_play)
-	    {
-	      toggle_pause_state (app);
-	    }
+          if (actor == app->control_pause || actor == app->control_play)
+            {
+              toggle_pause_state (app);
+            }
           else if (actor == app->control_seek1 ||
                    actor == app->control_seek2 ||
                    actor == app->control_seekbar)
-	    {
-	      gfloat x, y, dist;
+            {
+              gfloat x, y, dist;
               gdouble progress;
 
-	      clutter_actor_get_transformed_position (app->control_seekbar,
+              clutter_actor_get_transformed_position (app->control_seekbar,
                                                       &x, &y);
 
-	      dist = bev->x - x;
+              dist = bev->x - x;
 
-	      dist = CLAMP (dist, 0, SEEK_W);
+              dist = CLAMP (dist, 0, SEEK_W);
 
-	      progress = (gdouble) dist / SEEK_W;
+              progress = (gdouble) dist / SEEK_W;
 
-	      clutter_media_set_progress (CLUTTER_MEDIA (app->vtexture),
+              clutter_media_set_progress (CLUTTER_MEDIA (app->vtexture),
                                           progress);
-	    }
-	}
+            }
+        }
       handled = TRUE;
       break;
 
@@ -189,15 +189,15 @@ input_cb (ClutterStage *stage,
         ClutterAnimation *animation = NULL;
 
         center.x = clutter_actor_get_width (app->vtexture) / 2;
-	
-	switch (clutter_event_get_key_symbol (event))
-	  {
-	  case CLUTTER_q:
-	  case CLUTTER_Escape:
-	    clutter_main_quit ();
-	    break;
 
-	  case CLUTTER_e:
+        switch (clutter_event_get_key_symbol (event))
+          {
+          case CLUTTER_q:
+          case CLUTTER_Escape:
+            clutter_main_quit ();
+            break;
+
+          case CLUTTER_e:
             animation =
               clutter_actor_animate (app->vtexture, CLUTTER_LINEAR, 500,
                                      "rotation-angle-y", 360.0,
@@ -207,13 +207,13 @@ input_cb (ClutterStage *stage,
                               G_CALLBACK (reset_animation),
                               app);
             handled = TRUE;
-	    break;
+            break;
 
-	  default:
-	    toggle_pause_state (app);
+          default:
+            toggle_pause_state (app);
             handled = TRUE;
-	    break;
-	  }
+            break;
+          }
       }
     default:
       break;
@@ -265,7 +265,7 @@ tick (GObject      *object,
 
   clutter_actor_set_size (app->control_seekbar,
                           progress * SEEK_W,
-			  SEEK_H);
+                          SEEK_H);
 }
 
 int
@@ -277,6 +277,7 @@ main (int argc, char *argv[])
   ClutterColor         control_color1 = { 73, 74, 77, 0xee };
   ClutterColor         control_color2 = { 0xcc, 0xcc, 0xcc, 0xff };
   ClutterGstVideoSink *sink;
+  GstElement          *playbin;
   gfloat               x,y;
 
   if (argc < 2)
@@ -292,15 +293,14 @@ main (int argc, char *argv[])
   app = g_new0(VideoApp, 1);
   app->stage = stage;
   app->vtexture = clutter_gst_video_texture_new ();
-  
+
   if (app->vtexture == NULL)
     g_error("failed to create vtexture");
 
   /* Use shaders if they're available */
-  g_object_get (G_OBJECT (clutter_gst_video_texture_get_playbin (
-                          CLUTTER_GST_VIDEO_TEXTURE (app->vtexture))),
-                "video-sink", &sink,
-                NULL);
+  playbin = clutter_gst_video_texture_get_playbin (
+              CLUTTER_GST_VIDEO_TEXTURE (app->vtexture));
+  g_object_get (G_OBJECT (playbin), "video-sink", &sink, NULL);
   g_object_set (G_OBJECT (sink), "use-shaders", TRUE, NULL);
 
   /* Dont let the underlying pixbuf dictate size */
@@ -308,8 +308,8 @@ main (int argc, char *argv[])
 
   /* Handle it ourselves so can scale up for fullscreen better */
   g_signal_connect (CLUTTER_TEXTURE (app->vtexture),
-		    "size-change",
-		    G_CALLBACK (size_change), app);
+                    "size-change",
+                    G_CALLBACK (size_change), app);
 
   /* Load up out video texture */
   clutter_media_set_filename (CLUTTER_MEDIA (app->vtexture), argv[1]);
@@ -340,14 +340,14 @@ main (int argc, char *argv[])
   clutter_actor_hide (app->control_play);
 
   clutter_container_add (CLUTTER_CONTAINER (app->control),
-			 app->control_bg,
-			 app->control_play,
-			 app->control_pause,
-			 app->control_seek1,
-			 app->control_seek2,
-			 app->control_seekbar,
-			 app->control_label,
-			 NULL);
+                         app->control_bg,
+                         app->control_play,
+                         app->control_pause,
+                         app->control_seek1,
+                         app->control_seek2,
+                         app->control_seekbar,
+                         app->control_label,
+                         NULL);
 
   clutter_actor_set_opacity (app->control, 0xee);
 
@@ -371,14 +371,14 @@ main (int argc, char *argv[])
 
   g_print ("start\n");
 
-  {
-    gfloat stage_width, stage_height;
+    {
+      gfloat stage_width, stage_height;
 
-    clutter_actor_get_size (stage, &stage_width, &stage_height);
+      clutter_actor_get_size (stage, &stage_width, &stage_height);
 
-    x = (stage_width - clutter_actor_get_width (app->control)) / 2;
-    y = stage_height - (stage_height / 3);
-  }
+      x = (stage_width - clutter_actor_get_width (app->control)) / 2;
+      y = stage_height - (stage_height / 3);
+    }
 
   g_print ("setting x = %.2f, y = %.2f, width = %.2f\n",
            x, y, clutter_actor_get_width (app->control));
@@ -396,8 +396,8 @@ main (int argc, char *argv[])
   g_signal_connect (stage, "event", G_CALLBACK (input_cb), app);
 
   g_signal_connect (app->vtexture,
-		    "notify::progress", G_CALLBACK (tick),
-		    app);
+                    "notify::progress", G_CALLBACK (tick),
+                    app);
 
   clutter_media_set_playing (CLUTTER_MEDIA (app->vtexture), TRUE);
 
