@@ -102,6 +102,7 @@ int
 main (int argc, char *argv[])
 {
   GOptionContext   *context;
+  GError           *error = NULL;
   gboolean          result;
   ClutterActor     *stage;
   ClutterActor     *texture;
@@ -118,7 +119,15 @@ main (int argc, char *argv[])
   g_option_context_add_group (context, gst_init_get_option_group ());
   g_option_context_add_group (context, clutter_get_option_group ());
   g_option_context_add_main_entries (context, options, NULL);
-  g_option_context_parse (context, &argc, &argv, NULL);
+
+  if (!g_option_context_parse (context, &argc, &argv, &error))
+    {
+      g_option_context_free (context);
+
+      g_print ("%s\n", error->message);
+      g_error_free (error);
+      exit(EXIT_FAILURE);
+    }
 
   stage = clutter_stage_get_default ();
   clutter_actor_set_size (CLUTTER_ACTOR (stage), 320.0f, 240.0f);
@@ -167,5 +176,5 @@ main (int argc, char *argv[])
 
   clutter_main();
 
-  return 0;
+  return EXIT_SUCCESS;
 }
