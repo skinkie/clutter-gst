@@ -167,8 +167,7 @@ typedef struct _ClutterGstRenderer
  int                    flags;    /* ClutterGstFeatures ORed flags */
  GstStaticCaps          caps;     /* caps handled by the renderer */
 
- void (*init)       (ClutterActor        *actor,
-                     ClutterGstVideoSink *sink);
+ void (*init)       (ClutterGstVideoSink *sink);
  void (*upload)     (ClutterGstVideoSink *sink,
                      GstBuffer           *buffer);
  void (*paint)      (ClutterActor        *actor,
@@ -350,8 +349,7 @@ clutter_gst_video_sink_set_shader (ClutterGstVideoSink *sink,
 
 /* some renderers don't need all the ClutterGstRenderer vtable */
 static void
-clutter_gst_dummy_init (ClutterActor        *actor,
-                        ClutterGstVideoSink *sink)
+clutter_gst_dummy_init (ClutterGstVideoSink *sink)
 {
 }
 
@@ -432,14 +430,12 @@ static ClutterGstRenderer rgb32_renderer =
  */
 
 static void
-clutter_gst_yv12_glsl_init (ClutterActor        *actor,
-                            ClutterGstVideoSink *sink)
+clutter_gst_yv12_glsl_init (ClutterGstVideoSink *sink)
 {
   ClutterGstVideoSinkPrivate *priv= sink->priv;
   GLint location;
 
-  clutter_gst_video_sink_set_shader (sink,
-                                     yv12_to_rgba_shader);
+  clutter_gst_video_sink_set_shader (sink, yv12_to_rgba_shader);
 
   cogl_program_use (priv->program);
   location = cogl_program_get_uniform_location (priv->program, "ytex");
@@ -543,8 +539,7 @@ static ClutterGstRenderer yv12_glsl_renderer =
 
 #ifdef CLUTTER_COGL_HAS_GL
 static void
-clutter_gst_yv12_fp_init (ClutterActor        *actor,
-                          ClutterGstVideoSink *sink)
+clutter_gst_yv12_fp_init (ClutterGstVideoSink *sink)
 {
   gchar *shader;
 
@@ -593,14 +588,12 @@ static ClutterGstRenderer yv12_fp_renderer =
  */
 
 static void
-clutter_gst_i420_glsl_init (ClutterActor        *actor,
-                            ClutterGstVideoSink *sink)
+clutter_gst_i420_glsl_init (ClutterGstVideoSink *sink)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
   GLint location;
 
-  clutter_gst_video_sink_set_shader (sink,
-                                     yv12_to_rgba_shader);
+  clutter_gst_video_sink_set_shader (sink, yv12_to_rgba_shader);
 
   cogl_program_use (priv->program);
   location = cogl_program_get_uniform_location (priv->program, "ytex");
@@ -633,8 +626,7 @@ static ClutterGstRenderer i420_glsl_renderer =
 
 #ifdef CLUTTER_COGL_HAS_GL
 static void
-clutter_gst_i420_fp_init (ClutterActor        *actor,
-                          ClutterGstVideoSink *sink)
+clutter_gst_i420_fp_init (ClutterGstVideoSink *sink)
 {
   gchar *shader;
 
@@ -669,8 +661,7 @@ static ClutterGstRenderer i420_fp_renderer =
  */
 
 static void
-clutter_gst_ayuv_glsl_init(ClutterActor        *actor,
-                           ClutterGstVideoSink *sink)
+clutter_gst_ayuv_glsl_init(ClutterGstVideoSink *sink)
 {
   clutter_gst_video_sink_set_shader (sink, ayuv_to_rgba_shader);
 }
@@ -875,7 +866,7 @@ clutter_gst_video_sink_idle_func (gpointer data)
         {
           gulong handler_id;
 
-          priv->renderer->init (CLUTTER_ACTOR (priv->texture), sink);
+          priv->renderer->init (sink);
 
           handler_id =
               g_signal_connect (priv->texture,
