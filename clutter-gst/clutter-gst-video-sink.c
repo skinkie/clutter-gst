@@ -160,6 +160,10 @@ typedef enum _ClutterGstFeatures
 /*
  * renderer: abstracts a backend to render a frame.
  */
+typedef void (ClutterGstRendererPaint) (ClutterActor *, ClutterGstVideoSink *);
+typedef void (ClutterGstRendererPostPaint) (ClutterActor *,
+                                            ClutterGstVideoSink *);
+
 typedef struct _ClutterGstRenderer
 {
  const char            *name;     /* user friendly name */
@@ -168,42 +172,46 @@ typedef struct _ClutterGstRenderer
  GstStaticCaps          caps;     /* caps handled by the renderer */
 
  void (*init)       (ClutterGstVideoSink *sink);
+ void (*deinit)     (ClutterGstVideoSink *sink);
  void (*upload)     (ClutterGstVideoSink *sink,
                      GstBuffer           *buffer);
- void (*paint)      (ClutterActor        *actor,
-                     ClutterGstVideoSink *sink);
- void (*post_paint) (ClutterActor        *actor,
-                     ClutterGstVideoSink *sink);
 } ClutterGstRenderer;
+
+typedef enum _ClutterGstRendererState
+{
+  CLUTTER_GST_RENDERER_STOPPED,
+  CLUTTER_GST_RENDERER_RUNNING,
+  CLUTTER_GST_RENDERER_NEED_GC,
+} ClutterGstRendererState;
 
 struct _ClutterGstVideoSinkPrivate
 {
-  ClutterTexture        *texture;
-  CoglHandle             u_tex;
-  CoglHandle             v_tex;
-  CoglHandle             program;
-  CoglHandle             shader;
-  GLuint                 fp;
+  ClutterTexture          *texture;
+  CoglHandle               u_tex;
+  CoglHandle               v_tex;
+  CoglHandle               program;
+  CoglHandle               shader;
+  GLuint                   fp;
 
-  GMutex                *buffer_lock;   /* mutex for the buffer and idle_id */
-  GstBuffer             *buffer;
-  guint                  idle_id;
+  GMutex                  *buffer_lock;   /* mutex for the buffer and idle_id */
+  GstBuffer               *buffer;
+  guint                    idle_id;
 
-  ClutterGstVideoFormat  format;
-  gboolean               bgr;
-  int                    width;
-  int                    height;
-  int                    fps_n, fps_d;
-  int                    par_n, par_d;
-  gboolean               shaders_init;
+  ClutterGstVideoFormat    format;
+  gboolean                 bgr;
+  int                      width;
+  int                      height;
+  int                      fps_n, fps_d;
+  int                      par_n, par_d;
   
-  ClutterGstSymbols      syms;          /* extra OpenGL functions */
+  ClutterGstSymbols        syms;          /* extra OpenGL functions */
 
-  GSList                *renderers;
-  GstCaps               *caps;
-  ClutterGstRenderer    *renderer;
+  GSList                  *renderers;
+  GstCaps                 *caps;
+  ClutterGstRenderer      *renderer;
+  ClutterGstRendererState  renderer_state;
 
-  GArray                *signal_handler_ids;
+  GArray                  *signal_handler_ids;
 };
 
 
@@ -237,6 +245,25 @@ _string_array_to_char_array (char	*dst,
   *dst = '\0';
 }
 
+static void
+_renderer_connect_signals(ClutterGstVideoSink        *sink,
+                          ClutterGstRendererPaint     paint_func,
+                          ClutterGstRendererPostPaint post_paint_func)
+{
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+  gulong handler_id;
+
+  handler_id =
+    g_signal_connect (priv->texture, "paint", G_CALLBACK (paint_func), sink);
+  g_array_append_val (priv->signal_handler_ids, handler_id);
+
+  handler_id = g_signal_connect_after (priv->texture,
+                                       "paint",
+                                       G_CALLBACK (post_paint_func),
+                                       sink);
+  g_array_append_val (priv->signal_handler_ids, handler_id);
+}
+
 #ifdef CLUTTER_COGL_HAS_GL
 static void
 clutter_gst_video_sink_fp_paint (ClutterActor        *actor,
@@ -257,7 +284,9 @@ clutter_gst_video_sink_set_fp_shader (ClutterGstVideoSink *sink,
   ClutterGstVideoSinkPrivate *priv = sink->priv;
   gulong handler_id;
 
-  priv->shaders_init = FALSE;
+  /* FIXME: implement freeing the shader */
+  if (!shader_src)
+    return;
 
   glEnable (GL_FRAGMENT_PROGRAM_ARB);
   priv->syms.glGenProgramsARB (1, &priv->fp);
@@ -275,9 +304,6 @@ clutter_gst_video_sink_set_fp_shader (ClutterGstVideoSink *sink,
                                  G_CALLBACK (clutter_gst_video_sink_fp_paint),
                                  sink);
   g_array_append_val (priv->signal_handler_ids, handler_id);
-
-  priv->shaders_init = TRUE;
-
 }
 #endif
 
@@ -296,7 +322,6 @@ clutter_gst_video_sink_set_shader (ClutterGstVideoSink *sink,
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
   
-  priv->shaders_init = FALSE;
   if (priv->texture)
     clutter_actor_set_shader (CLUTTER_ACTOR (priv->texture), NULL);
 
@@ -342,14 +367,17 @@ clutter_gst_video_sink_set_shader (ClutterGstVideoSink *sink,
                                      G_CALLBACK (clutter_gst_video_sink_paint),
                                      sink);
       g_array_append_val (priv->signal_handler_ids, handler_id);
-      
-      priv->shaders_init = TRUE;
     }
 }
 
 /* some renderers don't need all the ClutterGstRenderer vtable */
 static void
 clutter_gst_dummy_init (ClutterGstVideoSink *sink)
+{
+}
+
+static void
+clutter_gst_dummy_deinit (ClutterGstVideoSink *sink)
 {
 }
 
@@ -384,9 +412,8 @@ static ClutterGstRenderer rgb24_renderer =
   0,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_RGB ";" GST_VIDEO_CAPS_BGR),
   clutter_gst_dummy_init,
+  clutter_gst_dummy_deinit,
   clutter_gst_rgb24_upload,
-  NULL,
-  NULL,
 };
 
 /*
@@ -418,9 +445,8 @@ static ClutterGstRenderer rgb32_renderer =
   0,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_RGBA ";" GST_VIDEO_CAPS_BGRA),
   clutter_gst_dummy_init,
+  clutter_gst_dummy_deinit,
   clutter_gst_rgb32_upload,
-  NULL,
-  NULL,
 };
 
 /*
@@ -428,25 +454,6 @@ static ClutterGstRenderer rgb32_renderer =
  *
  * 8 bit Y plane followed by 8 bit 2x2 subsampled V and U planes.
  */
-
-static void
-clutter_gst_yv12_glsl_init (ClutterGstVideoSink *sink)
-{
-  ClutterGstVideoSinkPrivate *priv= sink->priv;
-  GLint location;
-
-  clutter_gst_video_sink_set_shader (sink, yv12_to_rgba_shader);
-
-  cogl_program_use (priv->program);
-  location = cogl_program_get_uniform_location (priv->program, "ytex");
-  cogl_program_uniform_1i (location, 0);
-  location = cogl_program_get_uniform_location (priv->program, "utex");
-  cogl_program_uniform_1i (location, 1);
-  location = cogl_program_get_uniform_location (priv->program, "vtex");
-  cogl_program_uniform_1i (location, 2);
-
-  cogl_program_use (COGL_INVALID_HANDLE);
-}
 
 static void
 clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
@@ -519,6 +526,36 @@ clutter_gst_yv12_glsl_post_paint (ClutterActor        *actor,
   cogl_material_remove_layer (material, 2);
 }
 
+static void
+clutter_gst_yv12_glsl_init (ClutterGstVideoSink *sink)
+{
+  ClutterGstVideoSinkPrivate *priv= sink->priv;
+  GLint location;
+
+  clutter_gst_video_sink_set_shader (sink, yv12_to_rgba_shader);
+
+  cogl_program_use (priv->program);
+  location = cogl_program_get_uniform_location (priv->program, "ytex");
+  cogl_program_uniform_1i (location, 0);
+  location = cogl_program_get_uniform_location (priv->program, "utex");
+  cogl_program_uniform_1i (location, 1);
+  location = cogl_program_get_uniform_location (priv->program, "vtex");
+  cogl_program_uniform_1i (location, 2);
+
+  cogl_program_use (COGL_INVALID_HANDLE);
+
+  _renderer_connect_signals (sink,
+                             clutter_gst_yv12_paint,
+                             clutter_gst_yv12_glsl_post_paint);
+}
+
+static void
+clutter_gst_yv12_glsl_deinit (ClutterGstVideoSink *sink)
+{
+  clutter_gst_video_sink_set_shader (sink, NULL);
+}
+
+
 static ClutterGstRenderer yv12_glsl_renderer =
 {
   "YV12 glsl",
@@ -526,9 +563,8 @@ static ClutterGstRenderer yv12_glsl_renderer =
   CLUTTER_GST_GLSL | CLUTTER_GST_MULTI_TEXTURE,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("YV12")),
   clutter_gst_yv12_glsl_init,
+  clutter_gst_yv12_glsl_deinit,
   clutter_gst_yv12_upload,
-  clutter_gst_yv12_paint,
-  clutter_gst_yv12_glsl_post_paint,
 };
 
 /*
@@ -538,20 +574,6 @@ static ClutterGstRenderer yv12_glsl_renderer =
  */
 
 #ifdef CLUTTER_COGL_HAS_GL
-static void
-clutter_gst_yv12_fp_init (ClutterGstVideoSink *sink)
-{
-  gchar *shader;
-
-  shader = g_malloc(YV12_FP_SZ + 1);
-  _string_array_to_char_array (shader, YV12_fp);
-
-  /* the size given to glProgramStringARB is without the trailing '\0', which
-   * is precisely YV12_FP_SZ */
-  clutter_gst_video_sink_set_fp_shader (sink, shader, YV12_FP_SZ);
-  g_free(shader);
-}
-
 static void
 clutter_gst_yv12_fp_post_paint (ClutterActor        *actor,
                                 ClutterGstVideoSink *sink)
@@ -567,6 +589,30 @@ clutter_gst_yv12_fp_post_paint (ClutterActor        *actor,
   glDisable (GL_FRAGMENT_PROGRAM_ARB);
 }
 
+static void
+clutter_gst_yv12_fp_init (ClutterGstVideoSink *sink)
+{
+  gchar *shader;
+
+  shader = g_malloc(YV12_FP_SZ + 1);
+  _string_array_to_char_array (shader, YV12_fp);
+
+  /* the size given to glProgramStringARB is without the trailing '\0', which
+   * is precisely YV12_FP_SZ */
+  clutter_gst_video_sink_set_fp_shader (sink, shader, YV12_FP_SZ);
+  g_free(shader);
+
+  _renderer_connect_signals (sink,
+                             clutter_gst_yv12_paint,
+                             clutter_gst_yv12_fp_post_paint);
+}
+
+static void
+clutter_gst_yv12_fp_deinit (ClutterGstVideoSink *sink)
+{
+  clutter_gst_video_sink_set_fp_shader (sink, NULL, 0);
+}
+
 static ClutterGstRenderer yv12_fp_renderer =
 {
   "YV12 fp",
@@ -574,9 +620,8 @@ static ClutterGstRenderer yv12_fp_renderer =
   CLUTTER_GST_FP | CLUTTER_GST_MULTI_TEXTURE,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("YV12")),
   clutter_gst_yv12_fp_init,
+  clutter_gst_yv12_fp_deinit,
   clutter_gst_yv12_upload,
-  clutter_gst_yv12_paint,
-  clutter_gst_yv12_fp_post_paint,
 };
 #endif
 
@@ -603,6 +648,10 @@ clutter_gst_i420_glsl_init (ClutterGstVideoSink *sink)
   location = cogl_program_get_uniform_location (priv->program, "utex");
   cogl_program_uniform_1i (location, 2);
   cogl_program_use (COGL_INVALID_HANDLE);
+
+  _renderer_connect_signals (sink,
+                             clutter_gst_yv12_paint,
+                             clutter_gst_yv12_glsl_post_paint);
 }
 
 static ClutterGstRenderer i420_glsl_renderer =
@@ -612,9 +661,8 @@ static ClutterGstRenderer i420_glsl_renderer =
   CLUTTER_GST_GLSL | CLUTTER_GST_MULTI_TEXTURE,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("I420")),
   clutter_gst_i420_glsl_init,
+  clutter_gst_yv12_glsl_deinit,
   clutter_gst_yv12_upload,
-  clutter_gst_yv12_paint,
-  clutter_gst_yv12_glsl_post_paint,
 };
 
 /*
@@ -637,6 +685,10 @@ clutter_gst_i420_fp_init (ClutterGstVideoSink *sink)
    * is precisely I420_FP_SZ */
   clutter_gst_video_sink_set_fp_shader (sink, shader, I420_FP_SZ);
   g_free(shader);
+
+  _renderer_connect_signals (sink,
+                             clutter_gst_yv12_paint,
+                             clutter_gst_yv12_fp_post_paint);
 }
 
 static ClutterGstRenderer i420_fp_renderer =
@@ -646,9 +698,8 @@ static ClutterGstRenderer i420_fp_renderer =
   CLUTTER_GST_FP | CLUTTER_GST_MULTI_TEXTURE,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("I420")),
   clutter_gst_i420_fp_init,
+  clutter_gst_yv12_fp_deinit,
   clutter_gst_yv12_upload,
-  clutter_gst_yv12_paint,
-  clutter_gst_yv12_fp_post_paint,
 };
 #endif
 
@@ -664,6 +715,12 @@ static void
 clutter_gst_ayuv_glsl_init(ClutterGstVideoSink *sink)
 {
   clutter_gst_video_sink_set_shader (sink, ayuv_to_rgba_shader);
+}
+
+static void
+clutter_gst_ayuv_glsl_deinit(ClutterGstVideoSink *sink)
+{
+  clutter_gst_video_sink_set_shader (sink, NULL);
 }
 
 static void
@@ -690,9 +747,8 @@ static ClutterGstRenderer ayuv_glsl_renderer =
   CLUTTER_GST_GLSL,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("AYUV")),
   clutter_gst_ayuv_glsl_init,
+  clutter_gst_ayuv_glsl_deinit,
   clutter_gst_ayuv_upload,
-  NULL,
-  NULL,
 };
 
 static GSList *
@@ -822,6 +878,19 @@ clutter_gst_video_sink_idle_func (gpointer data)
   sink = data;
   priv = sink->priv;
 
+  /* The initialization / free functions of the renderers have to be called in
+   * the clutter thread (OpenGL context) */
+  if (G_UNLIKELY (priv->renderer_state == CLUTTER_GST_RENDERER_NEED_GC))
+    {
+      priv->renderer->deinit (sink);
+      priv->renderer_state = CLUTTER_GST_RENDERER_STOPPED;
+    }
+  if (G_UNLIKELY (priv->renderer_state == CLUTTER_GST_RENDERER_STOPPED))
+    {
+      priv->renderer->init (sink);
+      priv->renderer_state = CLUTTER_GST_RENDERER_RUNNING;
+    }
+
   g_mutex_lock (priv->buffer_lock);
   if (!priv->buffer)
     {
@@ -843,46 +912,7 @@ clutter_gst_video_sink_idle_func (gpointer data)
   priv->idle_id = 0;
   g_mutex_unlock (priv->buffer_lock);
 
-
-  if ((priv->format == CLUTTER_GST_RGB32) || (priv->format == CLUTTER_GST_AYUV))
-    {
-      priv->renderer->upload (sink, buffer);
-
-      /* Initialise AYUV shader */
-      if ((priv->format == CLUTTER_GST_AYUV) && !priv->shaders_init)
-        priv->renderer->upload (sink, buffer);
-    }
-  else if (priv->format == CLUTTER_GST_RGB24)
-    {
-      priv->renderer->upload (sink, buffer);
-    }
-  else if (priv->format == CLUTTER_GST_YV12 || priv->format == CLUTTER_GST_I420)
-    {
-      
-      priv->renderer->upload (sink, buffer);
-
-      /* Initialize renderer */
-      if (!priv->shaders_init)
-        {
-          gulong handler_id;
-
-          priv->renderer->init (sink);
-
-          handler_id =
-              g_signal_connect (priv->texture,
-                                "paint",
-                                G_CALLBACK (priv->renderer->paint),
-                                sink);
-          g_array_append_val (priv->signal_handler_ids, handler_id);
-
-          handler_id =
-              g_signal_connect_after (priv->texture,
-                                      "paint",
-                                      G_CALLBACK (priv->renderer->post_paint),
-                                      sink);
-          g_array_append_val (priv->signal_handler_ids, handler_id);
-        }
-    }
+  priv->renderer->upload (sink, buffer);
 
   gst_buffer_unref (buffer);
   
@@ -915,6 +945,7 @@ clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
   priv->buffer_lock = g_mutex_new ();
   priv->renderers = clutter_gst_build_renderers_list (&priv->syms);
   priv->caps = clutter_gst_build_caps (priv->renderers);
+  priv->renderer_state = CLUTTER_GST_RENDERER_STOPPED;
 
   priv->signal_handler_ids = g_array_new (FALSE, FALSE, sizeof (gulong));
 }
@@ -978,8 +1009,6 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
 
   sink = CLUTTER_GST_VIDEO_SINK(bsink);
   priv = sink->priv;
-
-  clutter_gst_video_sink_set_shader (sink, NULL);
 
   intersection = gst_caps_intersect (priv->caps, caps);
   if (gst_caps_is_empty (intersection)) 
@@ -1047,6 +1076,7 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
         }
     }
 
+  /* find a renderer that can display our format */
   priv->renderer = clutter_gst_find_renderer_by_format (sink, priv->format);
   if (G_UNLIKELY (priv->renderer == NULL))
     {
@@ -1068,7 +1098,12 @@ clutter_gst_video_sink_dispose (GObject *object)
   self = CLUTTER_GST_VIDEO_SINK (object);
   priv = self->priv;
 
-  clutter_gst_video_sink_set_shader (self, NULL);
+  if (priv->renderer_state == CLUTTER_GST_RENDERER_RUNNING ||
+      priv->renderer_state == CLUTTER_GST_RENDERER_NEED_GC)
+    {
+      priv->renderer->deinit (self);
+      priv->renderer_state = CLUTTER_GST_RENDERER_STOPPED;
+    }
 
   if (priv->idle_id > 0)
     {
@@ -1163,16 +1198,17 @@ clutter_gst_video_sink_get_property (GObject *object,
 static gboolean
 clutter_gst_video_sink_stop (GstBaseSink *base_sink)
 {
-  ClutterGstVideoSinkPrivate *priv;
+  ClutterGstVideoSink        *sink = CLUTTER_GST_VIDEO_SINK (base_sink);
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
   guint i;
-
-  priv = CLUTTER_GST_VIDEO_SINK (base_sink)->priv;
 
   g_mutex_lock (priv->buffer_lock);
   if (priv->buffer)
     gst_buffer_unref (priv->buffer);
   priv->buffer = NULL;
   g_mutex_unlock (priv->buffer_lock);
+
+  priv->renderer_state = CLUTTER_GST_RENDERER_STOPPED;
 
   for (i = 0; i < priv->signal_handler_ids->len; i++)
     {
