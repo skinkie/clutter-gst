@@ -317,8 +317,8 @@ clutter_gst_video_sink_paint (ClutterActor        *actor,
 }
 
 static void
-clutter_gst_video_sink_set_shader (ClutterGstVideoSink *sink,
-                                   const gchar         *shader_src)
+clutter_gst_video_sink_set_glsl_shader (ClutterGstVideoSink *sink,
+                                        const gchar         *shader_src)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
   
@@ -532,7 +532,7 @@ clutter_gst_yv12_glsl_init (ClutterGstVideoSink *sink)
   ClutterGstVideoSinkPrivate *priv= sink->priv;
   GLint location;
 
-  clutter_gst_video_sink_set_shader (sink, yv12_to_rgba_shader);
+  clutter_gst_video_sink_set_glsl_shader (sink, yv12_to_rgba_shader);
 
   cogl_program_use (priv->program);
   location = cogl_program_get_uniform_location (priv->program, "ytex");
@@ -552,7 +552,7 @@ clutter_gst_yv12_glsl_init (ClutterGstVideoSink *sink)
 static void
 clutter_gst_yv12_glsl_deinit (ClutterGstVideoSink *sink)
 {
-  clutter_gst_video_sink_set_shader (sink, NULL);
+  clutter_gst_video_sink_set_glsl_shader (sink, NULL);
 }
 
 
@@ -638,7 +638,7 @@ clutter_gst_i420_glsl_init (ClutterGstVideoSink *sink)
   ClutterGstVideoSinkPrivate *priv = sink->priv;
   GLint location;
 
-  clutter_gst_video_sink_set_shader (sink, yv12_to_rgba_shader);
+  clutter_gst_video_sink_set_glsl_shader (sink, yv12_to_rgba_shader);
 
   cogl_program_use (priv->program);
   location = cogl_program_get_uniform_location (priv->program, "ytex");
@@ -714,13 +714,13 @@ static ClutterGstRenderer i420_fp_renderer =
 static void
 clutter_gst_ayuv_glsl_init(ClutterGstVideoSink *sink)
 {
-  clutter_gst_video_sink_set_shader (sink, ayuv_to_rgba_shader);
+  clutter_gst_video_sink_set_glsl_shader (sink, ayuv_to_rgba_shader);
 }
 
 static void
 clutter_gst_ayuv_glsl_deinit(ClutterGstVideoSink *sink)
 {
-  clutter_gst_video_sink_set_shader (sink, NULL);
+  clutter_gst_video_sink_set_glsl_shader (sink, NULL);
 }
 
 static void
