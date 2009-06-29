@@ -276,15 +276,12 @@ clutter_gst_video_sink_set_fp_shader (ClutterGstVideoSink *sink,
   if (!shader_src)
     return;
 
-  glEnable (GL_FRAGMENT_PROGRAM_ARB);
   priv->syms.glGenProgramsARB (1, &priv->fp);
   priv->syms.glBindProgramARB (GL_FRAGMENT_PROGRAM_ARB, priv->fp);
   priv->syms.glProgramStringARB (GL_FRAGMENT_PROGRAM_ARB,
                                   GL_PROGRAM_FORMAT_ASCII_ARB,
                                   size,
                                   (const GLbyte *)shader_src);
-
-  glDisable(GL_FRAGMENT_PROGRAM_ARB);
 }
 #endif
 
