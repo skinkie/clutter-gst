@@ -266,23 +266,11 @@ _renderer_connect_signals(ClutterGstVideoSink        *sink,
 
 #ifdef CLUTTER_COGL_HAS_GL
 static void
-clutter_gst_video_sink_fp_paint (ClutterActor        *actor,
-                                ClutterGstVideoSink *sink)
-{
-  ClutterGstVideoSinkPrivate *priv = sink->priv;
-
-  glEnable (GL_FRAGMENT_PROGRAM_ARB);
-  priv->syms.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, priv->fp);
-
-}
-
-static void
 clutter_gst_video_sink_set_fp_shader (ClutterGstVideoSink *sink,
                                       const gchar         *shader_src,
                                       const int            size)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
-  gulong handler_id;
 
   /* FIXME: implement freeing the shader */
   if (!shader_src)
@@ -297,24 +285,8 @@ clutter_gst_video_sink_set_fp_shader (ClutterGstVideoSink *sink,
                                   (const GLbyte *)shader_src);
 
   glDisable(GL_FRAGMENT_PROGRAM_ARB);
-
-  /* Hook onto the pre-paint signal to bind the shader. */
-  handler_id = g_signal_connect (priv->texture,
-                                 "paint",
-                                 G_CALLBACK (clutter_gst_video_sink_fp_paint),
-                                 sink);
-  g_array_append_val (priv->signal_handler_ids, handler_id);
 }
 #endif
-
-static void
-clutter_gst_video_sink_paint (ClutterActor        *actor,
-                              ClutterGstVideoSink *sink)
-{
-  ClutterGstVideoSinkPrivate *priv = sink->priv;
-  if (priv->program)
-    cogl_program_use (priv->program);
-}
 
 static void
 clutter_gst_video_sink_set_glsl_shader (ClutterGstVideoSink *sink,
@@ -340,7 +312,6 @@ clutter_gst_video_sink_set_glsl_shader (ClutterGstVideoSink *sink,
   if (shader_src)
     {
       ClutterShader *shader;
-      gulong handler_id;
 
       /* Set a dummy shader so we don't interfere with the shader stack */
       shader = clutter_shader_new ();
@@ -358,15 +329,6 @@ clutter_gst_video_sink_set_glsl_shader (ClutterGstVideoSink *sink,
       priv->program = cogl_create_program ();
       cogl_program_attach_shader (priv->program, priv->shader);
       cogl_program_link (priv->program);
-
-      /* Hook onto the pre-paint signal to replace the dummy shader with
-       * the real shader.
-       */
-      handler_id = g_signal_connect (priv->texture,
-                                     "paint",
-                                     G_CALLBACK (clutter_gst_video_sink_paint),
-                                     sink);
-      g_array_append_val (priv->signal_handler_ids, handler_id);
     }
 }
 
@@ -499,13 +461,16 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
 }
 
 static void
-clutter_gst_yv12_paint (ClutterActor        *actor,
-                        ClutterGstVideoSink *sink)
+clutter_gst_yv12_glsl_paint (ClutterActor        *actor,
+                             ClutterGstVideoSink *sink)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
   CoglHandle material;
 
   material = clutter_texture_get_cogl_material (CLUTTER_TEXTURE (actor));
+
+  /* bind the shader */
+  cogl_program_use (priv->program);
 
   /* Bind the U and V textures in layers 1 and 2 */
   if (priv->u_tex)
@@ -524,6 +489,9 @@ clutter_gst_yv12_glsl_post_paint (ClutterActor        *actor,
   material = clutter_texture_get_cogl_material (CLUTTER_TEXTURE (actor));
   cogl_material_remove_layer (material, 1);
   cogl_material_remove_layer (material, 2);
+
+  /* disable the shader */
+  cogl_program_use (COGL_INVALID_HANDLE);
 }
 
 static void
@@ -545,7 +513,7 @@ clutter_gst_yv12_glsl_init (ClutterGstVideoSink *sink)
   cogl_program_use (COGL_INVALID_HANDLE);
 
   _renderer_connect_signals (sink,
-                             clutter_gst_yv12_paint,
+                             clutter_gst_yv12_glsl_paint,
                              clutter_gst_yv12_glsl_post_paint);
 }
 
@@ -575,6 +543,27 @@ static ClutterGstRenderer yv12_glsl_renderer =
 
 #ifdef CLUTTER_COGL_HAS_GL
 static void
+clutter_gst_yv12_fp_paint (ClutterActor        *actor,
+                             ClutterGstVideoSink *sink)
+{
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+  CoglHandle material;
+
+  material = clutter_texture_get_cogl_material (CLUTTER_TEXTURE (actor));
+
+  /* Bind the U and V textures in layers 1 and 2 */
+  if (priv->u_tex)
+    cogl_material_set_layer (material, 1, priv->u_tex);
+  if (priv->v_tex)
+    cogl_material_set_layer (material, 2, priv->v_tex);
+
+  /* bind the shader */
+  glEnable (GL_FRAGMENT_PROGRAM_ARB);
+  priv->syms.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, priv->fp);
+
+}
+
+static void
 clutter_gst_yv12_fp_post_paint (ClutterActor        *actor,
                                 ClutterGstVideoSink *sink)
 {
@@ -603,7 +592,7 @@ clutter_gst_yv12_fp_init (ClutterGstVideoSink *sink)
   g_free(shader);
 
   _renderer_connect_signals (sink,
-                             clutter_gst_yv12_paint,
+                             clutter_gst_yv12_fp_paint,
                              clutter_gst_yv12_fp_post_paint);
 }
 
@@ -650,7 +639,7 @@ clutter_gst_i420_glsl_init (ClutterGstVideoSink *sink)
   cogl_program_use (COGL_INVALID_HANDLE);
 
   _renderer_connect_signals (sink,
-                             clutter_gst_yv12_paint,
+                             clutter_gst_yv12_glsl_paint,
                              clutter_gst_yv12_glsl_post_paint);
 }
 
@@ -687,7 +676,7 @@ clutter_gst_i420_fp_init (ClutterGstVideoSink *sink)
   g_free(shader);
 
   _renderer_connect_signals (sink,
-                             clutter_gst_yv12_paint,
+                             clutter_gst_yv12_fp_paint,
                              clutter_gst_yv12_fp_post_paint);
 }
 
