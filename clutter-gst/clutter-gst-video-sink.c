@@ -554,6 +554,13 @@ clutter_gst_yv12_fp_paint (ClutterActor        *actor,
   if (priv->v_tex)
     cogl_material_set_layer (material, 2, priv->v_tex);
 
+  /* Cogl doesn't support changing OpenGL state to modify how Cogl primitives
+   * work, but it also doesn't support ARBfp which we currently depend on. For
+   * now we at least ask Cogl to flush any batched primitives so we avoid
+   * binding our shader across the wrong geometry, but there is a risk that
+   * Cogl may start to use ARBfp internally which will conflict with us. */
+  cogl_flush ();
+
   /* bind the shader */
   glEnable (GL_FRAGMENT_PROGRAM_ARB);
   priv->syms.glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, priv->fp);
@@ -565,6 +572,13 @@ clutter_gst_yv12_fp_post_paint (ClutterActor        *actor,
                                 ClutterGstVideoSink *sink)
 {
   CoglHandle material;
+
+  /* Cogl doesn't support changing OpenGL state to modify how Cogl primitives
+   * work, but it also doesn't support ARBfp which we currently depend on. For
+   * now we at least ask Cogl to flush any batched primitives so we avoid
+   * binding our shader across the wrong geometry, but there is a risk that
+   * Cogl may start to use ARBfp internally which will conflict with us. */
+  cogl_flush ();
 
   /* Remove the extra layers */
   material = clutter_texture_get_cogl_material (CLUTTER_TEXTURE (actor));
