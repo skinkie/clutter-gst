@@ -305,7 +305,7 @@ clutter_gst_video_sink_set_glsl_shader (ClutterGstVideoSink *sink,
   
   if (priv->shader)
     {
-      cogl_program_unref (priv->shader);
+      cogl_shader_unref (priv->shader);
       priv->shader = NULL;
     }
   
