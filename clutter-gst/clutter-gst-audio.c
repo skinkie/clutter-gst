@@ -414,7 +414,7 @@ clutter_gst_audio_get_property (GObject    *object,
       break;
 
     case PROP_PROGRESS:
-      g_value_set_int (value, get_progress (audio));
+      g_value_set_double (value, get_progress (audio));
       break;
 
     case PROP_AUDIO_VOLUME:
