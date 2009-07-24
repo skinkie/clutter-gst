@@ -2,7 +2,8 @@ Clutter-GStreamer README
 ========================
 
 Clutter-GStreamer (clutter-gst) is an integration library for using GStreamer
-with Clutter.
+with Clutter.  Its purpose is to implement the ClutterMedia interface using
+GStreamer.
 
 Clutter is an open source software library for creating fast, visually
 rich and animated graphical user interfaces. It uses OpenGL for drawing
@@ -18,11 +19,13 @@ installing new plug-ins.
 
 Clutter-GStreamer requires:
 
-  GLib >= 2.10.0
-  Clutter >= 0.8.0
+  GLib >= 2.14.0
+  Clutter >= 0.9.6
   GStreamer >= 0.10
 
-Copyright (C) 2006  OpenedHand
+Copyright (C) 2006-2008  OpenedHand
+Copyright (C) 2009 Intel Corporation
+
 Released under the terms of the GNU Lesser General Public License, version 2.1
 or later. See the file COPYING for details.
 
