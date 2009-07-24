@@ -1,3 +1,28 @@
+clutter-gst 0.9.0 (24/07/2009)
+===============================================================================
+
+  * list of changes since 0.8.0
+
+    o Requires clutter 0.9.6.
+
+    o Added support for ARB fp 1.0 shaders when available.
+
+    o Added support for YUV I420 to RBG colorspacing.
+
+    o Removed the 'use-shaders' property on ClutterGstVideoSink. The sink
+      detects itself what the underlying GL implementation supports and
+      negotiates capabilities based on what it has found.
+
+Many thanks to:
+
+  Arjan van de Ven
+  Emmanuele Bassi
+  Haakon Sporsheim
+  Neil Roberts
+  Ole André Vadla Ravnås
+  Robert Bragg
+  Øyvind Kolås
+
 clutter-gst 0.8.0
 =================
 * List of changes:
