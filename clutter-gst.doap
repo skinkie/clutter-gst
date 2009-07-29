@@ -83,6 +83,16 @@
 
   <release>
     <Version>
+      <name>0.10.0 Release</name>
+      <created>2009-07-29</created>
+      <branch>clutter-gst-0.10.0</branch>
+      <revision>0.10.0</revision>
+      <file-release rdf:resource="http://www.clutter-project.org/sources/clutter-gst/0.10/clutter-gst-0.10.0.tar.gz" />
+    </Version>
+  </release>
+
+  <release>
+    <Version>
       <name>0.9.0 Release</name>
       <created>2009-07-24</created>
       <branch>clutter-gst-0.9.0</branch>
