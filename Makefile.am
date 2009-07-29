@@ -10,15 +10,15 @@ DIST_SUBDIRS = build scripts clutter-gst tests examples doc
 
 ACLOCAL_AMFLAGS = -I build/autotools
 
-clutter-gst-0.9.pc: clutter-gst.pc
-	$(QUIET_GEN)cp -f clutter-gst.pc clutter-gst-0.9.pc
+clutter-gst-$(CLUTTER_GST_API_VERSION).pc: clutter-gst.pc
+	$(QUIET_GEN)cp -f clutter-gst.pc $@
 
-pkgconfig_DATA = clutter-gst-0.9.pc
+pkgconfig_DATA = clutter-gst-$(CLUTTER_GST_API_VERSION).pc
 pkgconfigdir   = $(libdir)/pkgconfig
 
 EXTRA_DIST = clutter-gst.pc.in
 
-CLEANFILES = clutter-gst.pc clutter-gst-0.9.pc
+CLEANFILES = clutter-gst.pc clutter-gst-$(CLUTTER_GST_API_VERSION).pc
 
 DISTCLEANFILES = doltcompile doltlibtool
 

@@ -5,6 +5,8 @@ m4_define(clutter_gst_major_version, 0)
 m4_define(clutter_gst_minor_version, 10)
 m4_define(clutter_gst_micro_version, 0)
 
+m4_define(clutter_api_version, 1.0)
+
 m4_define([clutter_gst_version],
           [clutter_gst_major_version.clutter_gst_minor_version.clutter_gst_micro_version])
 
@@ -33,12 +35,14 @@ CLUTTER_GST_MICRO_VERSION=clutter_gst_micro_version
 CLUTTER_GST_VERSION=clutter_gst_version
 CLUTTER_GST_API_VERSION=clutter_gst_api_version
 CLUTTER_GST_MAJORMINOR=clutter_gst_api_version
+CLUTTER_API_VERSION=clutter_api_version
 AC_SUBST(CLUTTER_GST_MAJOR_VERSION)
 AC_SUBST(CLUTTER_GST_MINOR_VERSION)
 AC_SUBST(CLUTTER_GST_MICRO_VERSION)
 AC_SUBST(CLUTTER_GST_VERSION)
 AC_SUBST(CLUTTER_GST_API_VERSION)
 AC_SUBST(CLUTTER_GST_MAJORMINOR)
+AC_SUBST(CLUTTER_API_VERSION)
 
 m4_define([lt_current],
           [m4_eval(100 * clutter_gst_minor_version + clutter_gst_micro_version - clutter_gst_interface_age)])
