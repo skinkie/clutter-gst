@@ -97,6 +97,7 @@
 #include <gst/gst.h>
 #include <clutter/clutter.h>
 
+#include "clutter-gst-debug.h"
 #include "clutter-gst-util.h"
 
 static gboolean clutter_gst_is_initialized = FALSE;
@@ -125,6 +126,11 @@ clutter_gst_init (int    *argc,
 
   gst_init (argc, argv);
   retval = clutter_init (argc, argv);
+
+  /* initialize debugging infrastructure */
+#ifdef CLUTTER_GST_ENABLE_DEBUG
+  _clutter_gst_debug_init();
+#endif
 
   clutter_gst_is_initialized = TRUE;
 
@@ -185,6 +191,11 @@ clutter_gst_init_with_args (int            *argc,
 
   if (!res)
         return CLUTTER_INIT_ERROR_INTERNAL;
+
+  /* initialize debugging infrastructure */
+#ifdef CLUTTER_GST_ENABLE_DEBUG
+  _clutter_gst_debug_init ();
+#endif
 
   clutter_gst_is_initialized = TRUE;
 

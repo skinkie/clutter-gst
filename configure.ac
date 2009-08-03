@@ -132,6 +132,34 @@ AS_IF([test "x$enable_maintainer_flags" = "xyes" && test "x$GCC" = "xyes"],
 
 AC_SUBST(MAINTAINER_CFLAGS)
 
+dnl === Enable debug level ====================================================
+
+m4_define([debug_default], [m4_if(m4_eval(clutter_gst_minor_version % 2), [1], [yes], [minimum])])
+AC_ARG_ENABLE([debug],
+              [AC_HELP_STRING([--enable-debug=@<:@no/minimum/yes@:>@],
+                              [Control Clutter-Gst debugging level @<:@default=debug_default@:>@])],
+              [],
+              [enable_debug=debug_default])
+
+AS_CASE([$enable_debug],
+
+        [yes],
+        [
+          test "$cflags_set" = set || CFLAGS="$CFLAGS -g"
+          CLUTTER_GST_DEBUG_CFLAGS="-DCLUTTER_GST_ENABLE_DEBUG"
+        ],
+
+        [minimum],
+        [CLUTTER_GST_DEBUG_CFLAGS="-DCLUTTER_GST_ENABLE_DEBUG -DG_DISABLE_CAST_CHECKS"],
+
+        [no],
+        [CLUTTER_GST_DEBUG_CFLAGS="-DG_DISABLE_ASSERT -DG_DISABLE_CHECKS -DG_DISABLE_CAST_CHECKS"],
+
+        [AC_MSG_ERROR([Unknown argument for --enable-debug])]
+)
+
+AC_SUBST(CLUTTER_GST_DEBUG_CFLAGS)
+
 dnl ========================================================================
 
 GTK_DOC_CHECK([1.8])
@@ -179,5 +207,6 @@ echo "           Compiler flags:   ${MAINTAINER_CFLAGS} ${CPPFLAGS}"
 echo ""
 echo "              Cg compiler:   ${have_cgc}"
 echo ""
+echo "              debug level:   ${enable_debug}"
 echo "  Build API documentation:   ${enable_gtk_doc}"
 echo ""

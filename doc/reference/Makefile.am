@@ -1,4 +1,5 @@
 ## Process this file with automake to produce Makefile.in
+NULL = #
 
 # We require automake 1.6 at least.
 AUTOMAKE_OPTIONS = 1.6
@@ -47,7 +48,11 @@ CFILE_GLOB=$(top_srcdir)/clutter-gst/*.c
 
 # Header files to ignore when scanning.
 # e.g. IGNORE_HFILES=gtkdebug.h gtkintl.h
-IGNORE_HFILES=clutter-gst.h clutter-gst-shaders.h
+IGNORE_HFILES=			\
+	clutter-gst.h		\
+	clutter-gst-shaders.h	\
+	clutter-gst-debug.h	\
+	$(NULL)
 
 # Images to copy into HTML directory.
 # e.g. HTML_IMAGES=$(top_srcdir)/gtk/stock-icons/stock_about_24.png
