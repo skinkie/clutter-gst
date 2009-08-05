@@ -32,14 +32,13 @@ main (int argc, char *argv[])
   ClutterColor      stage_color = { 0xcc, 0xcc, 0xcc, 0xff };
   ClutterGstAudio  *audio;
 
+  clutter_gst_init (&argc, &argv);
+
   if (argc < 2)
     {
-      g_error ("Usage: %s URI", argv[0]);
-      return 1;
+      g_print ("Usage: [OPTIONS] %s URI\n", argv[0]);
+      return EXIT_FAILURE;
     }
-
-  clutter_init (&argc, &argv);
-  gst_init (&argc, &argv);
 
   stage = clutter_stage_get_default ();
 

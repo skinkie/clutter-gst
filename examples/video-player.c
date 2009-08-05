@@ -278,11 +278,13 @@ main (int argc, char *argv[])
   ClutterColor         control_color2 = { 0xcc, 0xcc, 0xcc, 0xff };
   gfloat               x,y;
 
-  if (argc < 2)
-    g_error("%s <video file>", argv[0]);
+  clutter_gst_init (&argc, &argv);
 
-  clutter_init (&argc, &argv);
-  gst_init (&argc, &argv);
+  if (argc < 2)
+    {
+      g_print ("Usage: %s [OPTIONS] <video file>\n", argv[0]);
+      return EXIT_FAILURE;
+    }
 
   stage = clutter_stage_get_default ();
   clutter_stage_set_color (CLUTTER_STAGE (stage), &stage_color);
