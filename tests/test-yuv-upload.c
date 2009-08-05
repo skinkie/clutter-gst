@@ -100,7 +100,6 @@ size_change (ClutterTexture *texture,
 int
 main (int argc, char *argv[])
 {
-  GOptionContext   *context;
   GError           *error = NULL;
   gboolean          result;
   ClutterActor     *stage;
@@ -114,18 +113,18 @@ main (int argc, char *argv[])
   if (!g_thread_supported ())
     g_thread_init (NULL);
 
-  context = g_option_context_new (" - test-colorspace options");
-  g_option_context_add_group (context, gst_init_get_option_group ());
-  g_option_context_add_group (context, clutter_get_option_group ());
-  g_option_context_add_main_entries (context, options, NULL);
+  result = clutter_gst_init_with_args (&argc,
+                                       &argv,
+                                       " - Test YUV frames uploading",
+                                       options,
+                                       NULL,
+                                       &error);
 
-  if (!g_option_context_parse (context, &argc, &argv, &error))
+  if (error)
     {
-      g_option_context_free (context);
-
       g_print ("%s\n", error->message);
       g_error_free (error);
-      exit(EXIT_FAILURE);
+      return EXIT_FAILURE;
     }
 
   stage = clutter_stage_get_default ();
