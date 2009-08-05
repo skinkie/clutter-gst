@@ -32,8 +32,14 @@
 
 G_BEGIN_DECLS
 
-ClutterInitError clutter_gst_init (int     *argc,
-                                   char  ***argv);
+ClutterInitError clutter_gst_init           (int     *argc,
+                                             char  ***argv);
+ClutterInitError clutter_gst_init_with_args (int            *argc,
+                                             char         ***argv,
+                                             const char     *parameter_string,
+                                             GOptionEntry   *entries,
+                                             const char     *translation_domain,
+                                             GError        **error);
 
 G_END_DECLS
 

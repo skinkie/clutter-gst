@@ -58,6 +58,7 @@ ClutterGstAudioPrivate
 <FILE>clutter-gst-util</FILE>
 <TITLE>Utilities</TITLE>
 clutter_gst_init
+clutter_gst_init_with_args
 </SECTION>
 
 <SECTION>
