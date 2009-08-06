@@ -37,11 +37,12 @@
 #include "config.h"
 #endif
 
-#include "clutter-gst-video-texture.h"
-#include "clutter-gst-video-sink.h"
-
-#include <gst/gst.h>
 #include <glib.h>
+#include <gst/gst.h>
+
+#include "clutter-gst-debug.h"
+#include "clutter-gst-video-sink.h"
+#include "clutter-gst-video-texture.h"
 
 struct _ClutterGstVideoTexturePrivate
 {
@@ -142,6 +143,8 @@ set_uri (ClutterGstVideoTexture *video_texture,
 
   gst_element_set_state (priv->playbin, GST_STATE_NULL);
 
+  CLUTTER_GST_NOTE (MEDIA, "setting URI: %s", uri);
+
   g_object_set (priv->playbin, "uri", uri, NULL);
 
   /*
@@ -169,6 +172,8 @@ set_playing (ClutterGstVideoTexture *video_texture,
   if (!priv->playbin)
     return;
 
+  CLUTTER_GST_NOTE (MEDIA, "set playing: %d", playing);
+
   if (priv->uri) 
     {
       GstState state = GST_STATE_PAUSED;
@@ -193,6 +198,7 @@ get_playing (ClutterGstVideoTexture *video_texture)
 {
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
   GstState state, pending;
+  gboolean playing;
 
   if (!priv->playbin)
     return FALSE;
@@ -200,9 +206,13 @@ get_playing (ClutterGstVideoTexture *video_texture)
   gst_element_get_state (priv->playbin, &state, &pending, 0);
   
   if (pending)
-    return (pending == GST_STATE_PLAYING);
+    playing = (pending == GST_STATE_PLAYING);
   else
-    return (state == GST_STATE_PLAYING);
+    playing = (state == GST_STATE_PLAYING);
+
+  CLUTTER_GST_NOTE (MEDIA, "get playing: %d", playing);
+
+  return playing;
 }
 
 static void
@@ -216,6 +226,8 @@ set_progress (ClutterGstVideoTexture *video_texture,
 
   if (!priv->playbin)
     return;
+
+  CLUTTER_GST_NOTE (MEDIA, "set progress: %.02f", progress);
 
   gst_element_get_state (priv->playbin, &state, &pending, 0);
 
@@ -283,6 +295,8 @@ get_progress (ClutterGstVideoTexture *video_texture)
   gst_query_unref (position_q);
   gst_query_unref (duration_q);
 
+  CLUTTER_GST_NOTE (MEDIA, "get progress: %.02f", progress);
+
   return progress;
 }
 
@@ -294,6 +308,8 @@ set_audio_volume (ClutterGstVideoTexture *video_texture,
 
   if (!priv->playbin)
     return;
+
+  CLUTTER_GST_NOTE (MEDIA, "set volume: %.02f", volume);
 
   /* the :volume property is in the [0, 10] interval */
   g_object_set (G_OBJECT (priv->playbin), "volume", volume * 10.0, NULL);
@@ -312,7 +328,11 @@ get_audio_volume (ClutterGstVideoTexture *video_texture)
   /* the :volume property is in the [0, 10] interval */
   g_object_get (priv->playbin, "volume", &volume, NULL);
 
-  return CLAMP (volume / 10.0, 0.0, 1.0);
+  volume = CLAMP (volume / 10.0, 0.0, 1.0);
+
+  CLUTTER_GST_NOTE (MEDIA, "get volume: %.02f", volume);
+
+  return volume;
 }
 
 static void
@@ -491,6 +511,8 @@ bus_message_eos_cb (GstBus                 *bus,
 {
   g_object_notify (G_OBJECT (video_texture), "progress");
 
+  CLUTTER_GST_NOTE (MEDIA, "EOS");
+
   g_signal_emit_by_name (video_texture, "eos");
 }
 
@@ -515,6 +537,8 @@ bus_message_buffering_cb (GstBus                 *bus,
                                  0.0,
                                  1.0);
 
+      CLUTTER_GST_NOTE (MEDIA, "buffer-fill: %.02f", priv->buffer_fill);
+
       g_object_notify (G_OBJECT (video_texture), "buffer-fill");
     }
 }
@@ -533,6 +557,8 @@ bus_message_duration_cb (GstBus                 *bus,
     return;
   
   priv->duration = (gdouble) duration / GST_SECOND;
+
+  CLUTTER_GST_NOTE (MEDIA, "duration: %.02f", priv->duration);
 
   g_object_notify (G_OBJECT (video_texture), "duration");
 }
@@ -583,6 +609,8 @@ bus_message_state_change_cb (GstBus                 *bus,
 
       gst_query_unref (query);
 
+      CLUTTER_GST_NOTE (MEDIA, "can-seek: %d", priv->can_seek);
+
       g_object_notify (G_OBJECT (video_texture), "can-seek");
       
       /* Determine the duration */
@@ -594,6 +622,8 @@ bus_message_state_change_cb (GstBus                 *bus,
 
 	  gst_query_parse_duration (query, NULL, &duration);
 	  priv->duration = (gdouble) duration / GST_SECOND;
+
+    CLUTTER_GST_NOTE (MEDIA, "duration: %.02f", priv->duration);
 
 	  g_object_notify (G_OBJECT (video_texture), "duration");
 	}
