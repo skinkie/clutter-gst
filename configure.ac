@@ -167,6 +167,10 @@ AM_CONDITIONAL([BUILD_GTK_DOC],
 
 dnl ========================================================================
 
+GOBJECT_INTROSPECTION_CHECK([0.6.8])
+
+dnl ========================================================================
+
 AC_SUBST(GCC_FLAGS)
 AC_SUBST(GST_CFLAGS)
 AC_SUBST(GST_LIBS)
@@ -207,4 +211,5 @@ echo "              Cg compiler:   ${have_cgc}"
 echo ""
 echo "              debug level:   ${enable_debug}"
 echo "  Build API documentation:   ${enable_gtk_doc}"
+echo "       Introspection data:   ${enable_introspection}"
 echo ""
