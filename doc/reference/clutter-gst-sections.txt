@@ -4,7 +4,7 @@
 ClutterGstVideoTexture
 ClutterGstVideoTextureClass
 clutter_gst_video_texture_new
-clutter_gst_video_texture_get_playbin
+clutter_gst_video_texture_get_pipeline
 <SUBSECTION Standard>
 CLUTTER_GST_VIDEO_TEXTURE
 CLUTTER_GST_IS_VIDEO_TEXTURE

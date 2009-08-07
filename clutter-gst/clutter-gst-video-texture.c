@@ -46,7 +46,7 @@
 
 struct _ClutterGstVideoTexturePrivate
 {
-  GstElement *playbin;
+  GstElement *pipeline;
 
   gchar *uri;
 
@@ -102,7 +102,7 @@ set_uri (ClutterGstVideoTexture *video_texture,
   GObject *self = G_OBJECT (video_texture);
   GstState state, pending;
 
-  if (!priv->playbin)
+  if (!priv->pipeline)
     return;
 
   g_free (priv->uri);
@@ -136,22 +136,22 @@ set_uri (ClutterGstVideoTexture *video_texture,
   priv->can_seek = FALSE;
   priv->duration = 0.0;
 
-  gst_element_get_state (priv->playbin, &state, &pending, 0);
+  gst_element_get_state (priv->pipeline, &state, &pending, 0);
 
   if (pending)
     state = pending;
 
-  gst_element_set_state (priv->playbin, GST_STATE_NULL);
+  gst_element_set_state (priv->pipeline, GST_STATE_NULL);
 
   CLUTTER_GST_NOTE (MEDIA, "setting URI: %s", uri);
 
-  g_object_set (priv->playbin, "uri", uri, NULL);
+  g_object_set (priv->pipeline, "uri", uri, NULL);
 
   /*
    * Restore state.
    */
   if (uri)
-    gst_element_set_state (priv->playbin, state);
+    gst_element_set_state (priv->pipeline, state);
 
   /*
    * Emit notififications for all these to make sure UI is not showing
@@ -169,7 +169,7 @@ set_playing (ClutterGstVideoTexture *video_texture,
 {
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
 
-  if (!priv->playbin)
+  if (!priv->pipeline)
     return;
 
   CLUTTER_GST_NOTE (MEDIA, "set playing: %d", playing);
@@ -181,7 +181,7 @@ set_playing (ClutterGstVideoTexture *video_texture,
       if (playing)
 	state = GST_STATE_PLAYING;
 
-      gst_element_set_state (priv->playbin, state);
+      gst_element_set_state (priv->pipeline, state);
     } 
   else 
     {
@@ -200,10 +200,10 @@ get_playing (ClutterGstVideoTexture *video_texture)
   GstState state, pending;
   gboolean playing;
 
-  if (!priv->playbin)
+  if (!priv->pipeline)
     return FALSE;
   
-  gst_element_get_state (priv->playbin, &state, &pending, 0);
+  gst_element_get_state (priv->pipeline, &state, &pending, 0);
   
   if (pending)
     playing = (pending == GST_STATE_PLAYING);
@@ -224,21 +224,21 @@ set_progress (ClutterGstVideoTexture *video_texture,
   GstQuery *duration_q;
   gint64 position;
 
-  if (!priv->playbin)
+  if (!priv->pipeline)
     return;
 
   CLUTTER_GST_NOTE (MEDIA, "set progress: %.02f", progress);
 
-  gst_element_get_state (priv->playbin, &state, &pending, 0);
+  gst_element_get_state (priv->pipeline, &state, &pending, 0);
 
   if (pending)
     state = pending;
 
-  gst_element_set_state (priv->playbin, GST_STATE_PAUSED);
+  gst_element_set_state (priv->pipeline, GST_STATE_PAUSED);
 
   duration_q = gst_query_new_duration (GST_FORMAT_TIME);
 
-  if (gst_element_query (priv->playbin, duration_q))
+  if (gst_element_query (priv->pipeline, duration_q))
     {
       gint64 duration = 0;
 
@@ -251,7 +251,7 @@ set_progress (ClutterGstVideoTexture *video_texture,
 
   gst_query_unref (duration_q);
 
-  gst_element_seek (priv->playbin,
+  gst_element_seek (priv->pipeline,
 		    1.0,
 		    GST_FORMAT_TIME,
 		    GST_SEEK_FLAG_FLUSH,
@@ -259,7 +259,7 @@ set_progress (ClutterGstVideoTexture *video_texture,
 		    position,
 		    0, 0);
 
-  gst_element_set_state (priv->playbin, state);
+  gst_element_set_state (priv->pipeline, state);
 
   g_object_notify (G_OBJECT (video_texture), "progress");
 }
@@ -271,14 +271,14 @@ get_progress (ClutterGstVideoTexture *video_texture)
   GstQuery *position_q, *duration_q;
   gdouble progress;
 
-  if (!priv->playbin)
+  if (!priv->pipeline)
     return 0.0;
 
   position_q = gst_query_new_position (GST_FORMAT_TIME);
   duration_q = gst_query_new_duration (GST_FORMAT_TIME);
 
-  if (gst_element_query (priv->playbin, position_q) &&
-      gst_element_query (priv->playbin, duration_q))
+  if (gst_element_query (priv->pipeline, position_q) &&
+      gst_element_query (priv->pipeline, duration_q))
     {
       gint64 position, duration;
 
@@ -306,13 +306,13 @@ set_audio_volume (ClutterGstVideoTexture *video_texture,
 {
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
 
-  if (!priv->playbin)
+  if (!priv->pipeline)
     return;
 
   CLUTTER_GST_NOTE (MEDIA, "set volume: %.02f", volume);
 
   /* the :volume property is in the [0, 10] interval */
-  g_object_set (G_OBJECT (priv->playbin), "volume", volume * 10.0, NULL);
+  g_object_set (G_OBJECT (priv->pipeline), "volume", volume * 10.0, NULL);
   g_object_notify (G_OBJECT (video_texture), "audio-volume");
 }
 
@@ -322,11 +322,11 @@ get_audio_volume (ClutterGstVideoTexture *video_texture)
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
   gdouble volume = 0.0;
 
-  if (!priv->playbin)
+  if (!priv->pipeline)
     return 0.0;
 
   /* the :volume property is in the [0, 10] interval */
-  g_object_get (priv->playbin, "volume", &volume, NULL);
+  g_object_get (priv->pipeline, "volume", &volume, NULL);
 
   volume = CLAMP (volume / 10.0, 0.0, 1.0);
 
@@ -352,11 +352,11 @@ clutter_gst_video_texture_dispose (GObject *object)
   /* FIXME: flush an errors off bus ? */
   /* gst_bus_set_flushing (priv->bus, TRUE); */
 
-  if (priv->playbin) 
+  if (priv->pipeline) 
     {
-      gst_element_set_state (priv->playbin, GST_STATE_NULL);
-      gst_object_unref (GST_OBJECT (priv->playbin));
-      priv->playbin = NULL;
+      gst_element_set_state (priv->pipeline, GST_STATE_NULL);
+      gst_object_unref (GST_OBJECT (priv->pipeline));
+      priv->pipeline = NULL;
     }
 
   if (priv->tick_timeout_id > 0) 
@@ -573,7 +573,7 @@ bus_message_state_change_cb (GstBus                 *bus,
   gpointer src;
 
   src = GST_MESSAGE_SRC (message);
-  if (src != priv->playbin)
+  if (src != priv->pipeline)
     return;
 
   gst_message_parse_state_changed (message, &old_state, &new_state, NULL);
@@ -586,7 +586,7 @@ bus_message_state_change_cb (GstBus                 *bus,
       /* Determine whether we can seek */
       query = gst_query_new_seeking (GST_FORMAT_TIME);
 
-      if (gst_element_query (priv->playbin, query))
+      if (gst_element_query (priv->pipeline, query))
         {
           gboolean can_seek = FALSE;
 
@@ -599,7 +599,7 @@ bus_message_state_change_cb (GstBus                 *bus,
       else
         {
 	  /* could not query for ability to seek by querying the
-           * playbin; let's crudely try by using the URI
+           * pipeline; let's crudely try by using the URI
 	   */
 	  if (priv->uri && g_str_has_prefix (priv->uri, "http://"))
             priv->can_seek = FALSE;
@@ -616,7 +616,7 @@ bus_message_state_change_cb (GstBus                 *bus,
       /* Determine the duration */
       query = gst_query_new_duration (GST_FORMAT_TIME);
 
-      if (gst_element_query (priv->playbin, query)) 
+      if (gst_element_query (priv->pipeline, query)) 
 	{
 	  gint64 duration;
 
@@ -639,8 +639,8 @@ lay_pipeline (ClutterGstVideoTexture *video_texture)
   GstElement *audio_sink = NULL;
   GstElement *video_sink = NULL;
 
-  priv->playbin = gst_element_factory_make ("playbin", "playbin");
-  if (!priv->playbin) 
+  priv->pipeline = gst_element_factory_make ("pipeline", "playbin");
+  if (!priv->pipeline) 
     {
       g_critical ("Unable to create playbin element");
       return FALSE;
@@ -668,7 +668,7 @@ lay_pipeline (ClutterGstVideoTexture *video_texture)
 
   video_sink = clutter_gst_video_sink_new (CLUTTER_TEXTURE (video_texture));
   g_object_set (G_OBJECT (video_sink), "qos", TRUE, "sync", TRUE, NULL);
-  g_object_set (G_OBJECT (priv->playbin),
+  g_object_set (G_OBJECT (priv->pipeline),
 		"video-sink", video_sink,
 		"audio-sink", audio_sink,
 		NULL);
@@ -693,7 +693,7 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
       return;
     }
 
-  bus = gst_pipeline_get_bus (GST_PIPELINE (priv->playbin));
+  bus = gst_pipeline_get_bus (GST_PIPELINE (priv->pipeline));
 
   gst_bus_add_signal_watch (bus);
 
@@ -732,18 +732,18 @@ clutter_gst_video_texture_new (void)
 }
 
 /**
- * clutter_gst_video_texture_get_playbin:
+ * clutter_gst_video_texture_get_pipeline:
  * @texture: a #ClutterGstVideoTexture
  *
- * Retrieves the #GstElement used by the @texture, for direct use with
+ * Retrieves the #GstPipeline used by the @texture, for direct use with
  * GStreamer API.
  *
- * Return value: the playbin element used by the video texture
+ * Return value: the pipeline element used by the video texture
  */
 GstElement *
-clutter_gst_video_texture_get_playbin (ClutterGstVideoTexture *texture)
+clutter_gst_video_texture_get_pipeline (ClutterGstVideoTexture *texture)
 {
   g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (texture), NULL);
 
-  return texture->priv->playbin;
+  return texture->priv->pipeline;
 }
