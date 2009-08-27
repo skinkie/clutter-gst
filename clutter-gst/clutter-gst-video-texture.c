@@ -639,7 +639,7 @@ lay_pipeline (ClutterGstVideoTexture *video_texture)
   GstElement *audio_sink = NULL;
   GstElement *video_sink = NULL;
 
-  priv->pipeline = gst_element_factory_make ("pipeline", "playbin");
+  priv->pipeline = gst_element_factory_make ("playbin", "pipeline");
   if (!priv->pipeline) 
     {
       g_critical ("Unable to create playbin element");
