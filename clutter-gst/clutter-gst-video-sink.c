@@ -419,6 +419,7 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
                          GstBuffer           *buffer)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
+  gint row_stride = GST_ROUND_UP_4 (priv->width / 2);
 
   CoglHandle y_tex = cogl_texture_new_from_data (priv->width,
                                                  priv->height,
@@ -442,7 +443,7 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
                                             COGL_TEXTURE_NO_SLICING,
                                             COGL_PIXEL_FORMAT_G_8,
                                             COGL_PIXEL_FORMAT_G_8,
-                                            priv->width / 2,
+                                            row_stride,
                                             GST_BUFFER_DATA (buffer) +
                                             (priv->width * priv->height));
 
@@ -451,10 +452,10 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
                                             COGL_TEXTURE_NO_SLICING,
                                             COGL_PIXEL_FORMAT_G_8,
                                             COGL_PIXEL_FORMAT_G_8,
-                                            priv->width / 2,
+                                            row_stride,
                                             GST_BUFFER_DATA (buffer)
                                             + (priv->width * priv->height)
-                                            + (priv->width / 2 * priv->height / 2));
+                                            + (row_stride * priv->height / 2));
 }
 
 static void
