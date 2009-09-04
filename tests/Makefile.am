@@ -1,31 +1,40 @@
 NULL = #
 
-noinst_PROGRAMS = test-yuv-upload \
-                  test-rgb-upload \
-                  test-start-stop \
-		  $(NULL)
+noinst_PROGRAMS = 	\
+	test-alpha	\
+	test-rgb-upload \
+	test-start-stop \
+	test-yuv-upload \
+	$(NULL)
 
 INCLUDES = -I$(top_srcdir)      \
 	   $(MAINTAINER_CFLAGS) \
 	   $(NULL)
 
-test_yuv_upload_SOURCES = test-yuv-upload.c
-test_yuv_upload_CFLAGS  = $(CLUTTER_GST_CFLAGS) $(GST_CFLAGS)
-test_yuv_upload_LDFLAGS = \
-    $(CLUTTER_GST_LIBS)   \
-    $(GST_LIBS)           \
-    $(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la
+test_alpha_SOURCES = test-alpha.c
+test_alpha_CFLAGS  = $(CLUTTER_GST_CFLAGS) $(GST_CFLAGS)
+test_alpha_LDFLAGS =		\
+	$(CLUTTER_GST_LIBS)	\
+	$(GST_LIBS)		\
+	$(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la
 
 test_rgb_upload_SOURCES = test-rgb-upload.c
 test_rgb_upload_CFLAGS  = $(CLUTTER_GST_CFLAGS) $(GST_CFLAGS)
-test_rgb_upload_LDFLAGS = \
-    $(CLUTTER_GST_LIBS)   \
-    $(GST_LIBS)           \
-    $(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la
+test_rgb_upload_LDFLAGS =	\
+	$(CLUTTER_GST_LIBS)	\
+	$(GST_LIBS)		\
+	$(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la
 
 test_start_stop_SOURCES = test-start-stop.c
 test_start_stop_CFLAGS  = $(CLUTTER_GST_CFLAGS) $(GST_CFLAGS)
-test_start_stop_LDFLAGS = \
-    $(CLUTTER_GST_LIBS)   \
-    $(GST_LIBS)           \
-    $(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la
+test_start_stop_LDFLAGS =	\
+	$(CLUTTER_GST_LIBS)	\
+	$(GST_LIBS)		\
+	$(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la
+
+test_yuv_upload_SOURCES = test-yuv-upload.c
+test_yuv_upload_CFLAGS  = $(CLUTTER_GST_CFLAGS) $(GST_CFLAGS)
+test_yuv_upload_LDFLAGS =	\
+	$(CLUTTER_GST_LIBS)	\
+	$(GST_LIBS)		\
+	$(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la
