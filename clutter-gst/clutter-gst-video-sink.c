@@ -419,14 +419,15 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
                          GstBuffer           *buffer)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
-  gint row_stride = GST_ROUND_UP_4 (priv->width / 2);
+  gint y_row_stride  = GST_ROUND_UP_4 (priv->width);
+  gint uv_row_stride = GST_ROUND_UP_4 (priv->width / 2);
 
   CoglHandle y_tex = cogl_texture_new_from_data (priv->width,
                                                  priv->height,
                                                  COGL_TEXTURE_NO_SLICING,
                                                  COGL_PIXEL_FORMAT_G_8,
                                                  COGL_PIXEL_FORMAT_G_8,
-                                                 priv->width,
+                                                 y_row_stride,
                                                  GST_BUFFER_DATA (buffer));
 
   clutter_texture_set_cogl_texture (priv->texture, y_tex);
@@ -443,19 +444,20 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
                                             COGL_TEXTURE_NO_SLICING,
                                             COGL_PIXEL_FORMAT_G_8,
                                             COGL_PIXEL_FORMAT_G_8,
-                                            row_stride,
+                                            uv_row_stride,
                                             GST_BUFFER_DATA (buffer) +
-                                            (priv->width * priv->height));
+                                            (y_row_stride * priv->height));
 
-  priv->u_tex = cogl_texture_new_from_data (priv->width / 2,
-                                            priv->height / 2,
-                                            COGL_TEXTURE_NO_SLICING,
-                                            COGL_PIXEL_FORMAT_G_8,
-                                            COGL_PIXEL_FORMAT_G_8,
-                                            row_stride,
-                                            GST_BUFFER_DATA (buffer)
-                                            + (priv->width * priv->height)
-                                            + (row_stride * priv->height / 2));
+  priv->u_tex =
+    cogl_texture_new_from_data (priv->width / 2,
+                                priv->height / 2,
+                                COGL_TEXTURE_NO_SLICING,
+                                COGL_PIXEL_FORMAT_G_8,
+                                COGL_PIXEL_FORMAT_G_8,
+                                uv_row_stride,
+                                GST_BUFFER_DATA (buffer)
+                                + (y_row_stride * priv->height)
+                                + (uv_row_stride * priv->height / 2));
 }
 
 static void
