@@ -28,6 +28,7 @@ struct YV12_output
 
 struct YV12_input
 {
+  float4 color : COLOR;
   float2 Y : TEXCOORD0;
   sampler2D Y_tex : TEXUNIT0;
   sampler2D U_tex : TEXUNIT1;
@@ -45,7 +46,8 @@ YV12_output YV12_main (YV12_input IN)
   OUT.color.r = y + 1.59765625 * v;
   OUT.color.g = y - 0.390625 * u - 0.8125 * v;
   OUT.color.b = y + 2.015625 * u;
-  OUT.color.a = 1.0;
+  OUT.color.rgb *= IN.color.a;
+  OUT.color.a = IN.color.a;
 
   return OUT;
 }
