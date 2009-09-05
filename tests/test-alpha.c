@@ -34,6 +34,8 @@
 
 static gint   opt_framerate = 30;
 static gchar *opt_fourcc    = "I420";
+static gint   opt_bpp       = 24;
+static gint   opt_depth     = 24;
 
 static GOptionEntry options[] =
 {
@@ -166,11 +168,26 @@ main (int argc, char *argv[])
   sink = clutter_gst_video_sink_new (CLUTTER_TEXTURE (texture));
 
   /* make videotestsrc spit the format we want */
-  caps = gst_caps_new_simple ("video/x-raw-yuv",
-                              "format", GST_TYPE_FOURCC,
-                                        parse_fourcc (opt_fourcc),
-                              "framerate", GST_TYPE_FRACTION, opt_framerate, 1,
-                              NULL);
+  if (g_strcmp0 (opt_fourcc, "RGB ") == 0)
+    {
+      caps = gst_caps_new_simple ("video/x-raw-rgb",
+                                  "bpp", G_TYPE_INT, opt_bpp,
+                                  "depth", G_TYPE_INT, opt_depth,
+                                  "framerate", GST_TYPE_FRACTION,
+                                               opt_framerate, 1,
+                                  NULL);
+
+    }
+  else
+    {
+      caps = gst_caps_new_simple ("video/x-raw-yuv",
+                                  "format", GST_TYPE_FOURCC,
+                                            parse_fourcc (opt_fourcc),
+                                  "framerate", GST_TYPE_FRACTION,
+                                               opt_framerate, 1,
+                                  NULL);
+    }
+
   g_object_set (capsfilter, "caps", caps, NULL);
 
   g_printf ("%s: [caps] %s\n", __FILE__, gst_caps_to_string (caps));
