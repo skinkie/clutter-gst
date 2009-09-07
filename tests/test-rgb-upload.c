@@ -63,8 +63,8 @@ static GOptionEntry options[] =
 
 void
 size_change (ClutterTexture *texture,
-             gfloat          width,
-             gfloat          height,
+             gint            width,
+             gint            height,
              gpointer        user_data)
 {
   ClutterActor *stage;
