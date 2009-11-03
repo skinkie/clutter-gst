@@ -46,7 +46,7 @@
 
 struct _ClutterGstAudioPrivate
 {
-  GstElement *playbin;
+  GstElement *pipeline;
 
   gchar *uri;
 
@@ -102,7 +102,7 @@ set_uri (ClutterGstAudio *audio,
   GObject *self = G_OBJECT (audio);
   GstState state, pending;
 
-  if (!priv->playbin)
+  if (!priv->pipeline)
     return;
 
   g_free (priv->uri);
@@ -136,18 +136,18 @@ set_uri (ClutterGstAudio *audio,
   priv->can_seek = FALSE;
   priv->duration = 0.0;
 
-  gst_element_get_state (priv->playbin, &state, &pending, 0);
+  gst_element_get_state (priv->pipeline, &state, &pending, 0);
 
   if (pending)
     state = pending;
 
-  gst_element_set_state (priv->playbin, GST_STATE_NULL);
+  gst_element_set_state (priv->pipeline, GST_STATE_NULL);
   
-  g_object_set (priv->playbin, "uri", uri, NULL);
+  g_object_set (priv->pipeline, "uri", uri, NULL);
 
   /* Restore state */
   if (uri) 
-    gst_element_set_state (priv->playbin, state);
+    gst_element_set_state (priv->pipeline, state);
 
   /* Emit notififications for all these to make sure UI is not showing
    * any properties of the old URI.
@@ -164,7 +164,7 @@ set_playing (ClutterGstAudio *audio,
 {
   ClutterGstAudioPrivate *priv = audio->priv;
 
-  if (!priv->playbin)
+  if (!priv->pipeline)
     return;
         
   if (priv->uri) 
@@ -174,7 +174,7 @@ set_playing (ClutterGstAudio *audio,
       if (playing)
 	state = GST_STATE_PLAYING;
     
-      gst_element_set_state (priv->playbin, state);
+      gst_element_set_state (priv->pipeline, state);
     }
   else 
     {
@@ -192,10 +192,10 @@ get_playing (ClutterGstAudio *audio)
   ClutterGstAudioPrivate *priv = audio->priv;
   GstState state, pending;
 
-  if (!priv->playbin)
+  if (!priv->pipeline)
     return FALSE;
   
-  gst_element_get_state (priv->playbin, &state, &pending, 0);
+  gst_element_get_state (priv->pipeline, &state, &pending, 0);
   
   if (pending)
     return (pending == GST_STATE_PLAYING);
@@ -212,19 +212,19 @@ set_progress (ClutterGstAudio *audio,
   GstQuery *duration_q;
   gint64 position;
 
-  if (!priv->playbin)
+  if (!priv->pipeline)
     return;
 
-  gst_element_get_state (priv->playbin, &state, &pending, 0);
+  gst_element_get_state (priv->pipeline, &state, &pending, 0);
 
   if (pending)
     state = pending;
 
-  gst_element_set_state (priv->playbin, GST_STATE_PAUSED);
+  gst_element_set_state (priv->pipeline, GST_STATE_PAUSED);
 
   duration_q = gst_query_new_duration (GST_FORMAT_TIME);
 
-  if (gst_element_query (priv->playbin, duration_q))
+  if (gst_element_query (priv->pipeline, duration_q))
     {
       gint64 duration = 0;
 
@@ -237,7 +237,7 @@ set_progress (ClutterGstAudio *audio,
 
   gst_query_unref (duration_q);
 
-  gst_element_seek (priv->playbin,
+  gst_element_seek (priv->pipeline,
 		    1.0,
 		    GST_FORMAT_TIME,
 		    GST_SEEK_FLAG_FLUSH,
@@ -245,7 +245,7 @@ set_progress (ClutterGstAudio *audio,
 		    position,
 		    0, 0);
 
-  gst_element_set_state (priv->playbin, state);
+  gst_element_set_state (priv->pipeline, state);
 
   g_object_notify (G_OBJECT (audio), "progress");
 }
@@ -257,14 +257,14 @@ get_progress (ClutterGstAudio *audio)
   GstQuery *position_q, *duration_q;
   gdouble progress;
 
-  if (!priv->playbin)
+  if (!priv->pipeline)
     return 0.0;
 
   position_q = gst_query_new_position (GST_FORMAT_TIME);
   duration_q = gst_query_new_duration (GST_FORMAT_TIME);
 
-  if (gst_element_query (priv->playbin, position_q) &&
-      gst_element_query (priv->playbin, duration_q))
+  if (gst_element_query (priv->pipeline, position_q) &&
+      gst_element_query (priv->pipeline, duration_q))
     {
       gint64 position, duration;
 
@@ -290,11 +290,11 @@ set_audio_volume (ClutterGstAudio *audio,
 {
   ClutterGstAudioPrivate *priv = audio->priv;
 
-  if (!priv->playbin)
+  if (!priv->pipeline)
     return;
 
   /* the :volume property is in the [0, 10] interval */
-  g_object_set (G_OBJECT (priv->playbin), "volume", volume * 10.0, NULL);
+  g_object_set (G_OBJECT (priv->pipeline), "volume", volume * 10.0, NULL);
 
   g_object_notify (G_OBJECT (audio), "audio-volume");
 }
@@ -305,11 +305,11 @@ get_audio_volume (ClutterGstAudio *audio)
   ClutterGstAudioPrivate *priv = audio->priv;
   gdouble volume = 0.0;
 
-  if (!priv->playbin)
+  if (!priv->pipeline)
     return 0.0;
 
   /* the :volume property is in the [0, 10] interval */
-  g_object_get (priv->playbin, "volume", &volume, NULL);
+  g_object_get (priv->pipeline, "volume", &volume, NULL);
 
   return CLAMP (volume / 10.0, 0.0, 1.0);
 }
@@ -331,11 +331,11 @@ clutter_gst_audio_dispose (GObject *object)
   /* FIXME: flush an errors off bus ? */
   /* gst_bus_set_flushing (priv->bus, TRUE); */
 
-  if (priv->playbin) 
+  if (priv->pipeline)
     {
-      gst_element_set_state (priv->playbin, GST_STATE_NULL);
-      gst_object_unref (GST_OBJECT (priv->playbin));
-      priv->playbin = NULL;
+      gst_element_set_state (priv->pipeline, GST_STATE_NULL);
+      gst_object_unref (GST_OBJECT (priv->pipeline));
+      priv->pipeline = NULL;
     }
 
   if (priv->tick_timeout_id > 0) 
@@ -490,7 +490,7 @@ bus_message_eos_cb (GstBus          *bus,
   
   g_signal_emit_by_name (CLUTTER_MEDIA(audio), "eos");
 
-  gst_element_set_state (audio->priv->playbin, GST_STATE_READY);
+  gst_element_set_state (audio->priv->pipeline, GST_STATE_READY);
 }
 
 static void
@@ -546,7 +546,7 @@ bus_message_state_change_cb (GstBus          *bus,
   gpointer src;
 
   src = GST_MESSAGE_SRC (message);
-  if (src != audio->priv->playbin)
+  if (src != audio->priv->pipeline)
     return;
 
   gst_message_parse_state_changed (message, &old_state, &new_state, NULL);
@@ -559,7 +559,7 @@ bus_message_state_change_cb (GstBus          *bus,
       /* Determine whether we can seek */
       query = gst_query_new_seeking (GST_FORMAT_TIME);
       
-      if (gst_element_query (audio->priv->playbin, query))
+      if (gst_element_query (audio->priv->pipeline, query))
         {
           gboolean can_seek = FALSE;
 
@@ -572,7 +572,7 @@ bus_message_state_change_cb (GstBus          *bus,
       else
         {
 	  /* could not query for ability to seek by querying the
-           * playbin; let's crudely try by using the URI
+           * pipeline; let's crudely try by using the URI
 	   */
           if (priv->uri && g_str_has_prefix (priv->uri, "http://"))
             priv->can_seek = FALSE;
@@ -587,7 +587,7 @@ bus_message_state_change_cb (GstBus          *bus,
       /* Determine the duration */
       query = gst_query_new_duration (GST_FORMAT_TIME);
 
-      if (gst_element_query (audio->priv->playbin, query)) 
+      if (gst_element_query (audio->priv->pipeline, query))
 	{
 	  gint64 duration;
 	  
@@ -607,9 +607,9 @@ lay_pipeline (ClutterGstAudio *audio)
   ClutterGstAudioPrivate *priv = audio->priv;
   GstElement *audio_sink = NULL;
 
-  priv->playbin = gst_element_factory_make ("playbin", "playbin");
+  priv->pipeline = gst_element_factory_make ("playbin", "playbin");
 
-  if (!priv->playbin) 
+  if (!priv->pipeline)
     {
       g_warning ("Unable to create playbin element");
       return FALSE;
@@ -635,7 +635,7 @@ lay_pipeline (ClutterGstAudio *audio)
 	}
     }
 
-  g_object_set (G_OBJECT (priv->playbin), "audio-sink", audio_sink, NULL);
+  g_object_set (G_OBJECT (priv->pipeline), "audio-sink", audio_sink, NULL);
 
   return TRUE;
 }
@@ -656,7 +656,7 @@ clutter_gst_audio_init (ClutterGstAudio *audio)
       return;
     }
 
-  bus = gst_pipeline_get_bus (GST_PIPELINE (priv->playbin));
+  bus = gst_pipeline_get_bus (GST_PIPELINE (priv->pipeline));
 
   gst_bus_add_signal_watch (bus);
 
@@ -693,18 +693,18 @@ clutter_gst_audio_new (void)
 }
 
 /**
- * clutter_gst_audio_get_playbin:
+ * clutter_gst_audio_get_pipeline:
  * @audio: a #ClutterGstAudio
  *
  * Retrieves the #GstElement used by the @audio, for direct use with
  * GStreamer API.
  *
- * Return value: the playbin element used by the audio object
+ * Return value: the pipeline element used by the audio object
  */
 GstElement *
-clutter_gst_audio_get_playbin (ClutterGstAudio *audio)
+clutter_gst_audio_get_pipeline (ClutterGstAudio *audio)
 {
   g_return_val_if_fail (CLUTTER_GST_IS_AUDIO (audio), NULL);
 
-  return audio->priv->playbin;
+  return audio->priv->pipeline;
 }

@@ -97,7 +97,7 @@ struct _ClutterGstAudioClass
 GType            clutter_gst_audio_get_type    (void) G_GNUC_CONST;
 ClutterGstAudio *clutter_gst_audio_new         (void);
 
-GstElement      *clutter_gst_audio_get_playbin (ClutterGstAudio *audio);
+GstElement      *clutter_gst_audio_get_pipeline (ClutterGstAudio *audio);
 
 G_END_DECLS
 

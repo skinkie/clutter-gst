@@ -41,7 +41,7 @@ ClutterGstVideoSinkPrivate
 ClutterGstAudio
 ClutterGstAudioClass
 clutter_gst_audio_new
-clutter_gst_audio_get_playbin
+clutter_gst_audio_get_pipeline
 <SUBSECTION Standard>
 CLUTTER_GST_AUDIO
 CLUTTER_GST_IS_AUDIO
