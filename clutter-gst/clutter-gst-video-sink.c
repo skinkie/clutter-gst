@@ -136,7 +136,7 @@ typedef enum
 typedef void (APIENTRYP GLUNIFORM1IPROC)(GLint location, GLint value);
 /* GL_ARB_fragment_program */
 typedef void (APIENTRYP GLGENPROGRAMSPROC)(GLsizei n, GLuint *programs);
-typedef void (APIENTRYP GLBINDPROGRAMPROC)(GLenum target, GLint program);
+typedef void (APIENTRYP GLBINDPROGRAMPROC)(GLenum target, GLuint program);
 typedef void (APIENTRYP GLPROGRAMSTRINGPROC)(GLenum target, GLenum format,
                                              GLsizei len, const void *string);
 typedef struct _ClutterGstSymbols
