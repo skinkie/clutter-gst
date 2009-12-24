@@ -6,12 +6,10 @@ m4_define(clutter_gst_minor_version, 90)
 m4_define(clutter_gst_micro_version, 1)
 
 m4_define(clutter_api_version, 1.0)
+m4_define([clutter_gst_api_version], [1.0])
 
 m4_define([clutter_gst_version],
           [clutter_gst_major_version.clutter_gst_minor_version.clutter_gst_micro_version])
-
-m4_define([clutter_gst_api_version],
-          [clutter_gst_major_version.clutter_gst_minor_version])
 
 # increase the interface age for each release; if the API changes, set to 0
 m4_define([clutter_gst_interface_age], [0])
