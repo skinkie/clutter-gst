@@ -7,8 +7,10 @@
  *                               video stream.
  *
  * Authored By Matthew Allum  <mallum@openedhand.com>
+ *             Damien Lespiau <damien.lespiau@intel.com>
  *
  * Copyright (C) 2006 OpenedHand
+ * Copyright (C) 2010 Intel Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -37,7 +39,10 @@
 #include "config.h"
 #endif
 
+#include <string.h>
+
 #include <glib.h>
+#include <gio/gio.h>
 #include <gst/gst.h>
 
 #include "clutter-gst-debug.h"
@@ -95,6 +100,81 @@ tick_timeout (gpointer data)
 }
 
 static void
+autoload_subtitle (ClutterGstVideoTexture *video_texture,
+                   const gchar            *uri)
+{
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+  gchar *path, *dot, *subtitle_path;
+  GFile *video;
+  guint i;
+
+  static const char subtitles_extensions[][4] =
+    {
+      "sub", "SUB",
+      "srt", "SRT",
+      "smi", "SMI",
+      "ssa", "SSA",
+      "ass", "ASS",
+      "asc", "ASC"
+    };
+
+  /* do not try to look for subtitle files if the video file is not mounted
+   * locally */
+  if (!g_str_has_prefix (uri, "file://"))
+    return;
+
+  /* Retrieve the absolute path of the video file */
+  video = g_file_new_for_uri (uri);
+  path = g_file_get_path (video);
+  g_object_unref (video);
+  if (path == NULL)
+    return;
+
+  /* Put a '\0' after the dot of the extension */
+  dot = strrchr (path, '.');
+  if (dot == NULL) {
+    g_free (path);
+    return;
+  }
+  *++dot = '\0';
+
+  /* we can't use path as the temporary buffer for the paths of the potential
+   * subtitle files as we may not have enough room there */
+  subtitle_path = g_malloc (strlen (path) + 1 + 4);
+  strcpy (subtitle_path, path);
+
+  /* reuse dot to point to the first byte of the extension of subtitle_path */
+  dot = subtitle_path + (dot - path);
+
+  for (i = 0; i < G_N_ELEMENTS (subtitles_extensions); i++)
+    {
+      GFile *candidate;
+
+      memcpy (dot, subtitles_extensions[i], 4);
+      candidate = g_file_new_for_path (subtitle_path);
+      if (g_file_query_exists (candidate, NULL))
+        {
+          gchar *suburi;
+
+          suburi = g_file_get_uri (candidate);
+
+          CLUTTER_GST_NOTE (MEDIA, "found subtitle: %s", suburi);
+
+          g_object_set (priv->pipeline, "suburi", suburi, NULL);
+          g_free (suburi);
+
+          g_object_unref (candidate);
+          break;
+        }
+
+      g_object_unref (candidate);
+    }
+
+  g_free (path);
+  g_free (subtitle_path);
+}
+
+static void
 set_uri (ClutterGstVideoTexture *video_texture,
          const gchar            *uri)
 {
@@ -121,6 +201,9 @@ set_uri (ClutterGstVideoTexture *video_texture,
           priv->tick_timeout_id =
             g_timeout_add (TICK_TIMEOUT * 1000, tick_timeout, self);
         }
+
+      /* try to load subtitles based on the uri of the file */
+      autoload_subtitle (video_texture, uri);
     }
   else 
     {
