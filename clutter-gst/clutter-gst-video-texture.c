@@ -70,6 +70,8 @@ enum {
   PROP_URI,
   PROP_PLAYING,
   PROP_PROGRESS,
+  PROP_SUBTITLE_URI,
+  PROP_SUBTITLE_FONT_NAME,
   PROP_AUDIO_VOLUME,
   PROP_CAN_SEEK,
   PROP_BUFFER_FILL,
@@ -414,6 +416,34 @@ get_progress (ClutterGstVideoTexture *video_texture)
 }
 
 static void
+set_subtitle_uri (ClutterGstVideoTexture *video_texture,
+                  const gchar            *uri)
+{
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+
+  if (!priv->pipeline)
+    return;
+
+  CLUTTER_GST_NOTE (MEDIA, "setting subtitle URI: %s", uri);
+
+  g_object_set (priv->pipeline, "suburi", uri, NULL);
+}
+
+static void
+set_subtitle_font_name (ClutterGstVideoTexture *video_texture,
+                        const gchar            *font_name)
+{
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+
+  if (!priv->pipeline)
+    return;
+
+  CLUTTER_GST_NOTE (MEDIA, "setting subtitle font to %s", font_name);
+
+  g_object_set (priv->pipeline, "subtitle-font-desc", font_name, NULL);
+}
+
+static void
 set_audio_volume (ClutterGstVideoTexture *video_texture,
                   gdouble                 volume)
 {
@@ -501,9 +531,7 @@ clutter_gst_video_texture_set_property (GObject      *object,
 				        const GValue *value, 
 				        GParamSpec   *pspec)
 {
-  ClutterGstVideoTexture *video_texture;
-
-  video_texture = CLUTTER_GST_VIDEO_TEXTURE (object);
+  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE (object);
 
   switch (property_id)
     {
@@ -517,6 +545,14 @@ clutter_gst_video_texture_set_property (GObject      *object,
 
     case PROP_PROGRESS:
       set_progress (video_texture, g_value_get_double (value));
+      break;
+
+    case PROP_SUBTITLE_URI:
+      set_subtitle_uri (video_texture, g_value_get_string (value));
+      break;
+
+    case PROP_SUBTITLE_FONT_NAME:
+      set_subtitle_font_name (video_texture, g_value_get_string (value));
       break;
 
     case PROP_AUDIO_VOLUME:
@@ -536,6 +572,7 @@ clutter_gst_video_texture_get_property (GObject    *object,
 {
   ClutterGstVideoTexture *video_texture;
   ClutterGstVideoTexturePrivate *priv;
+  char *str;
 
   video_texture = CLUTTER_GST_VIDEO_TEXTURE (object);
   priv = video_texture->priv;
@@ -552,6 +589,16 @@ clutter_gst_video_texture_get_property (GObject    *object,
 
     case PROP_PROGRESS:
       g_value_set_double (value, get_progress (video_texture));
+      break;
+
+    case PROP_SUBTITLE_URI:
+      g_object_get (priv->pipeline, "suburi", &str, NULL);
+      g_value_take_string (value, str);
+      break;
+
+    case PROP_SUBTITLE_FONT_NAME:
+      g_object_get (priv->pipeline, "subtitle-font-desc", &str, NULL);
+      g_value_take_string (value, str);
       break;
 
     case PROP_AUDIO_VOLUME:
@@ -593,6 +640,11 @@ clutter_gst_video_texture_class_init (ClutterGstVideoTextureClass *klass)
                                     PROP_PLAYING, "playing");
   g_object_class_override_property (object_class,
                                     PROP_PROGRESS, "progress");
+  g_object_class_override_property (object_class,
+                                    PROP_SUBTITLE_URI, "subtitle-uri");
+  g_object_class_override_property (object_class,
+                                    PROP_SUBTITLE_FONT_NAME,
+                                    "subtitle-font-name");
   g_object_class_override_property (object_class,
                                     PROP_AUDIO_VOLUME, "audio-volume");
   g_object_class_override_property (object_class,
