@@ -11,7 +11,7 @@
  *             Damien Lespiau    <damien.lespiau@intel.com>
  *
  * Copyright (C) 2007,2008 OpenedHand
- * Copyright (C) 2009 Intel Corporation
+ * Copyright (C) 2009,2010 Intel Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -158,6 +158,21 @@ typedef enum _ClutterGstFeatures
 } ClutterGstFeatures;
 
 /*
+ * Custom GSource to signal we have a new frame pending
+ */
+
+#define CLUTTER_GST_DEFAULT_PRIORITY    (G_PRIORITY_HIGH_IDLE)
+
+typedef struct _ClutterGstSource
+{
+  GSource              source;
+
+  ClutterGstVideoSink *sink;
+  GMutex              *buffer_lock;   /* mutex for the buffer */
+  GstBuffer           *buffer;
+} ClutterGstSource;
+
+/*
  * renderer: abstracts a backend to render a frame.
  */
 typedef void (ClutterGstRendererPaint) (ClutterActor *, ClutterGstVideoSink *);
@@ -193,10 +208,6 @@ struct _ClutterGstVideoSinkPrivate
   CoglHandle               shader;
   GLuint                   fp;
 
-  GMutex                  *buffer_lock;   /* mutex for the buffer and idle_id */
-  GstBuffer               *buffer;
-  guint                    idle_id;
-
   ClutterGstVideoFormat    format;
   gboolean                 bgr;
   int                      width;
@@ -205,6 +216,9 @@ struct _ClutterGstVideoSinkPrivate
   int                      par_n, par_d;
   
   ClutterGstSymbols        syms;          /* extra OpenGL functions */
+
+  GMainContext            *clutter_main_context;
+  ClutterGstSource        *source;
 
   GSList                  *renderers;
   GstCaps                 *caps;
@@ -226,6 +240,120 @@ GST_BOILERPLATE_FULL (ClutterGstVideoSink,
                       GstBaseSink,
                       GST_TYPE_BASE_SINK,
                       _do_init);
+
+/*
+ * ClutterGstSource implementation
+ */
+
+static GSourceFuncs gst_source_funcs;
+
+static ClutterGstSource *
+clutter_gst_source_new (ClutterGstVideoSink *sink)
+{
+  GSource *source;
+  ClutterGstSource *gst_source;
+
+  source = g_source_new (&gst_source_funcs, sizeof (ClutterGstSource));
+  gst_source = (ClutterGstSource *) source;
+
+  g_source_set_can_recurse (source, TRUE);
+  g_source_set_priority (source, CLUTTER_GST_DEFAULT_PRIORITY);
+
+  gst_source->sink = sink;
+  gst_source->buffer_lock = g_mutex_new ();
+  gst_source->buffer = NULL;
+
+  return gst_source;
+}
+
+static void
+clutter_gst_source_finalize (GSource *source)
+{
+  ClutterGstSource *gst_source = (ClutterGstSource *) source;
+
+  g_mutex_lock (gst_source->buffer_lock);
+  if (gst_source->buffer)
+    gst_buffer_unref (gst_source->buffer);
+  gst_source->buffer = NULL;
+  g_mutex_unlock (gst_source->buffer_lock);
+}
+
+static void
+clutter_gst_source_push (ClutterGstSource *gst_source,
+                         GstBuffer        *buffer)
+{
+  ClutterGstVideoSinkPrivate *priv = gst_source->sink->priv;
+
+  g_mutex_lock (gst_source->buffer_lock);
+  if (gst_source->buffer)
+    gst_buffer_unref (gst_source->buffer);
+  gst_source->buffer = gst_buffer_ref (buffer);
+  g_mutex_unlock (gst_source->buffer_lock);
+
+  g_main_context_wakeup (priv->clutter_main_context);
+}
+
+static gboolean
+clutter_gst_source_prepare (GSource *source,
+                            gint    *timeout)
+{
+  ClutterGstSource *gst_source = (ClutterGstSource *) source;
+
+  *timeout = -1;
+
+  return gst_source->buffer != NULL;
+}
+
+static gboolean
+clutter_gst_source_check (GSource *source)
+{
+  ClutterGstSource *gst_source = (ClutterGstSource *) source;
+
+  return gst_source->buffer != NULL;
+}
+
+static gboolean
+clutter_gst_source_dispatch (GSource     *source,
+                             GSourceFunc  callback,
+                             gpointer     user_data)
+{
+  ClutterGstSource *gst_source = (ClutterGstSource *) source;
+  ClutterGstVideoSinkPrivate *priv = gst_source->sink->priv;
+  GstBuffer *buffer;
+
+  /* The initialization / free functions of the renderers have to be called in
+   * the clutter thread (OpenGL context) */
+  if (G_UNLIKELY (priv->renderer_state == CLUTTER_GST_RENDERER_NEED_GC))
+    {
+      priv->renderer->deinit (gst_source->sink);
+      priv->renderer_state = CLUTTER_GST_RENDERER_STOPPED;
+    }
+  if (G_UNLIKELY (priv->renderer_state == CLUTTER_GST_RENDERER_STOPPED))
+    {
+      priv->renderer->init (gst_source->sink);
+      priv->renderer_state = CLUTTER_GST_RENDERER_RUNNING;
+    }
+
+  g_mutex_lock (gst_source->buffer_lock);
+  buffer = gst_source->buffer;
+  gst_source->buffer = NULL;
+  g_mutex_unlock (gst_source->buffer_lock);
+
+  if (buffer)
+    {
+      priv->renderer->upload (gst_source->sink, buffer);
+      gst_buffer_unref (buffer);
+    }
+
+  return TRUE;
+}
+
+static GSourceFuncs gst_source_funcs = {
+  clutter_gst_source_prepare,
+  clutter_gst_source_check,
+  clutter_gst_source_dispatch,
+  clutter_gst_source_finalize
+};
 
 /*
  * Small helpers
@@ -871,57 +999,6 @@ clutter_gst_find_renderer_by_format (ClutterGstVideoSink  *sink,
   return renderer;
 }
 
-static gboolean
-clutter_gst_video_sink_idle_func (gpointer data)
-{
-  ClutterGstVideoSink        *sink;
-  ClutterGstVideoSinkPrivate *priv;
-  GstBuffer                  *buffer;
-
-  sink = data;
-  priv = sink->priv;
-
-  /* The initialization / free functions of the renderers have to be called in
-   * the clutter thread (OpenGL context) */
-  if (G_UNLIKELY (priv->renderer_state == CLUTTER_GST_RENDERER_NEED_GC))
-    {
-      priv->renderer->deinit (sink);
-      priv->renderer_state = CLUTTER_GST_RENDERER_STOPPED;
-    }
-  if (G_UNLIKELY (priv->renderer_state == CLUTTER_GST_RENDERER_STOPPED))
-    {
-      priv->renderer->init (sink);
-      priv->renderer_state = CLUTTER_GST_RENDERER_RUNNING;
-    }
-
-  g_mutex_lock (priv->buffer_lock);
-  if (!priv->buffer)
-    {
-      priv->idle_id = 0;
-      g_mutex_unlock (priv->buffer_lock);
-      return FALSE;
-    }
-
-  buffer = priv->buffer;
-  priv->buffer = NULL;
-
-  if (G_UNLIKELY (!GST_IS_BUFFER (buffer)))
-    {
-      priv->idle_id = 0;
-      g_mutex_unlock (priv->buffer_lock);
-      return FALSE;
-    }
-
-  priv->idle_id = 0;
-  g_mutex_unlock (priv->buffer_lock);
-
-  priv->renderer->upload (sink, buffer);
-
-  gst_buffer_unref (buffer);
-  
-  return FALSE;
-}
-
 static void
 clutter_gst_video_sink_base_init (gpointer g_class)
 {
@@ -945,7 +1022,10 @@ clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
     G_TYPE_INSTANCE_GET_PRIVATE (sink, CLUTTER_GST_TYPE_VIDEO_SINK,
                                  ClutterGstVideoSinkPrivate);
 
-  priv->buffer_lock = g_mutex_new ();
+  /* We are saving the GMainContext of the caller thread (which has to be
+   * the clutter thread)  */
+  priv->clutter_main_context = g_main_context_default ();
+
   priv->renderers = clutter_gst_build_renderers_list (&priv->syms);
   priv->caps = clutter_gst_build_caps (priv->renderers);
   priv->renderer_state = CLUTTER_GST_RENDERER_STOPPED;
@@ -957,31 +1037,9 @@ static GstFlowReturn
 clutter_gst_video_sink_render (GstBaseSink *bsink,
                                GstBuffer   *buffer)
 {
-  ClutterGstVideoSink *sink;
-  ClutterGstVideoSinkPrivate *priv;
+  ClutterGstVideoSink *sink = CLUTTER_GST_VIDEO_SINK (bsink);
 
-  sink = CLUTTER_GST_VIDEO_SINK (bsink);
-  priv = sink->priv;
-
-
-  g_mutex_lock (priv->buffer_lock);
-  if (priv->buffer)
-    { 
-      gst_buffer_unref (priv->buffer);
-    }
-  priv->buffer = gst_buffer_ref (buffer);
-
-  if (priv->idle_id == 0)
-    {
-      priv->idle_id = clutter_threads_add_idle_full (G_PRIORITY_HIGH_IDLE,
-                                     clutter_gst_video_sink_idle_func,
-                                     sink,
-                                     NULL);
-      /* the lock must be held when adding this idle, if it is not the idle
-       * callback would be invoked before priv->idle_id had been assigned
-       */
-    }
-  g_mutex_unlock (priv->buffer_lock);
+  clutter_gst_source_push (sink->priv->source, buffer);
 
   return GST_FLOW_OK;
 }
@@ -1108,22 +1166,10 @@ clutter_gst_video_sink_dispose (GObject *object)
       priv->renderer_state = CLUTTER_GST_RENDERER_STOPPED;
     }
 
-  if (priv->idle_id > 0)
-    {
-      g_source_remove (priv->idle_id);
-      priv->idle_id = 0;
-    }
-
   if (priv->texture)
     {
       g_object_unref (priv->texture);
       priv->texture = NULL;
-    }
-
-  if (priv->buffer_lock)
-    {
-      g_mutex_free (priv->buffer_lock);
-      priv->buffer_lock = NULL;
     }
 
   if (priv->caps)
@@ -1199,17 +1245,32 @@ clutter_gst_video_sink_get_property (GObject *object,
 }
 
 static gboolean
+clutter_gst_video_sink_start (GstBaseSink *base_sink)
+{
+  ClutterGstVideoSink        *sink = CLUTTER_GST_VIDEO_SINK (base_sink);
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+
+  priv->source = clutter_gst_source_new (sink);
+  g_source_attach ((GSource *) priv->source, priv->clutter_main_context);
+
+  return TRUE;
+}
+
+static gboolean
 clutter_gst_video_sink_stop (GstBaseSink *base_sink)
 {
   ClutterGstVideoSink        *sink = CLUTTER_GST_VIDEO_SINK (base_sink);
   ClutterGstVideoSinkPrivate *priv = sink->priv;
   guint i;
 
-  g_mutex_lock (priv->buffer_lock);
-  if (priv->buffer)
-    gst_buffer_unref (priv->buffer);
-  priv->buffer = NULL;
-  g_mutex_unlock (priv->buffer_lock);
+  if (priv->source)
+    {
+      GSource *source = (GSource *) priv->source;
+
+      g_source_destroy (source);
+      g_source_unref (source);
+      priv->source = NULL;
+    }
 
   priv->renderer_state = CLUTTER_GST_RENDERER_STOPPED;
 
@@ -1240,6 +1301,7 @@ clutter_gst_video_sink_class_init (ClutterGstVideoSinkClass *klass)
 
   gstbase_sink_class->render = clutter_gst_video_sink_render;
   gstbase_sink_class->preroll = clutter_gst_video_sink_render;
+  gstbase_sink_class->start = clutter_gst_video_sink_start;
   gstbase_sink_class->stop = clutter_gst_video_sink_stop;
   gstbase_sink_class->set_caps = clutter_gst_video_sink_set_caps;
   gstbase_sink_class->get_caps = clutter_gst_video_sink_get_caps;
