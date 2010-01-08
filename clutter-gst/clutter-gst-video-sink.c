@@ -1322,6 +1322,10 @@ clutter_gst_video_sink_class_init (ClutterGstVideoSinkClass *klass)
  * Creates a new GStreamer video sink which uses @texture as the target
  * for sinking a video stream from GStreamer.
  *
+ * <note>This function has to be called from Clutter's main thread. While
+ * GStreamer will spawn threads to do its work, we want all the GL calls to
+ * happen in the same thread. Clutter-gst knows which thread it is by
+ * assuming this constructor is called from the Clutter thread.</note>
  * Return value: a #GstElement for the newly created video sink
  */
 GstElement *

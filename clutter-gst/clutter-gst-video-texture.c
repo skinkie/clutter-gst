@@ -815,6 +815,11 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
  *
  * Creates a video texture.
  *
+ * <note>This function has to be called from Clutter's main thread. While
+ * GStreamer will spawn threads to do its work, we want all the GL calls to
+ * happen in the same thread. Clutter-gst knows which thread it is by
+ * assuming this constructor is called from the Clutter thread.</note>
+ *
  * Return value: the newly created video texture actor
  */
 ClutterActor*
