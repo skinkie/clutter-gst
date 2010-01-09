@@ -763,9 +763,10 @@ lay_pipeline (ClutterGstVideoTexture *video_texture)
   video_sink = clutter_gst_video_sink_new (CLUTTER_TEXTURE (video_texture));
   g_object_set (G_OBJECT (video_sink), "qos", TRUE, "sync", TRUE, NULL);
   g_object_set (G_OBJECT (priv->pipeline),
-		"video-sink", video_sink,
-		"audio-sink", audio_sink,
-		NULL);
+                "video-sink", video_sink,
+                "audio-sink", audio_sink,
+                "subtitle-font-desc", "Sans 16",
+                NULL);
 
   return TRUE;
 }
