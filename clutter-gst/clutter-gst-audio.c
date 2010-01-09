@@ -8,9 +8,10 @@
  * Authored By Matthew Allum  <mallum@openedhand.com>
  *             Jorn Baayen <jorn@openedhand.com>
  *             Emmanuele Bassi <ebassi@linux.intel.com>
+ *             Damien Lespiau <damien.lespiau@intel.com>
  *
  * Copyright (C) 2006 OpenedHand
- * Copyright (C) 2009 Intel Corp.
+ * Copyright (C) 2009, 2010 Intel Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -43,6 +44,8 @@
 #include <gst/audio/gstbaseaudiosink.h>
 
 #include <glib.h>
+
+#include "clutter-gst-debug.h"
 
 struct _ClutterGstAudioPrivate
 {
@@ -143,6 +146,8 @@ set_uri (ClutterGstAudio *audio,
 
   gst_element_set_state (priv->pipeline, GST_STATE_NULL);
   
+  CLUTTER_GST_NOTE (MEDIA, "setting URI: %s", uri);
+
   g_object_set (priv->pipeline, "uri", uri, NULL);
 
   /* Restore state */
@@ -166,6 +171,8 @@ set_playing (ClutterGstAudio *audio,
 
   if (!priv->pipeline)
     return;
+
+  CLUTTER_GST_NOTE (MEDIA, "set playing: %d", playing);
         
   if (priv->uri) 
     {
@@ -191,6 +198,7 @@ get_playing (ClutterGstAudio *audio)
 {
   ClutterGstAudioPrivate *priv = audio->priv;
   GstState state, pending;
+  gboolean playing;
 
   if (!priv->pipeline)
     return FALSE;
@@ -198,9 +206,13 @@ get_playing (ClutterGstAudio *audio)
   gst_element_get_state (priv->pipeline, &state, &pending, 0);
   
   if (pending)
-    return (pending == GST_STATE_PLAYING);
+    playing = (pending == GST_STATE_PLAYING);
   else
-    return (state == GST_STATE_PLAYING);
+    playing = (state == GST_STATE_PLAYING);
+
+  CLUTTER_GST_NOTE (MEDIA, "get playing: %d", playing);
+
+  return playing;
 }
 
 static void
@@ -214,6 +226,8 @@ set_progress (ClutterGstAudio *audio,
 
   if (!priv->pipeline)
     return;
+
+  CLUTTER_GST_NOTE (MEDIA, "set progress: %.02f", progress);
 
   gst_element_get_state (priv->pipeline, &state, &pending, 0);
 
@@ -281,6 +295,8 @@ get_progress (ClutterGstAudio *audio)
   gst_query_unref (position_q);
   gst_query_unref (duration_q);
 
+  CLUTTER_GST_NOTE (MEDIA, "get progress: %.02f", progress);
+
   return progress;
 }
 
@@ -292,6 +308,8 @@ set_audio_volume (ClutterGstAudio *audio,
 
   if (!priv->pipeline)
     return;
+
+  CLUTTER_GST_NOTE (MEDIA, "set volume: %.02f", volume);
 
   /* the :volume property is in the [0, 10] interval */
   g_object_set (G_OBJECT (priv->pipeline), "volume", volume * 10.0, NULL);
@@ -310,6 +328,8 @@ get_audio_volume (ClutterGstAudio *audio)
 
   /* the :volume property is in the [0, 10] interval */
   g_object_get (priv->pipeline, "volume", &volume, NULL);
+
+  CLUTTER_GST_NOTE (MEDIA, "get volume: %.02f", volume);
 
   return CLAMP (volume / 10.0, 0.0, 1.0);
 }
@@ -488,6 +508,8 @@ bus_message_eos_cb (GstBus          *bus,
 {
   g_object_notify (G_OBJECT (audio), "progress");
   
+  CLUTTER_GST_NOTE (MEDIA, "EOS");
+
   g_signal_emit_by_name (CLUTTER_MEDIA(audio), "eos");
 
   gst_element_set_state (audio->priv->pipeline, GST_STATE_READY);
@@ -514,6 +536,8 @@ bus_message_buffering_cb (GstBus          *bus,
                                  0.0,
                                  1.0);
 
+      CLUTTER_GST_NOTE (MEDIA, "buffer-fill: %.02f", priv->buffer_fill);
+
       g_object_notify (G_OBJECT (audio), "buffer-fill");
     }
 }
@@ -532,6 +556,8 @@ bus_message_duration_cb (GstBus          *bus,
     return;
   
   priv->duration = (gdouble) duration / GST_SECOND;
+
+  CLUTTER_GST_NOTE (MEDIA, "duration: %.02f", priv->duration);
 
   g_object_notify (G_OBJECT (audio), "duration");
 }
@@ -582,6 +608,8 @@ bus_message_state_change_cb (GstBus          *bus,
 
       gst_query_unref (query);
       
+      CLUTTER_GST_NOTE (MEDIA, "can-seek: %d", priv->can_seek);
+
       g_object_notify (G_OBJECT (audio), "can-seek");
       
       /* Determine the duration */
@@ -593,6 +621,8 @@ bus_message_state_change_cb (GstBus          *bus,
 	  
 	  gst_query_parse_duration (query, NULL, &duration);
 	  priv->duration = (gdouble) duration / GST_SECOND;
+
+          CLUTTER_GST_NOTE (MEDIA, "duration: %.02f", priv->duration);
 
 	  g_object_notify (G_OBJECT (audio), "duration");
 	}
