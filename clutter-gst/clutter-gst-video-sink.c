@@ -122,6 +122,7 @@ enum
 {
   PROP_0,
   PROP_TEXTURE,
+  PROP_UPDATE_PRIORITY
 };
 
 typedef enum
@@ -355,6 +356,17 @@ static GSourceFuncs gst_source_funcs = {
   clutter_gst_source_dispatch,
   clutter_gst_source_finalize
 };
+
+static void
+clutter_gst_video_sink_set_priority (ClutterGstVideoSink *sink,
+                                     int                  priority)
+{
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+
+  GST_INFO ("GSource priority: %d", priority);
+
+  g_source_set_priority ((GSource *) priv->source, priority);
+}
 
 /*
  * Small helpers
@@ -1027,6 +1039,7 @@ clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
    * the clutter thread)  */
   priv->clutter_main_context = g_main_context_default ();
 
+
   priv->renderers = clutter_gst_build_renderers_list (&priv->syms);
   priv->caps = clutter_gst_build_caps (priv->renderers);
   priv->renderer_state = CLUTTER_GST_RENDERER_STOPPED;
@@ -1204,11 +1217,8 @@ clutter_gst_video_sink_set_property (GObject *object,
                                      const GValue *value,
                                      GParamSpec *pspec)
 {
-  ClutterGstVideoSink *sink;
-  ClutterGstVideoSinkPrivate *priv;
-
-  sink = CLUTTER_GST_VIDEO_SINK (object);
-  priv = sink->priv;
+  ClutterGstVideoSink *sink = CLUTTER_GST_VIDEO_SINK (object);
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
 
   switch (prop_id) 
     {
@@ -1217,6 +1227,9 @@ clutter_gst_video_sink_set_property (GObject *object,
         g_object_unref (priv->texture);
 
       priv->texture = CLUTTER_TEXTURE (g_value_dup_object (value));
+      break;
+    case PROP_UPDATE_PRIORITY:
+      clutter_gst_video_sink_set_priority (sink, g_value_get_int (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -1230,14 +1243,16 @@ clutter_gst_video_sink_get_property (GObject *object,
                                      GValue *value,
                                      GParamSpec *pspec)
 {
-  ClutterGstVideoSink *sink;
-
-  sink = CLUTTER_GST_VIDEO_SINK (object);
+  ClutterGstVideoSink *sink = CLUTTER_GST_VIDEO_SINK (object);
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
 
   switch (prop_id) 
     {
     case PROP_TEXTURE:
-      g_value_set_object (value, sink->priv->texture);
+      g_value_set_object (value, priv->texture);
+      break;
+    case PROP_UPDATE_PRIORITY:
+      g_value_set_int (value, g_source_get_priority ((GSource *) priv->source));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -1322,6 +1337,23 @@ clutter_gst_video_sink_class_init (ClutterGstVideoSinkClass *klass)
                                CLUTTER_TYPE_TEXTURE,
                                CLUTTER_GST_PARAM_READWRITE);
   g_object_class_install_property (gobject_class, PROP_TEXTURE, pspec);
+
+  /**
+   * ClutterGstVideoSink:update-priority:
+   *
+   * Clutter-Gst installs a #GSource to signal that a new frame is ready to
+   * the Clutter thread. This property allows to tweak the priority of the
+   * source (Lower value is higher priority).
+   *
+   * Since 1.0
+   */
+  pspec = g_param_spec_int ("update-priority",
+                            "Update Priority",
+                            "Priority of video updates in the Clutter thread",
+                            -G_MAXINT, G_MAXINT,
+                            CLUTTER_GST_DEFAULT_PRIORITY,
+                            CLUTTER_GST_PARAM_READWRITE);
+  g_object_class_install_property (gobject_class, PROP_UPDATE_PRIORITY, pspec);
 }
 
 /**
