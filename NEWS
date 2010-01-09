@@ -1,3 +1,26 @@
+clutter-gst 1.0.0 (09/02/2010)
+===============================================================================
+
+  * list of changes since 0.10.0
+
+    o Uses the playbin2 GStreamer element.
+
+    o Autoloads subtitle files when they have the same name than the video
+      being played and are in the same directory.
+
+    o GObject introspection support.
+
+    o Added a new clutter_gst_init_with_arg() symbol, changed *get_playbin()
+      to a more generic *get_pipeline()
+
+    o A lot of small bug fixes and code clean up.
+
+Many thanks to:
+
+  Bastian Winkler
+  Ole André Vadla Ravnås
+  Roland Peffer
+
 clutter-gst 0.10.0 (29/07/2009)
 ===============================================================================
 

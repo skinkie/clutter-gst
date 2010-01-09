@@ -23,9 +23,8 @@ Clutter-GStreamer requires:
   Clutter >= 1.0.0
   GStreamer >= 0.10
 
-Copyright (C) 2006-2008  OpenedHand
-Copyright (C) 2009 Intel Corporation
+Copyright (C) 2006, 2007, 2008  OpenedHand
+Copyright (C) 2009, 2010 Intel Corporation
 
 Released under the terms of the GNU Lesser General Public License, version 2.1
 or later. See the file COPYING for details.
-
