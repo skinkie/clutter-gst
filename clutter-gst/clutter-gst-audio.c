@@ -98,6 +98,36 @@ tick_timeout (gpointer data)
 }
 
 static void
+query_duration (ClutterGstAudio *audio)
+{
+  ClutterGstAudioPrivate *priv = audio->priv;
+  gboolean success;
+  GstFormat format = GST_FORMAT_TIME;
+  gint64 duration;
+  gdouble new_duration, difference;
+
+  success = gst_element_query_duration (priv->pipeline, &format, &duration);
+  if (G_UNLIKELY (success != TRUE))
+    return;
+
+  new_duration = (gdouble) duration / GST_SECOND;
+
+  /* while we store the new duration if it sligthly changes, the duration
+   * signal is sent only if the new duration is at least one second different
+   * from the old one (as the duration signal is mainly used to update the
+   * time displayed in a UI */
+  difference = ABS (priv->duration - new_duration);
+  if (difference > 1e-3)
+    {
+      CLUTTER_GST_NOTE (MEDIA, "duration: %.02f", new_duration);
+      priv->duration = new_duration;
+
+      if (difference > 1.0)
+        g_object_notify (G_OBJECT (audio), "duration");
+    }
+}
+
+static void
 set_uri (ClutterGstAudio *audio,
 	 const gchar     *uri)
 {
@@ -547,19 +577,15 @@ bus_message_duration_cb (GstBus          *bus,
                          GstMessage      *message,
                          ClutterGstAudio *audio)
 {
-  ClutterGstAudioPrivate *priv = audio->priv;
-  GstFormat format;
   gint64 duration;
 
-  gst_message_parse_duration (message, &format, &duration);
-  if (format != GST_FORMAT_TIME)
+  /* GstElements send a duration message on the bus with GST_CLOCK_TIME_NONE
+   * as duration to signal a new duration */
+  gst_message_parse_duration (message, NULL, &duration);
+  if (G_UNLIKELY (duration != GST_CLOCK_TIME_NONE))
     return;
-  
-  priv->duration = (gdouble) duration / GST_SECOND;
 
-  CLUTTER_GST_NOTE (MEDIA, "duration: %.02f", priv->duration);
-
-  g_object_notify (G_OBJECT (audio), "duration");
+  query_duration (audio);
 }
 
 static void
@@ -612,22 +638,7 @@ bus_message_state_change_cb (GstBus          *bus,
 
       g_object_notify (G_OBJECT (audio), "can-seek");
       
-      /* Determine the duration */
-      query = gst_query_new_duration (GST_FORMAT_TIME);
-
-      if (gst_element_query (audio->priv->pipeline, query))
-	{
-	  gint64 duration;
-	  
-	  gst_query_parse_duration (query, NULL, &duration);
-	  priv->duration = (gdouble) duration / GST_SECOND;
-
-          CLUTTER_GST_NOTE (MEDIA, "duration: %.02f", priv->duration);
-
-	  g_object_notify (G_OBJECT (audio), "duration");
-	}
-
-      gst_query_unref (query);
+      query_duration (audio);
     }
 }
 
