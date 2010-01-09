@@ -42,6 +42,7 @@
 #endif
 
 #include "clutter-gst-video-sink.h"
+#include "clutter-gst-private.h"
 #include "clutter-gst-shaders.h"
 /* include assembly shaders */
 #include "I420.h"
@@ -1312,7 +1313,7 @@ clutter_gst_video_sink_class_init (ClutterGstVideoSinkClass *klass)
                                     "texture",
                                     "Target ClutterTexture object",
                                     CLUTTER_TYPE_TEXTURE,
-                                    G_PARAM_READWRITE));
+                                    CLUTTER_GST_PARAM_READWRITE));
 }
 
 /**

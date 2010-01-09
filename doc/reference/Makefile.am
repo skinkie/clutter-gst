@@ -52,8 +52,9 @@ IGNORE_HFILES=			\
 	I420.h			\
 	YV12.h			\
 	clutter-gst.h		\
-	clutter-gst-shaders.h	\
 	clutter-gst-debug.h	\
+	clutter-gst-private.h	\
+	clutter-gst-shaders.h	\
 	$(NULL)
 
 # Images to copy into HTML directory.

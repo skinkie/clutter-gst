@@ -16,6 +16,7 @@ source_h = 					\
 
 source_priv_h =					\
 	$(srcdir)/clutter-gst-debug.h		\
+	$(srcdir)/clutter-gst-private.h		\
 	$(srcdir)/clutter-gst-shaders.h		\
 	$(NULL)
 
