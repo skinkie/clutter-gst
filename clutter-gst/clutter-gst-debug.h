@@ -28,7 +28,6 @@
 #define __CLUTTER_GST_DEBUG_H__
 
 #include <glib.h>
-#include "clutter-gst-util.h"
 
 G_BEGIN_DECLS
 
