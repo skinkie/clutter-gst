@@ -1291,6 +1291,7 @@ clutter_gst_video_sink_class_init (ClutterGstVideoSinkClass *klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
   GstBaseSinkClass *gstbase_sink_class = GST_BASE_SINK_CLASS (klass);
+  GParamSpec *pspec;
 
   g_type_class_add_private (klass, sizeof (ClutterGstVideoSinkPrivate));
 
@@ -1307,13 +1308,20 @@ clutter_gst_video_sink_class_init (ClutterGstVideoSinkClass *klass)
   gstbase_sink_class->set_caps = clutter_gst_video_sink_set_caps;
   gstbase_sink_class->get_caps = clutter_gst_video_sink_get_caps;
 
-  g_object_class_install_property 
-              (gobject_class, PROP_TEXTURE,
-               g_param_spec_object ("texture",
-                                    "texture",
-                                    "Target ClutterTexture object",
-                                    CLUTTER_TYPE_TEXTURE,
-                                    CLUTTER_GST_PARAM_READWRITE));
+  /**
+   * ClutterGstVideoSink:texture:
+   *
+   * This is the texture the video is decoded into. It can be any
+   * #ClutterTexture, however Cluter-Gst has a handy subclass,
+   * #ClutterGstVideoTexture, that implements the #ClutterMedia
+   * interface.
+   */
+  pspec = g_param_spec_object ("texture",
+                               "Texture",
+                               "Texture the video will be decoded into",
+                               CLUTTER_TYPE_TEXTURE,
+                               CLUTTER_GST_PARAM_READWRITE);
+  g_object_class_install_property (gobject_class, PROP_TEXTURE, pspec);
 }
 
 /**
