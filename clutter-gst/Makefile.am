@@ -21,12 +21,12 @@ source_priv_h =					\
 	$(NULL)
 
 source_c = 					\
-	   clutter-gst-audio.c			\
-	   clutter-gst-debug.c			\
-	   clutter-gst-video-sink.c		\
-	   clutter-gst-video-texture.c		\
-           clutter-gst-util.c			\
-	   $(NULL)
+	$(srcdir)/clutter-gst-audio.c		\
+	$(srcdir)/clutter-gst-debug.c		\
+	$(srcdir)/clutter-gst-video-sink.c	\
+	$(srcdir)/clutter-gst-video-texture.c	\
+        $(srcdir)/clutter-gst-util.c		\
+	$(NULL)
 
 libclutter_gst_@CLUTTER_GST_MAJORMINOR@_la_SOURCES = $(MARSHALFILES)  \
                                                      $(source_c)      \
@@ -53,7 +53,7 @@ libclutter_gst_@CLUTTER_GST_MAJORMINOR@_la_LIBADD  = @CLUTTER_GST_LIBS@ $(GST_LI
 libclutter_gst_@CLUTTER_GST_MAJORMINOR@_la_LDFLAGS = @CLUTTER_GST_LT_LDFLAGS@
 
 cluttergstheadersdir = $(includedir)/clutter-@CLUTTER_API_VERSION@/clutter-gst
-cluttergstheaders_HEADERS = $(source_h) clutter-gst.h
+cluttergstheaders_HEADERS = $(source_h) $(srcdir)/clutter-gst.h
 
 #
 # Introspection data
