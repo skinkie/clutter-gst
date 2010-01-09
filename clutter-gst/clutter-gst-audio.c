@@ -648,11 +648,11 @@ lay_pipeline (ClutterGstAudio *audio)
   ClutterGstAudioPrivate *priv = audio->priv;
   GstElement *audio_sink = NULL;
 
-  priv->pipeline = gst_element_factory_make ("playbin", "playbin");
+  priv->pipeline = gst_element_factory_make ("playbin2", "pipeline");
 
   if (!priv->pipeline)
     {
-      g_warning ("Unable to create playbin element");
+      g_warning ("Unable to create playbin2 element");
       return FALSE;
     }
 
