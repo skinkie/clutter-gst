@@ -25,8 +25,12 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef _HAVE_CLUTTER_GST_UTIL_H
-#define _HAVE_CLUTTER_GST_UTIL_H
+#if !defined(__CLUTTER_GST_H_INSIDE__) && !defined(CLUTTER_GST_COMPILATION)
+#error "Only <clutter-gst/clutter-gst.h> can be include directly."
+#endif
+
+#ifndef __CLUTTER_GST_UTIL_H__
+#define __CLUTTER_GST_UTIL_H__
 
 #include <clutter/clutter.h>
 
@@ -43,4 +47,4 @@ ClutterInitError clutter_gst_init_with_args (int            *argc,
 
 G_END_DECLS
 
-#endif
+#endif /* __CLUTTER_GST_UTIL_H__ */

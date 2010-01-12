@@ -25,8 +25,13 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-#ifndef _HAVE_CLUTTER_GST_AUDIO_H
-#define _HAVE_CLUTTER_GST_AUDIO_H
+
+#if !defined(__CLUTTER_GST_H_INSIDE__) && !defined(CLUTTER_GST_COMPILATION)
+#error "Only <clutter-gst/clutter-gst.h> can be included directly."
+#endif
+
+#ifndef __CLUTTER_GST_AUDIO_H__
+#define __CLUTTER_GST_AUDIO_H__
 
 #include <glib-object.h>
 #include <clutter/clutter.h>
@@ -101,4 +106,4 @@ GstElement      *clutter_gst_audio_get_pipeline (ClutterGstAudio *audio);
 
 G_END_DECLS
 
-#endif
+#endif /* __CLUTTER_GST_AUDIO_H__ */

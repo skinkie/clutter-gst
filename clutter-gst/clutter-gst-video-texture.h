@@ -26,8 +26,12 @@
  * Boston, MA 02111-1307, USA.
  */
 
-#ifndef _HAVE_CLUTTER_GST_VIDEO_TEXTURE_H
-#define _HAVE_CLUTTER_GST_VIDEO_TEXTURE_H
+#if !defined(__CLUTTER_GST_H_INSIDE__) && !defined(CLUTTER_GST_COMPILATION)
+#error "Only <clutter-gst/clutter-gst.h> can be included directly."
+#endif
+
+#ifndef __CLUTTER_GST_VIDEO_TEXTURE_H__
+#define __CLUTTER_GST_VIDEO_TEXTURE_H__
 
 #include <glib-object.h>
 #include <clutter/clutter.h>
@@ -102,4 +106,4 @@ GstElement   *clutter_gst_video_texture_get_pipeline  (ClutterGstVideoTexture *t
 
 G_END_DECLS
 
-#endif
+#endif /* __CLUTTER_GST_VIDEO_TEXTURE_H__ */

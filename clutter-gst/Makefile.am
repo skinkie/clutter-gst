@@ -39,8 +39,12 @@ INCLUDES =					\
 	-I$(top_srcdir)/clutter-gst/shaders	\
 	$(NULL)
 
-AM_CFLAGS = 				\
+AM_CPPFLAGS =				\
+	-DCLUTTER_GST_COMPILATION	\
 	-DG_LOG_DOMAIN=\"Clutter-Gst\"	\
+	$(NULL)
+
+AM_CFLAGS = 				\
 	$(MAINTAINER_CFLAGS)		\
 	$(CLUTTER_GST_DEBUG_CFLAGS)	\
 	$(CLUTTER_GST_CFLAGS)		\
@@ -66,6 +70,7 @@ ClutterGst-@CLUTTER_GST_API_VERSION@.gir: $(INTROSPECTION_SCANNER) libclutter-gs
 	$(QUIET_GEN)$(INTROSPECTION_SCANNER) -v \
 		--namespace ClutterGst --nsversion=@CLUTTER_GST_API_VERSION@ \
 		$(INCLUDES) \
+		$(AM_CPPFLAGS) \
 		--add-include-path=$(srcdir) --add-include=path=. \
 		--c-include="clutter-gst/clutter-gst.h" \
 		--include=GObject-2.0 \
