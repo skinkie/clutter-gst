@@ -572,13 +572,13 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
                                                  GST_BUFFER_DATA (buffer));
 
   clutter_texture_set_cogl_texture (priv->texture, y_tex);
-  cogl_texture_unref (y_tex);
+  cogl_handle_unref (y_tex);
 
   if (priv->u_tex)
-    cogl_texture_unref (priv->u_tex);
+    cogl_handle_unref (priv->u_tex);
 
   if (priv->v_tex)
-    cogl_texture_unref (priv->v_tex);
+    cogl_handle_unref (priv->v_tex);
 
   priv->v_tex = cogl_texture_new_from_data (priv->width / 2,
                                             priv->height / 2,
