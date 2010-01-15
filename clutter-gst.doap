@@ -14,7 +14,7 @@
 
   <description xml:lang="en">Clutter-Gst is a gstreamer based clutter actor
     implementing the ClutterMedia interface. It provides video playback on a
-    clutter texture as well as audio only playback.
+    clutter texture.
     The library can also be used for its cluttersink Gstreamer element to build
     more complex pipelines.</description>
 

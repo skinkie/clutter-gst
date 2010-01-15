@@ -6,7 +6,6 @@ SUBDIRS = shaders
 CLEANFILES = #
 
 source_h = 					\
-	$(srcdir)/clutter-gst-audio.h 		\
 	$(srcdir)/clutter-gst-util.h		\
 	$(srcdir)/clutter-gst-version.h		\
 	$(srcdir)/clutter-gst-video-sink.h 	\
@@ -21,7 +20,6 @@ source_priv_h =					\
 	$(NULL)
 
 source_c = 					\
-	$(srcdir)/clutter-gst-audio.c		\
 	$(srcdir)/clutter-gst-debug.c		\
 	$(srcdir)/clutter-gst-video-sink.c	\
 	$(srcdir)/clutter-gst-video-texture.c	\

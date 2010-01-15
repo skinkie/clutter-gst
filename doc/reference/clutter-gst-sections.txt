@@ -36,25 +36,6 @@ ClutterGstVideoSinkPrivate
 </SECTION>
 
 <SECTION>
-<FILE>clutter-gst-audio</FILE>
-<TITLE>ClutterGstAudio</TITLE>
-ClutterGstAudio
-ClutterGstAudioClass
-clutter_gst_audio_new
-clutter_gst_audio_get_pipeline
-<SUBSECTION Standard>
-CLUTTER_GST_AUDIO
-CLUTTER_GST_IS_AUDIO
-CLUTTER_GST_TYPE_AUDIO
-clutter_gst_audio_get_type
-CLUTTER_GST_AUDIO_CLASS
-CLUTTER_GST_IS_AUDIO_CLASS
-CLUTTER_GST_AUDIO_GET_CLASS
-<SUBSECTION Private>
-ClutterGstAudioPrivate
-</SECTION>
-
-<SECTION>
 <FILE>clutter-gst-util</FILE>
 <TITLE>Utilities</TITLE>
 clutter_gst_init
