@@ -1064,7 +1064,7 @@ clutter_gst_video_sink_get_caps (GstBaseSink *bsink)
   ClutterGstVideoSink *sink;
 
   sink = CLUTTER_GST_VIDEO_SINK (bsink);
-  return gst_caps_copy (sink->priv->caps);
+  return gst_caps_ref (sink->priv->caps);
 }
 
 static gboolean
