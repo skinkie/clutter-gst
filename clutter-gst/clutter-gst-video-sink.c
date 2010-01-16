@@ -278,6 +278,7 @@ clutter_gst_source_finalize (GSource *source)
     gst_buffer_unref (gst_source->buffer);
   gst_source->buffer = NULL;
   g_mutex_unlock (gst_source->buffer_lock);
+  g_mutex_free (gst_source->buffer_lock);
 }
 
 static void
