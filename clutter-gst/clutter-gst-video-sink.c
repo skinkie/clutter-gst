@@ -923,7 +923,7 @@ clutter_gst_build_renderers_list (ClutterGstSymbols *syms)
   /* get the features */
   gl_extensions = (const gchar*) glGetString (GL_EXTENSIONS);
 
-  glGetIntegerv (CGL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &nb_texture_units);
+  glGetIntegerv (GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &nb_texture_units);
 
   if (nb_texture_units >= 3)
     features |= CLUTTER_GST_MULTI_TEXTURE;
