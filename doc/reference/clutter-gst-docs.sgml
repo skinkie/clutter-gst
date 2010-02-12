@@ -56,7 +56,6 @@
   <chapter>
     <title>Clutter Actors And Objects</title>
     <xi:include href="xml/clutter-gst-video-texture.xml"/>
-    <xi:include href="xml/clutter-gst-audio.xml"/>
     <xi:include href="xml/clutter-gst-video-sink.xml"/>
     <xi:include href="xml/clutter-gst-util.xml"/>
     <xi:include href="xml/clutter-gst-version.xml"/>
