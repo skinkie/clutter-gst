@@ -56,6 +56,15 @@
 #include <glib.h>
 #include <string.h>
 
+/* Flags to give to cogl_texture_new(). Since clutter 1.1.10 put NO_ATLAS to
+ * be sure the frames don't end up in an atlas */
+#if CLUTTER_CHECK_VERSION(1, 1, 10)
+#define CLUTTER_GST_TEXTURE_FLAGS \
+  (COGL_TEXTURE_NO_SLICING | COGL_TEXTURE_NO_ATLAS)
+#else
+#define CLUTTER_GST_TEXTURE_FLAGS  COGL_TEXTURE_NO_SLICING
+#endif
+
 static gchar *ayuv_to_rgba_shader = \
      FRAGMENT_SHADER_VARS
      "uniform sampler2D tex;"
@@ -566,7 +575,7 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
 
   CoglHandle y_tex = cogl_texture_new_from_data (priv->width,
                                                  priv->height,
-                                                 COGL_TEXTURE_NO_SLICING,
+                                                 CLUTTER_GST_TEXTURE_FLAGS,
                                                  COGL_PIXEL_FORMAT_G_8,
                                                  COGL_PIXEL_FORMAT_G_8,
                                                  y_row_stride,
@@ -583,7 +592,7 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
 
   priv->v_tex = cogl_texture_new_from_data (priv->width / 2,
                                             priv->height / 2,
-                                            COGL_TEXTURE_NO_SLICING,
+                                            CLUTTER_GST_TEXTURE_FLAGS,
                                             COGL_PIXEL_FORMAT_G_8,
                                             COGL_PIXEL_FORMAT_G_8,
                                             uv_row_stride,
@@ -593,7 +602,7 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
   priv->u_tex =
     cogl_texture_new_from_data (priv->width / 2,
                                 priv->height / 2,
-                                COGL_TEXTURE_NO_SLICING,
+                                CLUTTER_GST_TEXTURE_FLAGS,
                                 COGL_PIXEL_FORMAT_G_8,
                                 COGL_PIXEL_FORMAT_G_8,
                                 uv_row_stride,
