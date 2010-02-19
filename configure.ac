@@ -58,6 +58,10 @@ AC_SUBST(CLUTTER_GST_LT_LDFLAGS)
 
 dnl ========================================================================
 
+m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
+
+dnl ========================================================================
+
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
@@ -178,14 +182,10 @@ AC_SUBST(GST_LIBS)
 AC_SUBST(CLUTTER_GST_CFLAGS)
 AC_SUBST(CLUTTER_GST_LIBS)
 
-SHAVE_INIT([build/autotools], [enable])
-
 AC_OUTPUT([
         Makefile
         build/Makefile
         build/autotools/Makefile
-        build/autotools/shave
-        build/autotools/shave-libtool
         scripts/Makefile
         clutter-gst/Makefile
         clutter-gst/clutter-gst-version.h

@@ -1,6 +1,6 @@
-QUIET_GEN = $(Q:@=@echo '  GEN   '$@;)
-QUIET_CGC = $(Q:@=@echo '  CGC   '$@;)
-NULL =
+include $(top_srcdir)/build/autotools/Makefile.am.silent
+
+NULL = #
 
 CLEANFILES =
 EXTRA_DIST = I420.cg I420.pso I420.h \

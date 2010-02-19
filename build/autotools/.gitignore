@@ -2,6 +2,3 @@
 !as-compiler-flag.m4
 !dolt.m4
 !introspection.m4
-!shave.m4
-shave
-shave-libtool
