@@ -59,6 +59,7 @@ AC_SUBST(CLUTTER_GST_LT_LDFLAGS)
 dnl ========================================================================
 
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
+AS_AM_REALLY_SILENT
 
 dnl ========================================================================
 
