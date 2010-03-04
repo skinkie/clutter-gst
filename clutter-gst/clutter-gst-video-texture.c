@@ -56,6 +56,9 @@ struct _ClutterGstVideoTexturePrivate
   gchar *uri;
 
   guint can_seek : 1;
+  guint in_seek : 1;
+  gdouble stacked_progress;
+  GstState stacked_state;
 
   guint tick_timeout_id;
 
@@ -296,6 +299,8 @@ set_playing (ClutterGstVideoTexture *video_texture,
       if (playing)
 	state = GST_STATE_PLAYING;
 
+      priv->in_seek = FALSE;
+
       gst_element_set_state (priv->pipeline, state);
     } 
   else 
@@ -335,7 +340,7 @@ set_progress (ClutterGstVideoTexture *video_texture,
               gdouble                 progress)
 {
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
-  GstState state, pending;
+  GstState pending;
   GstQuery *duration_q;
   gint64 position;
 
@@ -344,10 +349,17 @@ set_progress (ClutterGstVideoTexture *video_texture,
 
   CLUTTER_GST_NOTE (MEDIA, "set progress: %.02f", progress);
 
-  gst_element_get_state (priv->pipeline, &state, &pending, 0);
+  if (priv->in_seek)
+    {
+      CLUTTER_GST_NOTE (MEDIA, "already seeking. stacking progress point.");
+      priv->stacked_progress = progress;
+      return;
+    }
+
+  gst_element_get_state (priv->pipeline, &priv->stacked_state, &pending, 0);
 
   if (pending)
-    state = pending;
+    priv->stacked_state = pending;
 
   gst_element_set_state (priv->pipeline, GST_STATE_PAUSED);
 
@@ -369,14 +381,13 @@ set_progress (ClutterGstVideoTexture *video_texture,
   gst_element_seek (priv->pipeline,
 		    1.0,
 		    GST_FORMAT_TIME,
-		    GST_SEEK_FLAG_FLUSH,
+		    GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT,
 		    GST_SEEK_TYPE_SET,
 		    position,
-		    0, 0);
+		    GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
 
-  gst_element_set_state (priv->pipeline, state);
-
-  g_object_notify (G_OBJECT (video_texture), "progress");
+  priv->in_seek = TRUE;
+  priv->stacked_progress = 0.0;
 }
 
 static gdouble
@@ -778,6 +789,27 @@ bus_message_state_change_cb (GstBus                 *bus,
     }
 }
 
+static void
+bus_message_async_done_cb (GstBus                 *bus,
+                           GstMessage             *message,
+                           ClutterGstVideoTexture *video_texture)
+{
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+
+  if (priv->in_seek)
+    {
+      g_object_notify (G_OBJECT (video_texture), "progress");
+
+      priv->in_seek = FALSE;
+      gst_element_set_state (priv->pipeline, priv->stacked_state);
+
+      if (priv->stacked_progress)
+        {
+          set_progress (video_texture, priv->stacked_progress);
+        }
+    }
+}
+
 static gboolean
 lay_pipeline (ClutterGstVideoTexture *video_texture)
 {
@@ -840,6 +872,8 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
       return;
     }
 
+  priv->in_seek = FALSE;
+
   bus = gst_pipeline_get_bus (GST_PIPELINE (priv->pipeline));
 
   gst_bus_add_signal_watch (bus);
@@ -859,6 +893,9 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
   g_signal_connect_object (bus, "message::state-changed",
 			   G_CALLBACK (bus_message_state_change_cb),
 			   video_texture, 0);
+  g_signal_connect_object (bus, "message::async-done",
+                           G_CALLBACK (bus_message_async_done_cb),
+                           video_texture, 0);
 
   gst_object_unref (GST_OBJECT (bus));
 }
