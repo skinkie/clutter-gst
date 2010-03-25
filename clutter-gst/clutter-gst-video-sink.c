@@ -453,7 +453,7 @@ clutter_gst_video_sink_set_glsl_shader (ClutterGstVideoSink *sink,
   
   if (priv->shader)
     {
-      cogl_shader_unref (priv->shader);
+      cogl_handle_unref (priv->shader);
       priv->shader = NULL;
     }
   
@@ -939,7 +939,7 @@ clutter_gst_build_renderers_list (ClutterGstSymbols *syms)
     features |= CLUTTER_GST_MULTI_TEXTURE;
 
 #ifdef CLUTTER_COGL_HAS_GL
-  if (cogl_check_extension ("GL_ARB_fragment_program", gl_extensions))
+  if (strstr (gl_extensions, "GL_ARB_fragment_program") != NULL)
     {
       /* the shaders we'll feed to the GPU are simple enough, we don't need
        * to check GL limits for GL_FRAGMENT_PROGRAM_ARB */
