@@ -256,6 +256,28 @@ size_change (ClutterTexture *texture,
 }
 
 static void
+center_controls (VideoApp *app, ClutterActor *controls)
+{
+  gfloat x, y, stage_width, stage_height;
+
+  clutter_actor_get_size (app->stage, &stage_width, &stage_height);
+
+  x = (stage_width - clutter_actor_get_width (controls)) / 2;
+  y = stage_height - (stage_height / 3);
+
+  g_print ("setting x = %.2f, y = %.2f, width = %.2f\n",
+           x, y, clutter_actor_get_width (controls));
+
+  clutter_actor_set_position (controls, x, y);
+}
+
+static void
+on_fullscreen (ClutterStage *stage, VideoApp *app)
+{
+  center_controls (app, app->control);
+}
+
+static void
 tick (GObject      *object,
       GParamSpec   *pspec,
       VideoApp     *app)
@@ -276,7 +298,6 @@ main (int argc, char *argv[])
   ClutterColor         stage_color = { 0x00, 0x00, 0x00, 0x00 };
   ClutterColor         control_color1 = { 73, 74, 77, 0xee };
   ClutterColor         control_color2 = { 0xcc, 0xcc, 0xcc, 0xff };
-  gfloat               x,y;
 
   clutter_gst_init (&argc, &argv);
 
@@ -296,6 +317,11 @@ main (int argc, char *argv[])
 
   if (app->vtexture == NULL)
     g_error("failed to create vtexture");
+
+  g_signal_connect (stage,
+                    "fullscreen",
+                    G_CALLBACK (on_fullscreen),
+                    app);
 
   /* Dont let the underlying pixbuf dictate size */
   g_object_set (G_OBJECT(app->vtexture), "sync-size", FALSE, NULL);
@@ -365,19 +391,7 @@ main (int argc, char *argv[])
 
   g_print ("start\n");
 
-    {
-      gfloat stage_width, stage_height;
-
-      clutter_actor_get_size (stage, &stage_width, &stage_height);
-
-      x = (stage_width - clutter_actor_get_width (app->control)) / 2;
-      y = stage_height - (stage_height / 3);
-    }
-
-  g_print ("setting x = %.2f, y = %.2f, width = %.2f\n",
-           x, y, clutter_actor_get_width (app->control));
-
-  clutter_actor_set_position (app->control, x, y);
+  center_controls (app, app->control);
 
   g_print ("stop\n");
 
