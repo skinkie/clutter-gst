@@ -46,6 +46,7 @@
 #include <gst/gst.h>
 
 #include "clutter-gst-debug.h"
+#include "clutter-gst-private.h"
 #include "clutter-gst-video-sink.h"
 #include "clutter-gst-video-texture.h"
 
@@ -57,6 +58,7 @@ struct _ClutterGstVideoTexturePrivate
 
   guint can_seek : 1;
   guint in_seek : 1;
+  guint is_idle : 1;
   gdouble stacked_progress;
   GstState stacked_state;
 
@@ -64,12 +66,15 @@ struct _ClutterGstVideoTexturePrivate
 
   gdouble buffer_fill;
   gdouble duration;
+
+  CoglHandle idle_material;
+  CoglColor idle_color_unpre;
 };
 
 enum {
   PROP_0,
 
-  /* ClutterMedia proprs */
+  /* ClutterMedia properties */
   PROP_URI,
   PROP_PLAYING,
   PROP_PROGRESS,
@@ -78,7 +83,9 @@ enum {
   PROP_AUDIO_VOLUME,
   PROP_CAN_SEEK,
   PROP_BUFFER_FILL,
-  PROP_DURATION
+  PROP_DURATION,
+
+  PROP_IDLE_MATERIAL
 };
 
 
@@ -92,7 +99,72 @@ G_DEFINE_TYPE_WITH_CODE (ClutterGstVideoTexture,
                          G_IMPLEMENT_INTERFACE (CLUTTER_TYPE_MEDIA,
                                                 clutter_media_init));
 
-/* Interface implementation */
+/* Clutter 1.4 has this symbol, we don't want to depend on 1.4 just for that
+ * just yet */
+static void
+_cogl_color_unpremultiply (CoglColor *color)
+{
+  gfloat alpha;
+
+  alpha = cogl_color_get_alpha (color);
+
+  if (alpha != 0)
+    {
+      gfloat red, green, blue;
+
+      red = cogl_color_get_red (color);
+      green = cogl_color_get_green (color);
+      blue = cogl_color_get_blue (color);
+
+      red = red / alpha;
+      green = green / alpha;
+      blue = blue / alpha;
+
+      cogl_color_set_from_4f (color, red, green, blue, alpha);
+    }
+}
+
+/* Clutter 1.4 has this symbol, we don't want to depend on 1.4 just for that
+ * just yet */
+static void
+_cogl_color_set_alpha_byte (CoglColor     *color,
+                            unsigned char  alpha)
+{
+  unsigned char red, green, blue;
+
+  red = cogl_color_get_red_byte (color);
+  green = cogl_color_get_green_byte (color);
+  blue = cogl_color_get_blue_byte (color);
+
+  cogl_color_set_from_4ub (color, red, green, blue, alpha);
+}
+
+static void
+gen_texcoords_and_draw_cogl_rectangle (ClutterActor *self)
+{
+  ClutterActorBox box;
+
+  clutter_actor_get_allocation_box (self, &box);
+
+  cogl_rectangle_with_texture_coords (0, 0,
+                                      box.x2 - box.x1,
+                                      box.y2 - box.y1,
+                                      0, 0, 1.0, 1.0);
+}
+
+static void
+create_black_idle_material (ClutterGstVideoTexture *video_texture)
+{
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+
+  priv->idle_material = cogl_material_new ();
+  cogl_color_set_from_4ub (&priv->idle_color_unpre, 0, 0, 0, 0xff);
+  cogl_material_set_color (priv->idle_material, &priv->idle_color_unpre);
+}
+
+/*
+ * ClutterMedia implementation
+ */
 
 static gboolean
 tick_timeout (gpointer data)
@@ -494,6 +566,57 @@ clutter_media_init (ClutterMediaIface *iface)
 {
 }
 
+/*
+ * Clutter actor implementation
+ */
+
+/*
+ * ClutterTexture unconditionnaly sets the material color to:
+ *    (opacity,opacity,opacity,opacity)
+ * so we can't set a black material to the texture. Let's override paint()
+ * for now.
+ */
+static void
+clutter_gst_video_texture_paint (ClutterActor *actor)
+{
+  ClutterGstVideoTexture *video_texture = (ClutterGstVideoTexture *) actor;
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+  ClutterActorClass *actor_class;
+
+  if (G_UNLIKELY (priv->is_idle))
+    {
+      CoglColor *color;
+      gfloat alpha;
+
+      g_debug ("idle paint");
+
+      /* blend the alpha of the idle material with the actor's opacity */
+      color = cogl_color_copy (&priv->idle_color_unpre);
+      alpha = clutter_actor_get_paint_opacity (actor) *
+              cogl_color_get_alpha_byte (color) / 0xff;
+      _cogl_color_set_alpha_byte (color, alpha);
+      cogl_color_premultiply (color);
+      cogl_material_set_color (priv->idle_material, color);
+
+      cogl_set_source (priv->idle_material);
+
+      /* draw */
+      _gen_texcoords_and_draw_cogl_rectangle (actor);
+    }
+  else
+    {
+      /* when not idle, just chain up to ClutterTexture::paint() */
+      actor_class =
+        CLUTTER_ACTOR_CLASS (clutter_gst_video_texture_parent_class);
+      actor_class->paint (actor);
+    }
+
+}
+
+/*
+ * GObject implementation
+ */
+
 static void
 clutter_gst_video_texture_dispose (GObject *object)
 {
@@ -532,6 +655,8 @@ clutter_gst_video_texture_finalize (GObject *object)
   priv = self->priv;
 
   g_free (priv->uri);
+  if (priv->idle_material != COGL_INVALID_HANDLE)
+    cogl_handle_unref (priv->idle_material);
 
   G_OBJECT_CLASS (clutter_gst_video_texture_parent_class)->finalize (object);
 }
@@ -568,6 +693,11 @@ clutter_gst_video_texture_set_property (GObject      *object,
 
     case PROP_AUDIO_VOLUME:
       set_audio_volume (video_texture, g_value_get_double (value));
+      break;
+
+    case PROP_IDLE_MATERIAL:
+      clutter_gst_video_texture_set_idle_material (video_texture,
+                                                   g_value_get_boxed (value));
       break;
 
     default:
@@ -628,6 +758,10 @@ clutter_gst_video_texture_get_property (GObject    *object,
       g_value_set_double (value, priv->duration);
       break;
 
+    case PROP_IDLE_MATERIAL:
+      g_value_set_boxed (value, priv->idle_material);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
@@ -637,6 +771,8 @@ static void
 clutter_gst_video_texture_class_init (ClutterGstVideoTextureClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  ClutterActorClass *actor_class = CLUTTER_ACTOR_CLASS (klass);
+  GParamSpec *pspec;
 
   g_type_class_add_private (klass, sizeof (ClutterGstVideoTexturePrivate));
 
@@ -644,6 +780,8 @@ clutter_gst_video_texture_class_init (ClutterGstVideoTextureClass *klass)
   object_class->finalize     = clutter_gst_video_texture_finalize;
   object_class->set_property = clutter_gst_video_texture_set_property;
   object_class->get_property = clutter_gst_video_texture_get_property;
+
+  actor_class->paint = clutter_gst_video_texture_paint;
 
   g_object_class_override_property (object_class,
                                     PROP_URI, "uri");
@@ -664,6 +802,13 @@ clutter_gst_video_texture_class_init (ClutterGstVideoTextureClass *klass)
                                     PROP_DURATION, "duration");
   g_object_class_override_property (object_class,
                                     PROP_BUFFER_FILL, "buffer-fill");
+
+  pspec = g_param_spec_boxed ("idle-material",
+                              "Idle material",
+                              "Material to use for drawing when not playing",
+                              COGL_TYPE_HANDLE,
+                              CLUTTER_GST_PARAM_READWRITE);
+  g_object_class_install_property (object_class, PROP_IDLE_MATERIAL, pspec);
 }
 
 static void
@@ -787,6 +932,12 @@ bus_message_state_change_cb (GstBus                 *bus,
 
       query_duration (video_texture);
     }
+
+  /* is_idle controls the drawing with the idle material */
+  if (new_state == GST_STATE_NULL)
+    priv->is_idle = TRUE;
+  else if (old_state == GST_STATE_NULL)
+    priv->is_idle = FALSE;
 }
 
 static void
@@ -872,6 +1023,10 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
       return;
     }
 
+  create_black_idle_material (video_texture);
+
+  priv->is_idle = TRUE;
+
   priv->in_seek = FALSE;
 
   bus = gst_pipeline_get_bus (GST_PIPELINE (priv->pipeline));
@@ -935,4 +1090,61 @@ clutter_gst_video_texture_get_pipeline (ClutterGstVideoTexture *texture)
   g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (texture), NULL);
 
   return texture->priv->pipeline;
+}
+
+/**
+ * clutter_gst_video_texture_get_idle_material:
+ * @texture: a #ClutterGstVideoTexture
+ *
+ * Retrieves the material used to draw when no media is being played.
+ *
+ * Return value: the #CoglHandle of the idle material
+ */
+CoglHandle
+clutter_gst_video_texture_get_idle_material (ClutterGstVideoTexture *texture)
+{
+  g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (texture),
+                        COGL_INVALID_HANDLE);
+
+  return texture->priv->idle_material;
+}
+
+/**
+ * clutter_gst_video_texture_set_idle_material:
+ * @texture: a #ClutterGstVideoTexture
+ * @material: the handle of a Cogl material
+ *
+ * Sets a material to use to draw when no media is being played. The
+ * #ClutterGstVideoTexture holds a reference of the @material.
+ *
+ * The default idle material will paint the #ClutterGstVideoTexture in black.
+ * If %COGL_INVALID_HANDLE is given as @material to this function, this
+ * default idle material will be used.
+ *
+ * Return value: the #CoglHandle of the idle material
+ */
+void
+clutter_gst_video_texture_set_idle_material (ClutterGstVideoTexture *texture,
+                                             CoglHandle              material)
+{
+  ClutterGstVideoTexturePrivate *priv;
+
+  g_return_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (texture));
+
+  priv = texture->priv;
+  /* priv->idle_material always has a valid material */
+  cogl_handle_unref (priv->idle_material);
+
+  if (material != COGL_INVALID_HANDLE)
+    {
+      priv->idle_material = cogl_handle_ref (material);
+      cogl_material_get_color (material, &priv->idle_color_unpre);
+      _cogl_color_unpremultiply (&priv->idle_color_unpre);
+    }
+  else
+    {
+      create_black_idle_material (texture);
+    }
+
+  g_object_notify (G_OBJECT (texture), "idle-material");
 }

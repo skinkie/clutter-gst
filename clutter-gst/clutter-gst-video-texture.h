@@ -99,10 +99,14 @@ struct _ClutterGstVideoTextureClass
   void (* _clutter_reserved6) (void);
 }; 
 
-GType         clutter_gst_video_texture_get_type      (void) G_GNUC_CONST;
-ClutterActor *clutter_gst_video_texture_new           (void);
+GType           clutter_gst_video_texture_get_type            (void) G_GNUC_CONST;
+ClutterActor *  clutter_gst_video_texture_new                 (void);
 
-GstElement   *clutter_gst_video_texture_get_pipeline  (ClutterGstVideoTexture *texture);
+GstElement *    clutter_gst_video_texture_get_pipeline        (ClutterGstVideoTexture *texture);
+
+CoglHandle      clutter_gst_video_texture_get_idle_material   (ClutterGstVideoTexture *texture);
+void            clutter_gst_video_texture_set_idle_material   (ClutterGstVideoTexture *texture,
+                                                               CoglHandle              material);
 
 G_END_DECLS
 
