@@ -588,8 +588,6 @@ clutter_gst_video_texture_paint (ClutterActor *actor)
       CoglColor *color;
       gfloat alpha;
 
-      g_debug ("idle paint");
-
       /* blend the alpha of the idle material with the actor's opacity */
       color = cogl_color_copy (&priv->idle_color_unpre);
       alpha = clutter_actor_get_paint_opacity (actor) *
@@ -601,7 +599,7 @@ clutter_gst_video_texture_paint (ClutterActor *actor)
       cogl_set_source (priv->idle_material);
 
       /* draw */
-      _gen_texcoords_and_draw_cogl_rectangle (actor);
+      gen_texcoords_and_draw_cogl_rectangle (actor);
     }
   else
     {
