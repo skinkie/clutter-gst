@@ -934,7 +934,7 @@ bus_message_state_change_cb (GstBus                 *bus,
   /* is_idle controls the drawing with the idle material */
   if (new_state == GST_STATE_NULL)
     priv->is_idle = TRUE;
-  else if (old_state == GST_STATE_NULL)
+  else if (new_state == GST_STATE_PLAYING)
     priv->is_idle = FALSE;
 }
 
