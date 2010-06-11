@@ -1097,6 +1097,8 @@ clutter_gst_video_texture_get_pipeline (ClutterGstVideoTexture *texture)
  * Retrieves the material used to draw when no media is being played.
  *
  * Return value: the #CoglHandle of the idle material
+ *
+ * Since: 1.2
  */
 CoglHandle
 clutter_gst_video_texture_get_idle_material (ClutterGstVideoTexture *texture)
@@ -1120,6 +1122,8 @@ clutter_gst_video_texture_get_idle_material (ClutterGstVideoTexture *texture)
  * default idle material will be used.
  *
  * Return value: the #CoglHandle of the idle material
+ *
+ * Since: 1.2
  */
 void
 clutter_gst_video_texture_set_idle_material (ClutterGstVideoTexture *texture,
