@@ -66,6 +66,7 @@ struct _ClutterGstVideoTexturePrivate
 
   gdouble buffer_fill;
   gdouble duration;
+  gchar *user_agent;
 
   CoglHandle idle_material;
   CoglColor idle_color_unpre;
@@ -85,7 +86,8 @@ enum {
   PROP_BUFFER_FILL,
   PROP_DURATION,
 
-  PROP_IDLE_MATERIAL
+  PROP_IDLE_MATERIAL,
+  PROP_USER_AGENT
 };
 
 
@@ -160,6 +162,31 @@ create_black_idle_material (ClutterGstVideoTexture *video_texture)
   priv->idle_material = cogl_material_new ();
   cogl_color_set_from_4ub (&priv->idle_color_unpre, 0, 0, 0, 0xff);
   cogl_material_set_color (priv->idle_material, &priv->idle_color_unpre);
+}
+
+static void
+set_user_agent (ClutterGstVideoTexture *video_texture,
+                const gchar            *user_agent)
+{
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+  GstElement *source;
+  GParamSpec *pspec;
+
+  if (user_agent == NULL)
+    return;
+
+  g_object_get (priv->pipeline, "source", &source, NULL);
+  if (source == NULL)
+    return;
+
+  pspec = g_object_class_find_property (G_OBJECT_GET_CLASS (source),
+                                        "user-agent");
+  if (pspec == NULL)
+    return;
+
+  CLUTTER_GST_NOTE (MEDIA, "setting user agent: %s", user_agent);
+
+  g_object_set (source, "user-agent", user_agent, NULL);
 }
 
 /*
@@ -698,6 +725,11 @@ clutter_gst_video_texture_set_property (GObject      *object,
                                                    g_value_get_boxed (value));
       break;
 
+    case PROP_USER_AGENT:
+      clutter_gst_video_texture_set_user_agent (video_texture,
+                                                g_value_get_string (value));
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
@@ -760,6 +792,15 @@ clutter_gst_video_texture_get_property (GObject    *object,
       g_value_set_boxed (value, priv->idle_material);
       break;
 
+    case PROP_USER_AGENT:
+      {
+        gchar *user_agent;
+
+        user_agent = clutter_gst_video_texture_get_user_agent (video_texture);
+        g_value_take_string (value, user_agent);
+      }
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
@@ -807,6 +848,13 @@ clutter_gst_video_texture_class_init (ClutterGstVideoTextureClass *klass)
                               COGL_TYPE_HANDLE,
                               CLUTTER_GST_PARAM_READWRITE);
   g_object_class_install_property (object_class, PROP_IDLE_MATERIAL, pspec);
+
+  pspec = g_param_spec_string ("user-agent",
+                               "User Agent",
+                               "User Agent used with network protocols",
+                               NULL,
+                               CLUTTER_GST_PARAM_READWRITE);
+  g_object_class_install_property (object_class, PROP_USER_AGENT, pspec);
 }
 
 static void
@@ -959,6 +1007,14 @@ bus_message_async_done_cb (GstBus                 *bus,
     }
 }
 
+static void
+on_source_changed (GstElement             *pipeline,
+                   GParamSpec             *pspec,
+                   ClutterGstVideoTexture *video_texture)
+{
+  set_user_agent (video_texture, video_texture->priv->user_agent);
+}
+
 static gboolean
 lay_pipeline (ClutterGstVideoTexture *video_texture)
 {
@@ -972,6 +1028,9 @@ lay_pipeline (ClutterGstVideoTexture *video_texture)
       g_critical ("Unable to create playbin2 element");
       return FALSE;
     }
+
+  g_signal_connect (priv->pipeline, "notify::source",
+                    G_CALLBACK (on_source_changed), video_texture);
 
   /* ugh - let's go through the audio sinks
    *
@@ -1108,8 +1167,8 @@ clutter_gst_video_texture_get_idle_material (ClutterGstVideoTexture *texture)
 
   return texture->priv->idle_material;
 }
-
 /**
+
  * clutter_gst_video_texture_set_idle_material:
  * @texture: a #ClutterGstVideoTexture
  * @material: the handle of a Cogl material
@@ -1120,8 +1179,6 @@ clutter_gst_video_texture_get_idle_material (ClutterGstVideoTexture *texture)
  * The default idle material will paint the #ClutterGstVideoTexture in black.
  * If %COGL_INVALID_HANDLE is given as @material to this function, this
  * default idle material will be used.
- *
- * Return value: the #CoglHandle of the idle material
  *
  * Since: 1.2
  */
@@ -1149,4 +1206,76 @@ clutter_gst_video_texture_set_idle_material (ClutterGstVideoTexture *texture,
     }
 
   g_object_notify (G_OBJECT (texture), "idle-material");
+}
+
+/**
+ * clutter_gst_video_texture_get_user_agent:
+ * @texture: a #ClutterGstVideoTexture
+ *
+ * Retrieves the user agent used when streaming.
+ *
+ * Return value: the user agent used. The returned string has to be freed with
+ * g_free()
+ *
+ * Since: 1.2
+ */
+gchar *
+clutter_gst_video_texture_get_user_agent (ClutterGstVideoTexture *texture)
+{
+  ClutterGstVideoTexturePrivate *priv;
+  GstElement *source;
+  GParamSpec *pspec;
+  gchar *user_agent;
+
+  g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (texture), NULL);
+
+  /* If the user has set a custom user agent, we just return it even if it is
+   * not used by the current source element of the pipeline */
+  if (priv->user_agent)
+    return g_strdup (priv->user_agent);
+
+  /* If not, we try to retrieve the user agent used by the current source */
+  g_object_get (priv->pipeline, "source", &source, NULL);
+  if (source == NULL)
+    return NULL;
+
+  pspec = g_object_class_find_property (G_OBJECT_GET_CLASS (source),
+                                        "user-agent");
+  if (pspec == NULL)
+    return NULL;
+
+  g_object_get (source, "user-agent", &user_agent, NULL);
+
+  return user_agent;
+}
+
+/**
+ * clutter_gst_video_texture_set_user_agent:
+ * @texture: a #ClutterGstVideoTexture
+ * @user_agent: the user agent
+ *
+ * Sets the user agent to use when streaming.
+ *
+ * When streaming content, you might want to set a custom user agent, eg. to
+ * promote your software, make it appear in statistics or because the server
+ * requires a special user agent you want to impersonate.
+ *
+ * Since: 1.2
+ */
+void
+clutter_gst_video_texture_set_user_agent (ClutterGstVideoTexture *texture,
+                                          const gchar *           user_agent)
+{
+  ClutterGstVideoTexturePrivate *priv;
+
+  g_return_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (texture));
+
+  priv = texture->priv;
+  g_free (priv->user_agent);
+  if (user_agent)
+    priv->user_agent = g_strdup (user_agent);
+  else
+    priv->user_agent = NULL;
+
+  set_user_agent (texture, user_agent);
 }

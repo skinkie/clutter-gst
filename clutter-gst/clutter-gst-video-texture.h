@@ -107,6 +107,9 @@ GstElement *    clutter_gst_video_texture_get_pipeline        (ClutterGstVideoTe
 CoglHandle      clutter_gst_video_texture_get_idle_material   (ClutterGstVideoTexture *texture);
 void            clutter_gst_video_texture_set_idle_material   (ClutterGstVideoTexture *texture,
                                                                CoglHandle              material);
+gchar *         clutter_gst_video_texture_get_user_agent      (ClutterGstVideoTexture *texture);
+void            clutter_gst_video_texture_set_user_agent      (ClutterGstVideoTexture *texture,
+                                                               const gchar *           user_agent);
 
 G_END_DECLS
 
