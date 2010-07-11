@@ -31,8 +31,8 @@ struct YV12_input
   float4 color : COLOR;
   float2 Y : TEXCOORD0;
   sampler2D Y_tex : TEXUNIT0;
-  sampler2D U_tex : TEXUNIT1;
-  sampler2D V_tex : TEXUNIT2;
+  sampler2D U_tex : TEXUNIT2;
+  sampler2D V_tex : TEXUNIT1;
 };
 
 YV12_output YV12_main (YV12_input IN)

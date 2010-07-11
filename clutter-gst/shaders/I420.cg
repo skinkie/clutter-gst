@@ -31,8 +31,8 @@ struct I420_input
   float4 color : COLOR;
   float2 Y : TEXCOORD0;
   sampler2D Y_tex : TEXUNIT0;
-  sampler2D U_tex : TEXUNIT2;
-  sampler2D V_tex : TEXUNIT1;
+  sampler2D U_tex : TEXUNIT1;
+  sampler2D V_tex : TEXUNIT2;
 };
 
 I420_output I420_main (I420_input IN)
