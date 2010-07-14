@@ -44,9 +44,12 @@
 #include "clutter-gst-video-sink.h"
 #include "clutter-gst-private.h"
 #include "clutter-gst-shaders.h"
+
+#ifdef CLUTTER_COGL_HAS_GL
 /* include assembly shaders */
 #include "I420.h"
 #include "YV12.h"
+#endif
 
 #include <gst/gst.h>
 #include <gst/gstvalue.h>
@@ -143,6 +146,15 @@ typedef enum
   CLUTTER_GST_YV12,
   CLUTTER_GST_I420,
 } ClutterGstVideoFormat;
+
+#ifndef APIENTRYP
+# ifdef APIENTRY
+#  define APIENTRYP APIENTRY *
+# else
+#  define APIENTRY
+#  define APIENTRYP *
+# endif
+#endif
 
 typedef void (APIENTRYP GLUNIFORM1IPROC)(GLint location, GLint value);
 /* GL_ARB_fragment_program */
@@ -382,6 +394,7 @@ clutter_gst_video_sink_set_priority (ClutterGstVideoSink *sink,
  * Small helpers
  */
 
+#ifdef CLUTTER_COGL_HAS_GL
 static void
 _string_array_to_char_array (char	*dst,
                              const char *src[])
@@ -395,6 +408,7 @@ _string_array_to_char_array (char	*dst,
   }
   *dst = '\0';
 }
+#endif
 
 static void
 _renderer_connect_signals(ClutterGstVideoSink        *sink,
