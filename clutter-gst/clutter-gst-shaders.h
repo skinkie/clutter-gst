@@ -8,7 +8,7 @@
 
 /* These variables are used instead of the standard GLSL variables on
    GLES 2 */
-#ifdef HAVE_COGL_GLES2
+#ifdef COGL_HAS_GLES
 
 #define GLES2_VARS              \
   "precision mediump float;\n"  \
@@ -17,13 +17,13 @@
 #define TEX_COORD "tex_coord"
 #define COLOR_VAR "frag_color"
 
-#else /* HAVE_COGL_GLES2 */
+#else /* COGL_HAS_GLES */
 
 #define GLES2_VARS ""
 #define TEX_COORD "gl_TexCoord[0]"
 #define COLOR_VAR "gl_Color"
 
-#endif /* HAVE_COGL_GLES2 */
+#endif /* COGL_HAS_GLES */
 
 /* a couple of boilerplate defines that are common amongst all the
  * sample shaders
