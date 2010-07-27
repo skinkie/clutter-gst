@@ -1229,6 +1229,8 @@ clutter_gst_video_texture_get_user_agent (ClutterGstVideoTexture *texture)
 
   g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (texture), NULL);
 
+  priv = texture->priv;
+
   /* If the user has set a custom user agent, we just return it even if it is
    * not used by the current source element of the pipeline */
   if (priv->user_agent)
