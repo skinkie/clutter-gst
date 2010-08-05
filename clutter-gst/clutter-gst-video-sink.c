@@ -611,9 +611,6 @@ clutter_gst_yv12_glsl_paint (ClutterActor        *actor,
 
   material = clutter_texture_get_cogl_material (CLUTTER_TEXTURE (actor));
 
-  /* bind the shader */
-  cogl_program_use (priv->program);
-
   /* Bind the U and V textures in layers 1 and 2 */
   if (priv->u_tex)
     cogl_material_set_layer (material, 1, priv->u_tex);
@@ -631,9 +628,6 @@ clutter_gst_yv12_glsl_post_paint (ClutterActor        *actor,
   material = clutter_texture_get_cogl_material (CLUTTER_TEXTURE (actor));
   cogl_material_remove_layer (material, 1);
   cogl_material_remove_layer (material, 2);
-
-  /* disable the shader */
-  cogl_program_use (COGL_INVALID_HANDLE);
 }
 
 static void
@@ -641,6 +635,7 @@ clutter_gst_yv12_glsl_init (ClutterGstVideoSink *sink)
 {
   ClutterGstVideoSinkPrivate *priv= sink->priv;
   GLint location;
+  CoglMaterial *material;
 
   clutter_gst_video_sink_set_glsl_shader (sink, yv12_to_rgba_shader);
 
@@ -653,6 +648,9 @@ clutter_gst_yv12_glsl_init (ClutterGstVideoSink *sink)
   cogl_program_uniform_1i (location, 2);
 
   cogl_program_use (COGL_INVALID_HANDLE);
+
+  material = clutter_texture_get_cogl_material (priv->texture);
+  cogl_material_set_user_program (material, priv->program);
 
   _renderer_connect_signals (sink,
                              clutter_gst_yv12_glsl_paint,
@@ -734,6 +732,7 @@ clutter_gst_i420_glsl_init (ClutterGstVideoSink *sink)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
   GLint location;
+  CoglMaterial *material;
 
   clutter_gst_video_sink_set_glsl_shader (sink, yv12_to_rgba_shader);
 
@@ -745,6 +744,9 @@ clutter_gst_i420_glsl_init (ClutterGstVideoSink *sink)
   location = cogl_program_get_uniform_location (priv->program, "utex");
   cogl_program_uniform_1i (location, 2);
   cogl_program_use (COGL_INVALID_HANDLE);
+
+  material = clutter_texture_get_cogl_material (priv->texture);
+  cogl_material_set_user_program (material, priv->program);
 
   _renderer_connect_signals (sink,
                              clutter_gst_yv12_glsl_paint,
