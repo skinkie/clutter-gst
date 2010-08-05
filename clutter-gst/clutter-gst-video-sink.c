@@ -83,11 +83,6 @@ static gchar *ayuv_to_rgba_shader = \
      FRAGMENT_SHADER_END
      "}";
 
-static gchar *dummy_shader = \
-     FRAGMENT_SHADER_VARS
-     "void main () {"
-     "}";
-
 static gchar *yv12_to_rgba_shader = \
      FRAGMENT_SHADER_VARS
      "uniform sampler2D ytex;"
@@ -410,9 +405,6 @@ clutter_gst_video_sink_set_glsl_shader (ClutterGstVideoSink *sink,
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
   
-  if (priv->texture)
-    clutter_actor_set_shader (CLUTTER_ACTOR (priv->texture), NULL);
-
   if (priv->program)
     {
       cogl_program_unref (priv->program);
@@ -427,14 +419,6 @@ clutter_gst_video_sink_set_glsl_shader (ClutterGstVideoSink *sink,
   
   if (shader_src)
     {
-      ClutterShader *shader;
-
-      /* Set a dummy shader so we don't interfere with the shader stack */
-      shader = clutter_shader_new ();
-      clutter_shader_set_fragment_source (shader, dummy_shader, -1);
-      clutter_actor_set_shader (CLUTTER_ACTOR (priv->texture), shader);
-      g_object_unref (shader);
-
       /* Create shader through COGL - necessary as we need to be able to set
        * integer uniform variables for multi-texturing.
        */
