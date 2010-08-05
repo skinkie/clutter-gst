@@ -824,7 +824,6 @@ static GSList *
 clutter_gst_build_renderers_list (void)
 {
   GSList             *list = NULL;
-  const gchar        *gl_extensions;
   GLint               nb_texture_units = 0;
   gint                features = 0, i;
   /* The order of the list of renderers is important. They will be prepended
@@ -845,17 +844,14 @@ clutter_gst_build_renderers_list (void)
       NULL
     };
 
-  /* get the features */
-  gl_extensions = (const gchar*) glGetString (GL_EXTENSIONS);
-
   glGetIntegerv (GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &nb_texture_units);
 
   if (nb_texture_units >= 3)
     features |= CLUTTER_GST_MULTI_TEXTURE;
 
 #ifdef CLUTTER_COGL_HAS_GL
-  if (strstr (gl_extensions, "GL_ARB_fragment_program") != NULL)
-      features |= CLUTTER_GST_FP;
+  if (cogl_features_available (COGL_FEATURE_SHADERS_ARBFP))
+    features |= CLUTTER_GST_FP;
 #endif
 
   if (cogl_features_available (COGL_FEATURE_SHADERS_GLSL))
