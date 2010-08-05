@@ -41,8 +41,6 @@
 #include "config.h"
 #endif
 
-#define COGL_ENABLE_ARBFP_MATERIAL_OVERRIDE
-
 #include "clutter-gst-video-sink.h"
 #include "clutter-gst-private.h"
 #include "clutter-gst-shaders.h"
@@ -456,6 +454,27 @@ clutter_gst_dummy_init (ClutterGstVideoSink *sink)
 {
 }
 
+#ifdef CLUTTER_COGL_HAS_GL
+static CoglHandle
+_create_arbfp_program (gchar *source)
+{
+  CoglHandle shader;
+  CoglHandle program;
+
+  shader = cogl_create_shader (COGL_SHADER_TYPE_FRAGMENT);
+  cogl_shader_source (shader, source);
+  cogl_shader_compile (shader);
+
+  program = cogl_create_program ();
+  cogl_program_attach_shader (program, shader);
+  cogl_program_link (program);
+
+  cogl_handle_unref (shader);
+
+  return program;
+}
+#endif
+
 static void
 clutter_gst_dummy_deinit (ClutterGstVideoSink *sink)
 {
@@ -669,14 +688,20 @@ static void
 clutter_gst_yv12_fp_init (ClutterGstVideoSink *sink)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
-  CoglHandle material;
+  CoglMaterial *material;
+  CoglHandle program;
+
   gchar *shader;
 
   shader = g_malloc(YV12_FP_SZ + 1);
   _string_array_to_char_array (shader, YV12_fp);
 
   material = clutter_texture_get_cogl_material (priv->texture);
-  cogl_material_set_arbfp_source (material, shader);
+
+  program = _create_arbfp_program (shader);
+  cogl_material_set_user_program (material, program);
+  cogl_handle_unref (program);
+
   g_free(shader);
 }
 
@@ -749,14 +774,17 @@ static void
 clutter_gst_i420_fp_init (ClutterGstVideoSink *sink)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
-  CoglHandle material;
+  CoglMaterial *material;
+  CoglHandle program;
   gchar *shader;
 
   shader = g_malloc(I420_FP_SZ + 1);
   _string_array_to_char_array (shader, I420_fp);
 
   material = clutter_texture_get_cogl_material (priv->texture);
-  cogl_material_set_arbfp_source (material, shader);
+  program = _create_arbfp_program (shader);
+  cogl_material_set_user_program (material, program);
+  cogl_handle_unref (program);
   g_free(shader);
 }
 
