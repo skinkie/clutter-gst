@@ -66,6 +66,7 @@ struct _ClutterGstVideoTexturePrivate
 
   gdouble buffer_fill;
   gdouble duration;
+  gchar *font_name;
   gchar *user_agent;
 
   CoglHandle idle_material;
@@ -550,6 +551,8 @@ set_subtitle_font_name (ClutterGstVideoTexture *video_texture,
 
   CLUTTER_GST_NOTE (MEDIA, "setting subtitle font to %s", font_name);
 
+  g_free (priv->font_name);
+  priv->font_name = g_strdup (font_name);
   g_object_set (priv->pipeline, "subtitle-font-desc", font_name, NULL);
 }
 
@@ -680,6 +683,7 @@ clutter_gst_video_texture_finalize (GObject *object)
   priv = self->priv;
 
   g_free (priv->uri);
+  g_free (priv->font_name);
   if (priv->idle_material != COGL_INVALID_HANDLE)
     cogl_handle_unref (priv->idle_material);
 
@@ -768,8 +772,7 @@ clutter_gst_video_texture_get_property (GObject    *object,
       break;
 
     case PROP_SUBTITLE_FONT_NAME:
-      g_object_get (priv->pipeline, "subtitle-font-desc", &str, NULL);
-      g_value_take_string (value, str);
+      g_value_set_string (value, priv->font_name);
       break;
 
     case PROP_AUDIO_VOLUME:
