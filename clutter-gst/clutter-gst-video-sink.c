@@ -381,25 +381,6 @@ _string_array_to_char_array (char	*dst,
 #endif
 
 static void
-_renderer_connect_signals(ClutterGstVideoSink        *sink,
-                          ClutterGstRendererPaint     paint_func,
-                          ClutterGstRendererPostPaint post_paint_func)
-{
-  ClutterGstVideoSinkPrivate *priv = sink->priv;
-  gulong handler_id;
-
-  handler_id =
-    g_signal_connect (priv->texture, "paint", G_CALLBACK (paint_func), sink);
-  g_array_append_val (priv->signal_handler_ids, handler_id);
-
-  handler_id = g_signal_connect_after (priv->texture,
-                                       "paint",
-                                       G_CALLBACK (post_paint_func),
-                                       sink);
-  g_array_append_val (priv->signal_handler_ids, handler_id);
-}
-
-static void
 clutter_gst_video_sink_set_glsl_shader (ClutterGstVideoSink *sink,
                                         const gchar         *shader_src)
 {
@@ -587,34 +568,6 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
 }
 
 static void
-clutter_gst_yv12_glsl_paint (ClutterActor        *actor,
-                             ClutterGstVideoSink *sink)
-{
-  ClutterGstVideoSinkPrivate *priv = sink->priv;
-  CoglHandle material;
-
-  material = clutter_texture_get_cogl_material (CLUTTER_TEXTURE (actor));
-
-  /* Bind the U and V textures in layers 1 and 2 */
-  if (priv->u_tex)
-    cogl_material_set_layer (material, 1, priv->u_tex);
-  if (priv->v_tex)
-    cogl_material_set_layer (material, 2, priv->v_tex);
-}
-
-static void
-clutter_gst_yv12_glsl_post_paint (ClutterActor        *actor,
-                                  ClutterGstVideoSink *sink)
-{
-  CoglHandle material;
-
-  /* Remove the extra layers */
-  material = clutter_texture_get_cogl_material (CLUTTER_TEXTURE (actor));
-  cogl_material_remove_layer (material, 1);
-  cogl_material_remove_layer (material, 2);
-}
-
-static void
 clutter_gst_yv12_glsl_init (ClutterGstVideoSink *sink)
 {
   ClutterGstVideoSinkPrivate *priv= sink->priv;
@@ -635,10 +588,6 @@ clutter_gst_yv12_glsl_init (ClutterGstVideoSink *sink)
 
   material = clutter_texture_get_cogl_material (priv->texture);
   cogl_material_set_user_program (material, priv->program);
-
-  _renderer_connect_signals (sink,
-                             clutter_gst_yv12_glsl_paint,
-                             clutter_gst_yv12_glsl_post_paint);
 }
 
 static void
@@ -731,10 +680,6 @@ clutter_gst_i420_glsl_init (ClutterGstVideoSink *sink)
 
   material = clutter_texture_get_cogl_material (priv->texture);
   cogl_material_set_user_program (material, priv->program);
-
-  _renderer_connect_signals (sink,
-                             clutter_gst_yv12_glsl_paint,
-                             clutter_gst_yv12_glsl_post_paint);
 }
 
 static ClutterGstRenderer i420_glsl_renderer =
