@@ -516,7 +516,7 @@ static ClutterGstRenderer rgb32_renderer =
 /*
  * YV12
  *
- * 8 bit Y plane followed by 8 bit 2x2 subsampled V and U planes.
+ * 8 bit Y plane followed by 8 bit 2x2 subsampled U and V planes.
  */
 
 static void
@@ -541,7 +541,7 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
   clutter_texture_set_cogl_texture (priv->texture, y_tex);
   cogl_handle_unref (y_tex);
 
-  v_tex = cogl_texture_new_from_data (priv->width / 2,
+  u_tex = cogl_texture_new_from_data (priv->width / 2,
                                       priv->height / 2,
                                       CLUTTER_GST_TEXTURE_FLAGS,
                                       COGL_PIXEL_FORMAT_G_8,
@@ -550,10 +550,10 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
                                       GST_BUFFER_DATA (buffer) +
                                       (y_row_stride * priv->height));
 
-  cogl_material_set_layer (material, 1, v_tex);
-  cogl_handle_unref (v_tex);
+  cogl_material_set_layer (material, 1, u_tex);
+  cogl_handle_unref (u_tex);
 
-  u_tex = cogl_texture_new_from_data (priv->width / 2,
+  v_tex = cogl_texture_new_from_data (priv->width / 2,
                                       priv->height / 2,
                                       CLUTTER_GST_TEXTURE_FLAGS,
                                       COGL_PIXEL_FORMAT_G_8,
@@ -563,8 +563,8 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
                                       + (y_row_stride * priv->height)
                                       + (uv_row_stride * priv->height / 2));
 
-  cogl_material_set_layer (material, 2, u_tex);
-  cogl_handle_unref (u_tex);
+  cogl_material_set_layer (material, 2, v_tex);
+  cogl_handle_unref (v_tex);
 }
 
 static void
