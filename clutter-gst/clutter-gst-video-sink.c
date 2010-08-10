@@ -201,7 +201,6 @@ struct _ClutterGstVideoSinkPrivate
   CoglHandle               v_tex;
   CoglHandle               program;
   CoglHandle               shader;
-  GLuint                   fp;
 
   ClutterGstVideoFormat    format;
   gboolean                 bgr;
