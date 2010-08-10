@@ -197,10 +197,7 @@ typedef enum _ClutterGstRendererState
 struct _ClutterGstVideoSinkPrivate
 {
   ClutterTexture          *texture;
-  CoglHandle               u_tex;
-  CoglHandle               v_tex;
-  CoglHandle               program;
-  CoglHandle               shader;
+  CoglMaterial            *material_template;
 
   ClutterGstVideoFormat    format;
   gboolean                 bgr;
@@ -379,56 +376,19 @@ _string_array_to_char_array (char	*dst,
 }
 #endif
 
-static void
-clutter_gst_video_sink_set_glsl_shader (ClutterGstVideoSink *sink,
-                                        const gchar         *shader_src)
-{
-  ClutterGstVideoSinkPrivate *priv = sink->priv;
-  
-  if (priv->program)
-    {
-      cogl_program_unref (priv->program);
-      priv->program = NULL;
-    }
-  
-  if (priv->shader)
-    {
-      cogl_handle_unref (priv->shader);
-      priv->shader = NULL;
-    }
-  
-  if (shader_src)
-    {
-      /* Create shader through COGL - necessary as we need to be able to set
-       * integer uniform variables for multi-texturing.
-       */
-      priv->shader = cogl_create_shader (COGL_SHADER_TYPE_FRAGMENT);
-      cogl_shader_source (priv->shader, shader_src);
-      cogl_shader_compile (priv->shader);
-      
-      priv->program = cogl_create_program ();
-      cogl_program_attach_shader (priv->program, priv->shader);
-      cogl_program_link (priv->program);
-    }
-}
-
-/* some renderers don't need all the ClutterGstRenderer vtable */
-static void
-clutter_gst_dummy_init (ClutterGstVideoSink *sink)
-{
-}
-
-#ifdef CLUTTER_COGL_HAS_GL
 static CoglHandle
-_create_arbfp_program (gchar *source)
+_create_cogl_program (const char *source)
 {
   CoglHandle shader;
   CoglHandle program;
-
+  
+  /* Create shader through Cogl - necessary as we need to be able to set
+   * integer uniform variables for multi-texturing.
+   */
   shader = cogl_create_shader (COGL_SHADER_TYPE_FRAGMENT);
   cogl_shader_source (shader, source);
   cogl_shader_compile (shader);
-
+  
   program = cogl_create_program ();
   cogl_program_attach_shader (program, shader);
   cogl_program_link (program);
@@ -437,11 +397,96 @@ _create_arbfp_program (gchar *source)
 
   return program;
 }
-#endif
+
+static void
+_create_template_material (ClutterGstVideoSink *sink,
+                           const char *source,
+                           gboolean set_uniforms,
+                           int n_layers)
+{
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+  CoglMaterial *template;
+  int i;
+  
+  if (priv->material_template)
+    cogl_object_unref (priv->material_template);
+
+  template = cogl_material_new ();
+
+  if (source)
+    {
+      CoglHandle program = _create_cogl_program (source);
+
+      if (set_uniforms)
+        {
+          unsigned int location;
+
+          cogl_program_use (program);
+
+          location = cogl_program_get_uniform_location (program, "ytex");
+          cogl_program_uniform_1i (location, 0);
+          if (n_layers > 1)
+            {
+              location = cogl_program_get_uniform_location (program, "utex");
+              cogl_program_uniform_1i (location, 1);
+            }
+          if (n_layers > 2)
+            {
+              location = cogl_program_get_uniform_location (program, "vtex");
+              cogl_program_uniform_1i (location, 2);
+            }
+
+          cogl_program_use (COGL_INVALID_HANDLE);
+        }
+
+      cogl_material_set_user_program (template, program);
+      cogl_handle_unref (program);
+    }
+
+  for (i = 0; i < n_layers; i++)
+    cogl_material_set_layer (template, i, COGL_INVALID_HANDLE);
+
+  priv->material_template = template;
+}
+
+static void
+_create_paint_material (ClutterGstVideoSink *sink,
+                        CoglHandle tex0,
+                        CoglHandle tex1,
+                        CoglHandle tex2)
+{
+  ClutterGstVideoSinkPrivate *priv= sink->priv;
+  CoglMaterial *material = cogl_material_copy (priv->material_template);
+
+  if (tex0 != COGL_INVALID_HANDLE)
+    {
+      cogl_material_set_layer (material, 0, tex0);
+      cogl_handle_unref (tex0);
+    }
+  if (tex1 != COGL_INVALID_HANDLE)
+    {
+      cogl_material_set_layer (material, 1, tex1);
+      cogl_handle_unref (tex1);
+    }
+  if (tex2 != COGL_INVALID_HANDLE)
+    {
+      cogl_material_set_layer (material, 2, tex2);
+      cogl_handle_unref (tex2);
+    }
+
+  clutter_texture_set_cogl_material (priv->texture, material);
+  cogl_object_unref (material);
+}
 
 static void
 clutter_gst_dummy_deinit (ClutterGstVideoSink *sink)
 {
+}
+
+static void
+clutter_gst_rgb_init (ClutterGstVideoSink *sink)
+{
+  _create_template_material (sink, NULL, FALSE, 1);
 }
 
 /*
@@ -454,18 +499,20 @@ static void
 clutter_gst_rgb24_upload (ClutterGstVideoSink *sink,
                           GstBuffer           *buffer)
 {
-  ClutterGstVideoSinkPrivate *priv= sink->priv;
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+  CoglHandle tex =
+    cogl_texture_new_from_data (priv->width,
+                                priv->height,
+                                CLUTTER_GST_TEXTURE_FLAGS,
+                                COGL_PIXEL_FORMAT_RGB_888,
+                                COGL_PIXEL_FORMAT_RGB_888,
+                                GST_ROUND_UP_4 (3 * priv->width),
+                                GST_BUFFER_DATA (buffer));
 
-  clutter_texture_set_from_rgb_data (priv->texture,
-                                     GST_BUFFER_DATA (buffer),
-                                     FALSE,
-                                     priv->width,
-                                     priv->height,
-                                     GST_ROUND_UP_4 (3 * priv->width),
-                                     3,
-                                     priv->bgr ?
-                                     CLUTTER_TEXTURE_RGB_FLAG_BGR : 0,
-                                     NULL);
+  _create_paint_material (sink,
+                          tex,
+                          COGL_INVALID_HANDLE,
+                          COGL_INVALID_HANDLE);
 }
 
 static ClutterGstRenderer rgb24_renderer =
@@ -474,7 +521,7 @@ static ClutterGstRenderer rgb24_renderer =
   CLUTTER_GST_RGB24,
   0,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_RGB ";" GST_VIDEO_CAPS_BGR),
-  clutter_gst_dummy_init,
+  clutter_gst_rgb_init,
   clutter_gst_dummy_deinit,
   clutter_gst_rgb24_upload,
 };
@@ -487,18 +534,20 @@ static void
 clutter_gst_rgb32_upload (ClutterGstVideoSink *sink,
                           GstBuffer           *buffer)
 {
-  ClutterGstVideoSinkPrivate *priv= sink->priv;
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+  CoglHandle tex =
+    cogl_texture_new_from_data (priv->width,
+                                priv->height,
+                                CLUTTER_GST_TEXTURE_FLAGS,
+                                COGL_PIXEL_FORMAT_RGBA_8888,
+                                COGL_PIXEL_FORMAT_RGBA_8888,
+                                GST_ROUND_UP_4 (4 * priv->width),
+                                GST_BUFFER_DATA (buffer));
 
-  clutter_texture_set_from_rgb_data (priv->texture,
-                                     GST_BUFFER_DATA (buffer),
-                                     TRUE,
-                                     priv->width,
-                                     priv->height,
-                                     GST_ROUND_UP_4 (4 * priv->width),
-                                     4,
-                                     priv->bgr ?
-                                     CLUTTER_TEXTURE_RGB_FLAG_BGR : 0,
-                                     NULL);
+  _create_paint_material (sink,
+                          tex,
+                          COGL_INVALID_HANDLE,
+                          COGL_INVALID_HANDLE);
 }
 
 static ClutterGstRenderer rgb32_renderer =
@@ -507,7 +556,7 @@ static ClutterGstRenderer rgb32_renderer =
   CLUTTER_GST_RGB32,
   0,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_RGBA ";" GST_VIDEO_CAPS_BGRA),
-  clutter_gst_dummy_init,
+  clutter_gst_rgb_init,
   clutter_gst_dummy_deinit,
   clutter_gst_rgb32_upload,
 };
@@ -525,9 +574,7 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
   ClutterGstVideoSinkPrivate *priv = sink->priv;
   gint y_row_stride  = GST_ROUND_UP_4 (priv->width);
   gint uv_row_stride = GST_ROUND_UP_4 (priv->width / 2);
-  CoglHandle y_tex, u_tex, v_tex, material;
-
-  material = clutter_texture_get_cogl_material (priv->texture);
+  CoglHandle y_tex, u_tex, v_tex;
 
   y_tex = cogl_texture_new_from_data (priv->width,
                                       priv->height,
@@ -537,9 +584,6 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
                                       y_row_stride,
                                       GST_BUFFER_DATA (buffer));
 
-  clutter_texture_set_cogl_texture (priv->texture, y_tex);
-  cogl_handle_unref (y_tex);
-
   u_tex = cogl_texture_new_from_data (priv->width / 2,
                                       priv->height / 2,
                                       CLUTTER_GST_TEXTURE_FLAGS,
@@ -548,9 +592,6 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
                                       uv_row_stride,
                                       GST_BUFFER_DATA (buffer) +
                                       (y_row_stride * priv->height));
-
-  cogl_material_set_layer (material, 1, u_tex);
-  cogl_handle_unref (u_tex);
 
   v_tex = cogl_texture_new_from_data (priv->width / 2,
                                       priv->height / 2,
@@ -562,37 +603,13 @@ clutter_gst_yv12_upload (ClutterGstVideoSink *sink,
                                       + (y_row_stride * priv->height)
                                       + (uv_row_stride * priv->height / 2));
 
-  cogl_material_set_layer (material, 2, v_tex);
-  cogl_handle_unref (v_tex);
+  _create_paint_material (sink, y_tex, u_tex, v_tex);
 }
 
 static void
 clutter_gst_yv12_glsl_init (ClutterGstVideoSink *sink)
 {
-  ClutterGstVideoSinkPrivate *priv= sink->priv;
-  GLint location;
-  CoglMaterial *material;
-
-  clutter_gst_video_sink_set_glsl_shader (sink, yv12_to_rgba_shader);
-
-  cogl_program_use (priv->program);
-  location = cogl_program_get_uniform_location (priv->program, "ytex");
-  cogl_program_uniform_1i (location, 0);
-  location = cogl_program_get_uniform_location (priv->program, "utex");
-  cogl_program_uniform_1i (location, 1);
-  location = cogl_program_get_uniform_location (priv->program, "vtex");
-  cogl_program_uniform_1i (location, 2);
-
-  cogl_program_use (COGL_INVALID_HANDLE);
-
-  material = clutter_texture_get_cogl_material (priv->texture);
-  cogl_material_set_user_program (material, priv->program);
-}
-
-static void
-clutter_gst_yv12_glsl_deinit (ClutterGstVideoSink *sink)
-{
-  clutter_gst_video_sink_set_glsl_shader (sink, NULL);
+  _create_template_material (sink, yv12_to_rgba_shader, TRUE, 3);
 }
 
 
@@ -603,7 +620,7 @@ static ClutterGstRenderer yv12_glsl_renderer =
   CLUTTER_GST_GLSL | CLUTTER_GST_MULTI_TEXTURE,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("YV12")),
   clutter_gst_yv12_glsl_init,
-  clutter_gst_yv12_glsl_deinit,
+  clutter_gst_dummy_deinit,
   clutter_gst_yv12_upload,
 };
 
@@ -617,27 +634,12 @@ static ClutterGstRenderer yv12_glsl_renderer =
 static void
 clutter_gst_yv12_fp_init (ClutterGstVideoSink *sink)
 {
-  ClutterGstVideoSinkPrivate *priv = sink->priv;
-  CoglMaterial *material;
-  CoglHandle program;
-
-  gchar *shader;
-
-  shader = g_malloc(YV12_FP_SZ + 1);
+  char *shader = g_malloc (YV12_FP_SZ + 1);
   _string_array_to_char_array (shader, YV12_fp);
 
-  material = clutter_texture_get_cogl_material (priv->texture);
+  _create_template_material (sink, shader, FALSE, 3);
 
-  program = _create_arbfp_program (shader);
-  cogl_material_set_user_program (material, program);
-  cogl_handle_unref (program);
-
-  g_free(shader);
-}
-
-static void
-clutter_gst_yv12_fp_deinit (ClutterGstVideoSink *sink)
-{
+  g_free (shader);
 }
 
 static ClutterGstRenderer yv12_fp_renderer =
@@ -647,7 +649,7 @@ static ClutterGstRenderer yv12_fp_renderer =
   CLUTTER_GST_FP | CLUTTER_GST_MULTI_TEXTURE,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("YV12")),
   clutter_gst_yv12_fp_init,
-  clutter_gst_yv12_fp_deinit,
+  clutter_gst_dummy_deinit,
   clutter_gst_yv12_upload,
 };
 #endif
@@ -662,23 +664,7 @@ static ClutterGstRenderer yv12_fp_renderer =
 static void
 clutter_gst_i420_glsl_init (ClutterGstVideoSink *sink)
 {
-  ClutterGstVideoSinkPrivate *priv = sink->priv;
-  GLint location;
-  CoglMaterial *material;
-
-  clutter_gst_video_sink_set_glsl_shader (sink, yv12_to_rgba_shader);
-
-  cogl_program_use (priv->program);
-  location = cogl_program_get_uniform_location (priv->program, "ytex");
-  cogl_program_uniform_1i (location, 0);
-  location = cogl_program_get_uniform_location (priv->program, "utex");
-  cogl_program_uniform_1i (location, 1);
-  location = cogl_program_get_uniform_location (priv->program, "vtex");
-  cogl_program_uniform_1i (location, 2);
-  cogl_program_use (COGL_INVALID_HANDLE);
-
-  material = clutter_texture_get_cogl_material (priv->texture);
-  cogl_material_set_user_program (material, priv->program);
+  _create_template_material (sink, yv12_to_rgba_shader, TRUE, 3);
 }
 
 static ClutterGstRenderer i420_glsl_renderer =
@@ -688,7 +674,7 @@ static ClutterGstRenderer i420_glsl_renderer =
   CLUTTER_GST_GLSL | CLUTTER_GST_MULTI_TEXTURE,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("I420")),
   clutter_gst_i420_glsl_init,
-  clutter_gst_yv12_glsl_deinit,
+  clutter_gst_dummy_deinit,
   clutter_gst_yv12_upload,
 };
 
@@ -703,19 +689,12 @@ static ClutterGstRenderer i420_glsl_renderer =
 static void
 clutter_gst_i420_fp_init (ClutterGstVideoSink *sink)
 {
-  ClutterGstVideoSinkPrivate *priv = sink->priv;
-  CoglMaterial *material;
-  CoglHandle program;
-  gchar *shader;
-
-  shader = g_malloc(I420_FP_SZ + 1);
+  char *shader = g_malloc(I420_FP_SZ + 1);
   _string_array_to_char_array (shader, I420_fp);
 
-  material = clutter_texture_get_cogl_material (priv->texture);
-  program = _create_arbfp_program (shader);
-  cogl_material_set_user_program (material, program);
-  cogl_handle_unref (program);
-  g_free(shader);
+  _create_template_material (sink, shader, FALSE, 3);
+
+  g_free (shader);
 }
 
 static ClutterGstRenderer i420_fp_renderer =
@@ -741,30 +720,27 @@ static ClutterGstRenderer i420_fp_renderer =
 static void
 clutter_gst_ayuv_glsl_init(ClutterGstVideoSink *sink)
 {
-  clutter_gst_video_sink_set_glsl_shader (sink, ayuv_to_rgba_shader);
-}
-
-static void
-clutter_gst_ayuv_glsl_deinit(ClutterGstVideoSink *sink)
-{
-  clutter_gst_video_sink_set_glsl_shader (sink, NULL);
+  _create_template_material (sink, ayuv_to_rgba_shader, TRUE, 1);
 }
 
 static void
 clutter_gst_ayuv_upload (ClutterGstVideoSink *sink,
                          GstBuffer           *buffer)
 {
-  ClutterGstVideoSinkPrivate *priv= sink->priv;
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+  CoglHandle tex =
+    cogl_texture_new_from_data (priv->width,
+                                priv->height,
+                                CLUTTER_GST_TEXTURE_FLAGS,
+                                COGL_PIXEL_FORMAT_RGBA_8888,
+                                COGL_PIXEL_FORMAT_RGBA_8888,
+                                GST_ROUND_UP_4 (4 * priv->width),
+                                GST_BUFFER_DATA (buffer));
 
-  clutter_texture_set_from_rgb_data (priv->texture,
-                                     GST_BUFFER_DATA (buffer),
-                                     TRUE,
-                                     priv->width,
-                                     priv->height,
-                                     GST_ROUND_UP_4 (4 * priv->width),
-                                     4,
-                                     0,
-                                     NULL);
+  _create_paint_material (sink,
+                          tex,
+                          COGL_INVALID_HANDLE,
+                          COGL_INVALID_HANDLE);
 }
 
 static ClutterGstRenderer ayuv_glsl_renderer =
@@ -774,7 +750,7 @@ static ClutterGstRenderer ayuv_glsl_renderer =
   CLUTTER_GST_GLSL,
   GST_STATIC_CAPS (GST_VIDEO_CAPS_YUV ("AYUV")),
   clutter_gst_ayuv_glsl_init,
-  clutter_gst_ayuv_glsl_deinit,
+  clutter_gst_dummy_deinit,
   clutter_gst_ayuv_upload,
 };
 
