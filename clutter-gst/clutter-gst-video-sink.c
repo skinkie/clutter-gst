@@ -672,9 +672,9 @@ clutter_gst_i420_glsl_init (ClutterGstVideoSink *sink)
   cogl_program_use (priv->program);
   location = cogl_program_get_uniform_location (priv->program, "ytex");
   cogl_program_uniform_1i (location, 0);
-  location = cogl_program_get_uniform_location (priv->program, "vtex");
-  cogl_program_uniform_1i (location, 1);
   location = cogl_program_get_uniform_location (priv->program, "utex");
+  cogl_program_uniform_1i (location, 1);
+  location = cogl_program_get_uniform_location (priv->program, "vtex");
   cogl_program_uniform_1i (location, 2);
   cogl_program_use (COGL_INVALID_HANDLE);
 
