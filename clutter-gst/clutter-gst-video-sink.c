@@ -500,14 +500,21 @@ clutter_gst_rgb24_upload (ClutterGstVideoSink *sink,
                           GstBuffer           *buffer)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
-  CoglHandle tex =
-    cogl_texture_new_from_data (priv->width,
-                                priv->height,
-                                CLUTTER_GST_TEXTURE_FLAGS,
-                                COGL_PIXEL_FORMAT_RGB_888,
-                                COGL_PIXEL_FORMAT_RGB_888,
-                                GST_ROUND_UP_4 (3 * priv->width),
-                                GST_BUFFER_DATA (buffer));
+  CoglPixelFormat format;
+  CoglHandle tex;
+
+  if (priv->bgr)
+    format = COGL_PIXEL_FORMAT_BGR_888;
+  else
+    format = COGL_PIXEL_FORMAT_RGB_888;
+
+  tex = cogl_texture_new_from_data (priv->width,
+                                    priv->height,
+                                    CLUTTER_GST_TEXTURE_FLAGS,
+                                    format,
+                                    format,
+                                    GST_ROUND_UP_4 (3 * priv->width),
+                                    GST_BUFFER_DATA (buffer));
 
   _create_paint_material (sink,
                           tex,
@@ -535,14 +542,21 @@ clutter_gst_rgb32_upload (ClutterGstVideoSink *sink,
                           GstBuffer           *buffer)
 {
   ClutterGstVideoSinkPrivate *priv = sink->priv;
-  CoglHandle tex =
-    cogl_texture_new_from_data (priv->width,
-                                priv->height,
-                                CLUTTER_GST_TEXTURE_FLAGS,
-                                COGL_PIXEL_FORMAT_RGBA_8888,
-                                COGL_PIXEL_FORMAT_RGBA_8888,
-                                GST_ROUND_UP_4 (4 * priv->width),
-                                GST_BUFFER_DATA (buffer));
+  CoglPixelFormat format;
+  CoglHandle tex;
+
+  if (priv->bgr)
+    format = COGL_PIXEL_FORMAT_BGRA_8888;
+  else
+    format = COGL_PIXEL_FORMAT_RGBA_8888;
+
+  tex = cogl_texture_new_from_data (priv->width,
+                                    priv->height,
+                                    CLUTTER_GST_TEXTURE_FLAGS,
+                                    format,
+                                    format,
+                                    GST_ROUND_UP_4 (4 * priv->width),
+                                    GST_BUFFER_DATA (buffer));
 
   _create_paint_material (sink,
                           tex,
