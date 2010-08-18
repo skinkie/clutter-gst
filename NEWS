@@ -1,3 +1,26 @@
+clutter-gst 1.2.0 (18/08/2010)
+===============================================================================
+
+  * list of changes since 1.0.0
+
+    o Supports the ClutterMedia subtitle-related properties introduced in
+      1.2.0.
+
+    o Added a "idle material" to VideoTexture, a material that will be used
+      to paint the texture when not playing any video.
+
+    o You can now set a user-agent when streaming videos.
+
+    o The usual bulk of small fixes, small memory leaks, build (builds on
+      GLES2 now), don't use deprecated symbols, ...
+
+Many thanks to:
+
+  Chris Lord
+  Frederik Zipp
+  Gwenole Beauchesne
+  Samuel Degrande
+
 clutter-gst 1.0.0 (09/02/2010)
 ===============================================================================
 
