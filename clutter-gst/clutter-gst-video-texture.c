@@ -44,6 +44,7 @@
 #include <glib.h>
 #include <gio/gio.h>
 #include <gst/gst.h>
+#include <gst/video/video.h>
 
 #include "clutter-gst-debug.h"
 #include "clutter-gst-private.h"
@@ -63,6 +64,18 @@ struct _ClutterGstVideoTexturePrivate
   GstState stacked_state;
 
   guint tick_timeout_id;
+
+  /* width / height (in pixels) of the frame data before applying the pixel
+   * aspect ratio */
+  gint buffer_width;
+  gint buffer_height;
+
+  /* Pixel aspect ration is par_n / par_d. this is set by the sink */
+  guint par_n, par_d;
+
+  /* natural width / height (in pixels) of the texture (after par applied) */
+  guint texture_width;
+  guint texture_height;
 
   gdouble buffer_fill;
   gdouble duration;
@@ -597,8 +610,204 @@ clutter_media_init (ClutterMediaIface *iface)
 }
 
 /*
+ * ClutterTexture implementation
+ */
+
+static void
+clutter_gst_video_texture_size_change (ClutterTexture *texture,
+                                       gint            width,
+                                       gint            height)
+{
+  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE (texture);
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+  gboolean changed;
+
+  /* we are being told the actual (as in number of pixels in the buffers)
+   * frame size. Store the values to be used in preferred_width/height() */
+  changed = (priv->buffer_width != width) || (priv->buffer_height != height);
+  priv->buffer_width = width;
+  priv->buffer_height = height;
+
+  if (changed)
+    {
+      /* reset the computed texture dimensions if the underlying frames have
+       * changed size */
+      CLUTTER_GST_NOTE (ASPECT_RATIO, "frame size has been updated to %dx%d",
+                        width, height);
+
+      priv->texture_width = priv->texture_height = 0;
+
+      /* queue a relayout to ask containers/layout manager to ask for
+       * the preferred size again */
+      clutter_actor_queue_relayout (CLUTTER_ACTOR (texture));
+    }
+}
+
+/*
  * Clutter actor implementation
  */
+
+static void
+clutter_gst_video_texture_get_natural_size (ClutterGstVideoTexture *texture,
+                                            gfloat                 *width,
+                                            gfloat                 *height)
+{
+  ClutterGstVideoTexturePrivate *priv = texture->priv;
+  guint dar_n, dar_d;
+  gboolean ret;
+
+  /* we cache texture_width and texture_height */
+
+  if (G_UNLIKELY (priv->buffer_width == 0 || priv->buffer_height == 0))
+    {
+      /* we don't know the size of the frames yet default to 0,0 */
+      priv->texture_width = 0;
+      priv->texture_height = 0;
+    }
+  else if (G_UNLIKELY (priv->texture_width == 0 || priv->texture_height == 0))
+    {
+      CLUTTER_GST_NOTE (ASPECT_RATIO, "frame is %dx%d with par %d/%d",
+                        priv->buffer_width, priv->buffer_height,
+                        priv->par_n, priv->par_d);
+
+      ret = gst_video_calculate_display_ratio (&dar_n, &dar_d,
+                                               priv->buffer_width,
+                                               priv->buffer_height,
+                                               priv->par_n, priv->par_d,
+                                               1, 1);
+      if (ret == FALSE)
+        dar_n = dar_d = 1;
+
+      if (priv->buffer_height % dar_d == 0)
+        {
+          priv->texture_width = gst_util_uint64_scale (priv->buffer_height,
+                                                       dar_n, dar_d);
+          priv->texture_height = priv->buffer_height;
+        }
+      else if (priv->buffer_width % dar_n == 0)
+        {
+          priv->texture_width = priv->buffer_width;
+          priv->texture_height = gst_util_uint64_scale (priv->buffer_width,
+                                                        dar_d, dar_n);
+
+        }
+      else
+        {
+          priv->texture_width = gst_util_uint64_scale (priv->buffer_height,
+                                                       dar_n, dar_d);
+          priv->texture_height = priv->buffer_height;
+        }
+
+      CLUTTER_GST_NOTE (ASPECT_RATIO,
+                        "final size is %dx%d (calculated par is %d/%d)",
+                        priv->texture_width, priv->texture_height,
+                        dar_n, dar_d);
+    }
+
+  if (width)
+    *width = (gfloat)priv->texture_width;
+
+  if (height)
+    *height = (gfloat)priv->texture_height;
+}
+
+static void
+clutter_gst_video_texture_get_preferred_width (ClutterActor *self,
+                                               gfloat        for_height,
+                                               gfloat       *min_width_p,
+                                               gfloat       *natural_width_p)
+{
+  ClutterGstVideoTexture *texture = CLUTTER_GST_VIDEO_TEXTURE (self);
+  ClutterGstVideoTexturePrivate *priv = texture->priv;
+  gboolean sync_size, keep_aspect_ratio;
+  gfloat natural_width, natural_height;
+
+  /* Min request is always 0 since we can scale down or clip */
+  if (min_width_p)
+    *min_width_p = 0;
+
+  sync_size = clutter_texture_get_sync_size (CLUTTER_TEXTURE (self));
+  keep_aspect_ratio =
+    clutter_texture_get_keep_aspect_ratio (CLUTTER_TEXTURE (self));
+
+  clutter_gst_video_texture_get_natural_size (texture,
+                                              &natural_width,
+                                              &natural_height);
+
+  if (sync_size)
+    {
+      if (natural_width_p)
+        {
+          if (!keep_aspect_ratio ||
+              for_height < 0 ||
+              priv->buffer_height <= 0)
+            {
+              *natural_width_p = natural_width;
+            }
+          else
+            {
+              /* Set the natural width so as to preserve the aspect ratio */
+              gfloat ratio =  natural_width /  natural_height;
+
+              *natural_width_p = ratio * for_height;
+            }
+        }
+    }
+  else
+    {
+      if (natural_width_p)
+        *natural_width_p = 0;
+    }
+}
+
+static void
+clutter_gst_video_texture_get_preferred_height (ClutterActor *self,
+                                                gfloat        for_width,
+                                                gfloat       *min_height_p,
+                                                gfloat       *natural_height_p)
+{
+  ClutterGstVideoTexture *texture = CLUTTER_GST_VIDEO_TEXTURE (self);
+  ClutterGstVideoTexturePrivate *priv = texture->priv;
+  gboolean sync_size, keep_aspect_ratio;
+  gfloat natural_width, natural_height;
+
+  /* Min request is always 0 since we can scale down or clip */
+  if (min_height_p)
+    *min_height_p = 0;
+
+  sync_size = clutter_texture_get_sync_size (CLUTTER_TEXTURE (self));
+  keep_aspect_ratio =
+    clutter_texture_get_keep_aspect_ratio (CLUTTER_TEXTURE (self));
+
+  clutter_gst_video_texture_get_natural_size (texture,
+                                              &natural_width,
+                                              &natural_height);
+
+  if (sync_size)
+    {
+      if (natural_height_p)
+        {
+          if (!keep_aspect_ratio ||
+              for_width < 0 ||
+              priv->buffer_width <= 0)
+            {
+              *natural_height_p = natural_height;
+            }
+          else
+            {
+              /* Set the natural height so as to preserve the aspect ratio */
+              gfloat ratio = natural_height / natural_width;
+
+              *natural_height_p = ratio * for_width;
+            }
+        }
+    }
+  else
+    {
+      if (natural_height_p)
+        *natural_height_p = 0;
+    }
+}
 
 /*
  * ClutterTexture unconditionnaly sets the material color to:
@@ -814,6 +1023,7 @@ clutter_gst_video_texture_class_init (ClutterGstVideoTextureClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   ClutterActorClass *actor_class = CLUTTER_ACTOR_CLASS (klass);
+  ClutterTextureClass *texture_class = CLUTTER_TEXTURE_CLASS (klass);
   GParamSpec *pspec;
 
   g_type_class_add_private (klass, sizeof (ClutterGstVideoTexturePrivate));
@@ -824,6 +1034,12 @@ clutter_gst_video_texture_class_init (ClutterGstVideoTextureClass *klass)
   object_class->get_property = clutter_gst_video_texture_get_property;
 
   actor_class->paint = clutter_gst_video_texture_paint;
+  actor_class->get_preferred_width =
+    clutter_gst_video_texture_get_preferred_width;
+  actor_class->get_preferred_height =
+    clutter_gst_video_texture_get_preferred_height;
+
+  texture_class->size_change = clutter_gst_video_texture_size_change;
 
   g_object_class_override_property (object_class,
                                     PROP_URI, "uri");
@@ -1086,8 +1302,9 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
   create_black_idle_material (video_texture);
 
   priv->is_idle = TRUE;
-
   priv->in_seek = FALSE;
+
+  priv->par_n = priv->par_d = 1;
 
   bus = gst_pipeline_get_bus (GST_PIPELINE (priv->pipeline));
 
@@ -1113,6 +1330,24 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
                            video_texture, 0);
 
   gst_object_unref (GST_OBJECT (bus));
+}
+
+/*
+ * Private symbols
+ */
+
+/* This function is called from the sink set_caps(). we receive the first
+ * buffer way after this so are told about the par before size_changed has
+ * been fired */
+void
+_clutter_gst_video_texture_set_par (ClutterGstVideoTexture *texture,
+                                    guint                   par_n,
+                                    guint                   par_d)
+{
+  ClutterGstVideoTexturePrivate *priv = texture->priv;
+
+  priv->par_n = par_n;
+  priv->par_d = par_d;
 }
 
 /**

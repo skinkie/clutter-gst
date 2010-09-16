@@ -36,6 +36,7 @@ G_BEGIN_DECLS
 typedef enum {
   CLUTTER_GST_DEBUG_MISC            = 1 << 0,
   CLUTTER_GST_DEBUG_MEDIA           = 1 << 1,
+  CLUTTER_GST_DEBUG_ASPECT_RATIO    = 1 << 2
 } ClutterDebugFlag;
 
 #ifdef __GNUC__

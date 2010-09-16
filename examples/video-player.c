@@ -224,17 +224,23 @@ input_cb (ClutterStage *stage,
 
 static void
 size_change (ClutterTexture *texture, 
-             gint            width,
-             gint            height,
+             gint            base_width,
+             gint            base_height,
              VideoApp       *app)
 {
   ClutterActor *stage = app->stage;
   gfloat new_x, new_y, new_width, new_height;
   gfloat stage_width, stage_height;
+  gfloat frame_width, frame_height;
 
   clutter_actor_get_size (stage, &stage_width, &stage_height);
 
-  new_height = (height * stage_width) / width;
+  /* base_width and base_height are the actual dimensions of the buffers before
+   * taking the pixel aspect ratio into account. We need to get the actual
+   * size of the texture to display */
+  clutter_actor_get_size (CLUTTER_ACTOR (texture), &frame_width, &frame_height);
+
+  new_height = (frame_height * stage_width) / frame_width;
   if (new_height <= stage_height)
     {
       new_width = stage_width;
@@ -244,7 +250,7 @@ size_change (ClutterTexture *texture,
     }
   else
     {
-      new_width  = (width * stage_height) / height;
+      new_width  = (frame_width * stage_height) / frame_height;
       new_height = stage_height;
 
       new_x = (stage_width - new_width) / 2;
@@ -323,13 +329,10 @@ main (int argc, char *argv[])
                     G_CALLBACK (on_fullscreen),
                     app);
 
-  /* Dont let the underlying pixbuf dictate size */
-  g_object_set (G_OBJECT(app->vtexture), "sync-size", FALSE, NULL);
-
   /* Handle it ourselves so can scale up for fullscreen better */
-  g_signal_connect (CLUTTER_TEXTURE (app->vtexture),
-                    "size-change",
-                    G_CALLBACK (size_change), app);
+  g_signal_connect_after (CLUTTER_TEXTURE (app->vtexture),
+                          "size-change",
+                          G_CALLBACK (size_change), app);
 
   /* Load up out video texture */
   clutter_media_set_filename (CLUTTER_MEDIA (app->vtexture), argv[1]);

@@ -42,6 +42,7 @@
 #endif
 
 #include "clutter-gst-video-sink.h"
+#include "clutter-gst-video-texture.h"
 #include "clutter-gst-private.h"
 #include "clutter-gst-shaders.h"
 
@@ -968,6 +969,17 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
     } 
   else 
     priv->par_n = priv->par_d = 1;
+
+  /* If we happen to use a ClutterGstVideoTexture, now is to good time to
+   * instruct it about the pixel aspect ratio so we can have a correct
+   * natural width/height */
+  if (CLUTTER_GST_IS_VIDEO_TEXTURE (priv->texture))
+    {
+      ClutterGstVideoTexture *texture =
+        (ClutterGstVideoTexture *) priv->texture;
+
+      _clutter_gst_video_texture_set_par (texture, priv->par_n, priv->par_d);
+    }
 
   ret = gst_structure_get_fourcc (structure, "format", &fourcc);
   if (ret && (fourcc == GST_MAKE_FOURCC ('Y', 'V', '1', '2')))

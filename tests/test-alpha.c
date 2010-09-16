@@ -150,7 +150,6 @@ main (int argc, char *argv[])
    * efficient/corrent playback onto the texture (which sucks a bit)
    */
   texture = g_object_new (CLUTTER_TYPE_TEXTURE,
-                          "sync-size",       FALSE,
                           "disable-slicing", TRUE,
                           NULL);
   clutter_actor_set_opacity (texture, 0);
