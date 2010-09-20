@@ -1,3 +1,21 @@
+clutter-gst 1.3.2 (20/09/2010)
+===============================================================================
+
+  * list of changes since 1.2.0
+
+    o Respects the pixel-aspect-ratio property of the video frames and have
+      VideoTexture advertise the right preferred size.
+
+    o Reworked how ARB fp programs are set on the materials using a clutter 1.4
+      feature to set a program on a material, fixing the way materials were
+      used along the way.
+
+    o Removed all raw GL code and only use Cogl.
+
+Many thanks to:
+
+  Robert Bragg
+
 clutter-gst 1.2.0 (18/08/2010)
 ===============================================================================
 
