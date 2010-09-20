@@ -12,8 +12,7 @@ autom4te.cache
 clutter-gst*.pc
 compile
 config.guess
-config.h
-config.h.in
+config.h*
 config.log
 config.status
 config.sub
@@ -29,4 +28,5 @@ missing
 stamp-h1
 
 *.sw?
+.gdb_history
 TAGS
