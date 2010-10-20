@@ -1082,10 +1082,13 @@ bus_message_error_cb (GstBus                 *bus,
                       ClutterGstVideoTexture *video_texture)
 {
   GError *error = NULL;
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
 
   gst_message_parse_error (message, &error, NULL);
         
   g_signal_emit_by_name (video_texture, "error", error);
+
+  gst_element_set_state(priv->pipeline, GST_STATE_NULL);
 
   g_error_free (error);
 }
@@ -1095,11 +1098,14 @@ bus_message_eos_cb (GstBus                 *bus,
                     GstMessage             *message,
                     ClutterGstVideoTexture *video_texture)
 {
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
   g_object_notify (G_OBJECT (video_texture), "progress");
 
   CLUTTER_GST_NOTE (MEDIA, "EOS");
 
   g_signal_emit_by_name (video_texture, "eos");
+
+  gst_element_set_state(priv->pipeline, GST_STATE_NULL);
 }
 
 static void
