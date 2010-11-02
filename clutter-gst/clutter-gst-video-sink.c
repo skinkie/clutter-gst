@@ -425,16 +425,16 @@ _create_template_material (ClutterGstVideoSink *sink,
           cogl_program_use (program);
 
           location = cogl_program_get_uniform_location (program, "ytex");
-          cogl_program_uniform_1i (location, 0);
+          cogl_program_set_uniform_1i (program, location, 0);
           if (n_layers > 1)
             {
               location = cogl_program_get_uniform_location (program, "utex");
-              cogl_program_uniform_1i (location, 1);
+              cogl_program_set_uniform_1i (program, location, 1);
             }
           if (n_layers > 2)
             {
               location = cogl_program_get_uniform_location (program, "vtex");
-              cogl_program_uniform_1i (location, 2);
+              cogl_program_set_uniform_1i (program, location, 2);
             }
 
           cogl_program_use (COGL_INVALID_HANDLE);
