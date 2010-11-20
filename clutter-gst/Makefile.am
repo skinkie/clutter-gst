@@ -91,6 +91,7 @@ ClutterGst-@CLUTTER_GST_API_VERSION@.gir: $(INTROSPECTION_SCANNER) libclutter-gs
 		--pkg clutter-1.0 \
 		--pkg gstreamer-0.10 \
 		--pkg gstreamer-base-0.10 \
+		--pkg-export clutter-gst-@CLUTTER_GST_API_VERSION@ \
 		$(cluttergstheaders_HEADERS) \
 		$(source_c)
 
