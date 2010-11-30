@@ -75,6 +75,7 @@ static gchar *ayuv_to_rgba_shader = \
      "void main () {"
      "  vec4 color = texture2D (tex, vec2(" TEX_COORD "));"
      "  float y = 1.1640625 * (color.g - 0.0625);"
+     "  float u = color.b - 0.5;"
      "  float v = color.a - 0.5;"
      "  color.a = color.r;"
      "  color.r = y + 1.59765625 * v;"
