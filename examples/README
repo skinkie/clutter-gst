@@ -15,11 +15,6 @@ There are:
    - Has some useless cheesy effects built in.
       - Hit e to flip the video. 
 
- o video-cube.
- 
-   Pure evil. A nasty hack to do a video cube with clutter.
-   Could be done much nicer.
-
  o video-sink.
 
    Demonstrates use of ClutterGstVideoSink with a custom
