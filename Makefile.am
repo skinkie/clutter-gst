@@ -16,7 +16,7 @@ clutter-gst-$(CLUTTER_GST_API_VERSION).pc: clutter-gst.pc
 pkgconfig_DATA = clutter-gst-$(CLUTTER_GST_API_VERSION).pc
 pkgconfigdir   = $(libdir)/pkgconfig
 
-EXTRA_DIST = clutter-gst.pc.in
+EXTRA_DIST = clutter-gst.pc.in ChangeLog.pre-git-import
 
 CLEANFILES = clutter-gst.pc clutter-gst-$(CLUTTER_GST_API_VERSION).pc
 
