@@ -61,6 +61,21 @@ G_BEGIN_DECLS
   (G_TYPE_INSTANCE_GET_CLASS ((obj), \
   CLUTTER_GST_TYPE_VIDEO_TEXTURE, ClutterGstVideoTextureClass))
 
+/**
+ * ClutterGstSeekFlags:
+ * @CLUTTER_GST_SEEK_FLAG_NONE: Fast seeks (key frame boundaries, default)
+ * @CLUTTER_GST_SEEK_FLAG_ACCURATE: Accurate seeks (potentially slower)
+ *
+ * Flags that can be given to clutter_gst_video_texture_set_seek_flags().
+ *
+ * Since: 1.4
+ */
+typedef enum _ClutterGstSeekFlags
+{
+  CLUTTER_GST_SEEK_FLAG_NONE     = 0,
+  CLUTTER_GST_SEEK_FLAG_ACCURATE = 1 << 0
+} ClutterGstSeekFlags;
+
 typedef struct _ClutterGstVideoTexture        ClutterGstVideoTexture;
 typedef struct _ClutterGstVideoTextureClass   ClutterGstVideoTextureClass;
 typedef struct _ClutterGstVideoTexturePrivate ClutterGstVideoTexturePrivate;
@@ -99,17 +114,20 @@ struct _ClutterGstVideoTextureClass
   void (* _clutter_reserved6) (void);
 }; 
 
-GType           clutter_gst_video_texture_get_type            (void) G_GNUC_CONST;
-ClutterActor *  clutter_gst_video_texture_new                 (void);
+GType               clutter_gst_video_texture_get_type            (void) G_GNUC_CONST;
+ClutterActor *      clutter_gst_video_texture_new                 (void);
 
-GstElement *    clutter_gst_video_texture_get_pipeline        (ClutterGstVideoTexture *texture);
+GstElement *        clutter_gst_video_texture_get_pipeline        (ClutterGstVideoTexture *texture);
 
-CoglHandle      clutter_gst_video_texture_get_idle_material   (ClutterGstVideoTexture *texture);
-void            clutter_gst_video_texture_set_idle_material   (ClutterGstVideoTexture *texture,
-                                                               CoglHandle              material);
-gchar *         clutter_gst_video_texture_get_user_agent      (ClutterGstVideoTexture *texture);
-void            clutter_gst_video_texture_set_user_agent      (ClutterGstVideoTexture *texture,
-                                                               const gchar *           user_agent);
+CoglHandle          clutter_gst_video_texture_get_idle_material   (ClutterGstVideoTexture *texture);
+void                clutter_gst_video_texture_set_idle_material   (ClutterGstVideoTexture *texture,
+                                                                   CoglHandle              material);
+gchar *             clutter_gst_video_texture_get_user_agent      (ClutterGstVideoTexture *texture);
+void                clutter_gst_video_texture_set_user_agent      (ClutterGstVideoTexture *texture,
+                                                                   const gchar *           user_agent);
+ClutterGstSeekFlags clutter_gst_video_texture_get_seek_flags      (ClutterGstVideoTexture *texture);
+void                clutter_gst_video_texture_set_seek_flags      (ClutterGstVideoTexture *texture,
+                                                                   ClutterGstSeekFlags     flags);
 
 G_END_DECLS
 

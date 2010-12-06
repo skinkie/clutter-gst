@@ -5,14 +5,23 @@ NULL = #
 SUBDIRS = shaders
 
 CLEANFILES = #
+DISTCLEANFILES = #
+EXTRA_DIST = #
+BUILT_SOURCES = #
+
+# glib-mkenums
+glib_enum_h = clutter-gst-enum-types.h
+glib_enum_c = clutter-gst-enum-types.c
+glib_enum_headers = $(source_h)
+include $(top_srcdir)/build/autotools/Makefile.am.enums
 
 source_h = 					\
+	$(srcdir)/clutter-gst.h			\
 	$(srcdir)/clutter-gst-util.h		\
 	$(srcdir)/clutter-gst-version.h		\
 	$(srcdir)/clutter-gst-video-sink.h 	\
 	$(srcdir)/clutter-gst-video-texture.h 	\
 	$(NULL)
-
 
 source_priv_h =					\
 	$(srcdir)/clutter-gst-debug.h		\
@@ -25,12 +34,16 @@ source_c = 					\
 	$(srcdir)/clutter-gst-video-sink.c	\
 	$(srcdir)/clutter-gst-video-texture.c	\
         $(srcdir)/clutter-gst-util.c		\
+	$(glib_enum_c)				\
 	$(NULL)
 
-libclutter_gst_@CLUTTER_GST_MAJORMINOR@_la_SOURCES = $(MARSHALFILES)  \
-                                                     $(source_c)      \
-						     $(source_priv_h) \
-                                                     $(source_h)
+libclutter_gst_@CLUTTER_GST_MAJORMINOR@_la_SOURCES =	\
+	$(MARSHALFILES)  				\
+	$(source_c)      				\
+	$(source_priv_h) 				\
+	$(source_h)					\
+	$(glib_enum_h)					\
+	$(NULL)
 
 INCLUDES =					\
 	-I$(top_srcdir)				\
@@ -60,7 +73,7 @@ libclutter_gst_@CLUTTER_GST_MAJORMINOR@_la_LIBADD  = @CLUTTER_GST_LIBS@ $(GST_LI
 libclutter_gst_@CLUTTER_GST_MAJORMINOR@_la_LDFLAGS = @CLUTTER_GST_LT_LDFLAGS@
 
 cluttergstheadersdir = $(includedir)/clutter-@CLUTTER_API_VERSION@/clutter-gst
-cluttergstheaders_HEADERS = $(source_h) $(srcdir)/clutter-gst.h
+cluttergstheaders_HEADERS = $(source_h) $(glib_enum_h)
 
 #
 # Introspection data

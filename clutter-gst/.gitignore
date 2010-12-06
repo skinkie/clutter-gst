@@ -1,1 +1,4 @@
 clutter-gst-version.h
+clutter-gst-enum-types.h
+clutter-gst-enum-types.c
+stamp-enum-types

@@ -48,6 +48,7 @@
 
 #include "clutter-gst-debug.h"
 #include "clutter-gst-private.h"
+#include "clutter-gst-enum-types.h"
 #include "clutter-gst-video-sink.h"
 #include "clutter-gst-video-texture.h"
 
@@ -85,6 +86,8 @@ struct _ClutterGstVideoTexturePrivate
 
   CoglHandle idle_material;
   CoglColor idle_color_unpre;
+
+  GstSeekFlags seek_flags;    /* flags for the seek in set_progress(); */
 };
 
 enum {
@@ -102,7 +105,8 @@ enum {
   PROP_DURATION,
 
   PROP_IDLE_MATERIAL,
-  PROP_USER_AGENT
+  PROP_USER_AGENT,
+  PROP_SEEK_FLAGS
 };
 
 
@@ -495,7 +499,7 @@ set_progress (ClutterGstVideoTexture *video_texture,
   gst_element_seek (priv->pipeline,
 		    1.0,
 		    GST_FORMAT_TIME,
-		    GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT,
+		    GST_SEEK_FLAG_FLUSH | priv->seek_flags,
 		    GST_SEEK_TYPE_SET,
 		    position,
 		    GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
@@ -952,6 +956,11 @@ clutter_gst_video_texture_set_property (GObject      *object,
                                                 g_value_get_string (value));
       break;
 
+    case PROP_SEEK_FLAGS:
+      clutter_gst_video_texture_set_seek_flags (video_texture,
+                                                g_value_get_flags (value));
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
@@ -1022,6 +1031,15 @@ clutter_gst_video_texture_get_property (GObject    *object,
       }
       break;
 
+    case PROP_SEEK_FLAGS:
+      {
+        ClutterGstSeekFlags seek_flags;
+
+        seek_flags = clutter_gst_video_texture_get_seek_flags (video_texture);
+        g_value_set_flags (value, seek_flags);
+      }
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
@@ -1083,6 +1101,14 @@ clutter_gst_video_texture_class_init (ClutterGstVideoTextureClass *klass)
                                NULL,
                                CLUTTER_GST_PARAM_READWRITE);
   g_object_class_install_property (object_class, PROP_USER_AGENT, pspec);
+
+  pspec = g_param_spec_flags ("seek-flags",
+                              "Seek Flags",
+                              "Flags to use when seeking",
+                              CLUTTER_GST_TYPE_SEEK_FLAGS,
+                              CLUTTER_GST_SEEK_FLAG_NONE,
+                              CLUTTER_GST_PARAM_READWRITE);
+  g_object_class_install_property (object_class, PROP_SEEK_FLAGS, pspec);
 }
 
 static void
@@ -1321,6 +1347,9 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
 
   priv->par_n = priv->par_d = 1;
 
+  /* Default to a fast seek, ie. same effect than set_seek_flags (NONE); */
+  priv->seek_flags = GST_SEEK_FLAG_KEY_UNIT;
+
   bus = gst_pipeline_get_bus (GST_PIPELINE (priv->pipeline));
 
   gst_bus_add_signal_watch (bus);
@@ -1533,4 +1562,51 @@ clutter_gst_video_texture_set_user_agent (ClutterGstVideoTexture *texture,
     priv->user_agent = NULL;
 
   set_user_agent (texture, user_agent);
+}
+
+/**
+ * clutter_gst_video_texture_get_seek_flags:
+ * @texture: a #ClutterGstVideoTexture
+ *
+ * Get the current value of the seek-flags property.
+ *
+ * Return value: a combination of #ClutterGstSeekFlags
+ *
+ * Since: 1.4
+ */
+ClutterGstSeekFlags
+clutter_gst_video_texture_get_seek_flags (ClutterGstVideoTexture *texture)
+{
+  g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (texture),
+                        CLUTTER_GST_SEEK_FLAG_NONE);
+
+  if (texture->priv->seek_flags == GST_SEEK_FLAG_ACCURATE)
+    return CLUTTER_GST_SEEK_FLAG_ACCURATE;
+  else
+    return CLUTTER_GST_SEEK_FLAG_NONE;
+}
+
+/**
+ * clutter_gst_video_texture_set_seek_flags:
+ * @texture: a #ClutterGstVideoTexture
+ * @flags: a combination of #ClutterGstSeekFlags
+ *
+ * Seeking can be done with several trade-offs. Clutter-gst defaults
+ * to %CLUTTER_GST_SEEK_FLAG_NONE.
+ *
+ * Since: 1.4
+ */
+void
+clutter_gst_video_texture_set_seek_flags (ClutterGstVideoTexture *texture,
+                                          ClutterGstSeekFlags     flags)
+{
+  ClutterGstVideoTexturePrivate *priv;
+
+  g_return_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (texture));
+  priv = texture->priv;
+
+  if (flags == CLUTTER_GST_SEEK_FLAG_NONE)
+    priv->seek_flags = GST_SEEK_FLAG_KEY_UNIT;
+  else if (flags & CLUTTER_GST_SEEK_FLAG_ACCURATE)
+    priv->seek_flags = GST_SEEK_FLAG_ACCURATE;
 }

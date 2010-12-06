@@ -69,6 +69,7 @@ AM_PROG_CC_C_O
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 DOLT
+AC_PATH_PROG([GLIB_MKENUMS], [glib-mkenums])
 
 # Checks for header files.
 AC_HEADER_STDC
