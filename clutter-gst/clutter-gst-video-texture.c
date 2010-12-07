@@ -62,7 +62,7 @@ struct _ClutterGstVideoTexturePrivate
   guint in_seek : 1;
   guint is_idle : 1;
   gdouble stacked_progress;
-  gdouble last_known_progress;
+  gdouble target_progress;
   GstState stacked_state;
 
   guint tick_timeout_id;
@@ -467,6 +467,8 @@ set_progress (ClutterGstVideoTexture *video_texture,
 
   CLUTTER_GST_NOTE (MEDIA, "set progress: %.02f", progress);
 
+  priv->target_progress = progress;
+
   if (priv->in_seek)
     {
       CLUTTER_GST_NOTE (MEDIA, "already seeking. stacking progress point.");
@@ -522,7 +524,7 @@ get_progress (ClutterGstVideoTexture *video_texture)
    * the last known position instead as returning 0.0 will have some ugly
    * effects, say on a progress bar getting updated from the progress tick. */
   if (priv->in_seek)
-    return priv->last_known_progress;
+    return priv->target_progress;
 
   position_q = gst_query_new_position (GST_FORMAT_TIME);
   duration_q = gst_query_new_duration (GST_FORMAT_TIME);
@@ -546,8 +548,6 @@ get_progress (ClutterGstVideoTexture *video_texture)
   gst_query_unref (duration_q);
 
   CLUTTER_GST_NOTE (MEDIA, "get progress: %.02f", progress);
-
-  priv->last_known_progress = progress;
 
   return progress;
 }
