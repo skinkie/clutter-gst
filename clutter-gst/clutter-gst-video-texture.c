@@ -524,7 +524,10 @@ get_progress (ClutterGstVideoTexture *video_texture)
    * the last known position instead as returning 0.0 will have some ugly
    * effects, say on a progress bar getting updated from the progress tick. */
   if (priv->in_seek)
-    return priv->target_progress;
+    {
+      CLUTTER_GST_NOTE (MEDIA, "get progress: %.02f", priv->target_progress);
+      return priv->target_progress;
+    }
 
   position_q = gst_query_new_position (GST_FORMAT_TIME);
   duration_q = gst_query_new_duration (GST_FORMAT_TIME);
