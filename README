@@ -20,11 +20,11 @@ installing new plug-ins.
 Clutter-GStreamer requires:
 
   GLib >= 2.18.0
-  Clutter >= 1.3.14
+  Clutter >= 1.4.0
   GStreamer >= 0.10
 
 Copyright (C) 2006, 2007, 2008  OpenedHand
-Copyright (C) 2009, 2010 Intel Corporation
+Copyright (C) 2009, 2010, 2011 Intel Corporation
 
 Released under the terms of the GNU Lesser General Public License, version 2.1
 or later. See the file COPYING for details.
