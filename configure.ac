@@ -25,7 +25,7 @@ AC_CONFIG_AUX_DIR([build/autotools])
 AC_CONFIG_SRCDIR([clutter-gst/clutter-gst.h])
 AM_CONFIG_HEADER([config.h])
 
-AM_INIT_AUTOMAKE([1.9 -Wno-portability foreign])
+AM_INIT_AUTOMAKE([1.9 -Wno-portability foreign no-dist-gzip dist-bzip2])
 
 CLUTTER_GST_MAJOR_VERSION=clutter_gst_major_version
 CLUTTER_GST_MINOR_VERSION=clutter_gst_minor_version
@@ -55,6 +55,12 @@ CLUTTER_GST_LT_LDFLAGS="-version-info $CLUTTER_GST_LT_VERSION"
 
 AC_SUBST(CLUTTER_GST_LT_VERSION)
 AC_SUBST(CLUTTER_GST_LT_LDFLAGS)
+
+m4_define([clutter_gst_release_status],
+          [m4_if(m4_eval(clutter_gst_micro_version % 2), [1], [git],
+                 [m4_if(m4_eval(clutter_gst_minor_version % 2), [1], [snapshot],
+                       [release])])])
+AC_SUBST([CLUTTER_GST_RELEASE_STATUS], [clutter_gst_release_status])
 
 dnl ========================================================================
 
@@ -203,15 +209,17 @@ AC_OUTPUT([
 dnl ========================================================================
 
 echo ""
-echo "                  Clutter-GST $VERSION"
-echo "                 ==================="
+echo "Clutter-GST $VERSION (${CLUTTER_GST_RELEASE_STATUS})"
 echo ""
-echo "                   prefix:   ${prefix}"
-echo "           Compiler flags:   ${MAINTAINER_CFLAGS} ${CPPFLAGS}"
+echo " • Global:"
+echo "        Prefix     : ${prefix}"
+echo "        Cg compiler: ${have_cgc}"
 echo ""
-echo "              Cg compiler:   ${have_cgc}"
+echo " • Compiler options:"
+echo "        Compiler flags:${MAINTAINER_CFLAGS} ${CPPFLAGS}"
+echo "        Debug level   : ${enable_debug}"
 echo ""
-echo "              debug level:   ${enable_debug}"
-echo "  Build API documentation:   ${enable_gtk_doc}"
-echo "       Introspection data:   ${enable_introspection}"
+echo " • Extra:"
+echo "        API documentation : ${enable_gtk_doc}"
+echo "        Introspection data: ${enable_introspection}"
 echo ""
