@@ -1141,13 +1141,13 @@ bus_message_eos_cb (GstBus                 *bus,
 
   CLUTTER_GST_NOTE (MEDIA, "EOS");
 
-  g_signal_emit_by_name (video_texture, "eos");
+  gst_element_set_state(priv->pipeline, GST_STATE_NULL);
 
   /* restore the idle material so we don't just display the last frame */
   priv->is_idle = TRUE;
   clutter_actor_queue_redraw (CLUTTER_ACTOR (video_texture));
 
-  gst_element_set_state(priv->pipeline, GST_STATE_NULL);
+  g_signal_emit_by_name (video_texture, "eos");
 }
 
 static void
