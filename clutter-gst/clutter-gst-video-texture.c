@@ -372,22 +372,26 @@ set_uri (ClutterGstVideoTexture *video_texture,
   priv->can_seek = FALSE;
   priv->duration = 0.0;
 
-  gst_element_get_state (priv->pipeline, &state, &pending, 0);
-
-  if (pending)
-    state = pending;
-
-  gst_element_set_state (priv->pipeline, GST_STATE_NULL);
-
   CLUTTER_GST_NOTE (MEDIA, "setting URI: %s", uri);
 
-  g_object_set (priv->pipeline, "uri", uri, NULL);
-
-  /*
-   * Restore state.
-   */
   if (uri)
-    gst_element_set_state (priv->pipeline, state);
+    {
+      gst_element_get_state (priv->pipeline, &state, &pending, 0);
+      if (pending)
+        state = pending;
+
+      gst_element_set_state (priv->pipeline, GST_STATE_NULL);
+
+      g_object_set (priv->pipeline, "uri", uri, NULL);
+
+      gst_element_set_state (priv->pipeline, state);
+    }
+  else
+    {
+      priv->is_idle = TRUE;
+      gst_element_set_state (priv->pipeline, GST_STATE_NULL);
+      clutter_actor_queue_redraw (CLUTTER_ACTOR (video_texture));
+    }
 
   /*
    * Emit notififications for all these to make sure UI is not showing
