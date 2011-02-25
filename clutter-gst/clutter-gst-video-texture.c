@@ -394,7 +394,7 @@ set_uri (ClutterGstVideoTexture *video_texture,
     }
 
   /*
-   * Emit notififications for all these to make sure UI is not showing
+   * Emit notifications for all these to make sure UI is not showing
    * any properties of the old URI.
    */
   g_object_notify (self, "uri");
