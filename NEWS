@@ -1,3 +1,13 @@
+clutter-gst 1.3.6 (02/03/2011)
+===============================================================================
+
+  * list of changes since 1.3.4
+
+    o Make looping possible with set_playing(TRUE) in the the EOS callback
+
+    o set_uri(NULL) is now handled and defined to stop the pipeline and set
+      the video texture in "idle mode" (painted with the idle material)
+
 clutter-gst 1.3.4 (10/01/2011)
 ===============================================================================
 
