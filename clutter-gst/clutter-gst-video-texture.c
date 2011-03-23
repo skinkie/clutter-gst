@@ -473,9 +473,9 @@ set_progress (ClutterGstVideoTexture *video_texture,
 
   priv->target_progress = progress;
 
-  if (priv->in_seek)
+  if (priv->in_seek || priv->is_idle)
     {
-      CLUTTER_GST_NOTE (MEDIA, "already seeking. stacking progress point.");
+      CLUTTER_GST_NOTE (MEDIA, "already seeking/idleing. stacking progress point.");
       priv->stacked_progress = progress;
       return;
     }
@@ -1255,6 +1255,14 @@ bus_message_state_change_cb (GstBus                 *bus,
     priv->is_idle = TRUE;
   else if (new_state == GST_STATE_PLAYING)
     priv->is_idle = FALSE;
+
+  if (!priv->is_idle)
+    {
+      if (priv->stacked_progress)
+        {
+          set_progress (video_texture, priv->stacked_progress);
+        }
+    }
 }
 
 static void
