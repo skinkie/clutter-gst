@@ -1,3 +1,4 @@
+*.exe
 *.gir
 *.la
 *.lo
