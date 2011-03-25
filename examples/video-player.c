@@ -336,7 +336,6 @@ main (int argc, char *argv[])
 
   /* Load up out video texture */
   clutter_media_set_filename (CLUTTER_MEDIA (app->vtexture), argv[1]);
-  clutter_media_set_audio_volume (CLUTTER_MEDIA (app->vtexture), 0.5);
 
   /* Create the control UI */
   app->control = clutter_group_new ();

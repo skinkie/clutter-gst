@@ -10,7 +10,7 @@
  *             Damien Lespiau <damien.lespiau@intel.com>
  *
  * Copyright (C) 2006 OpenedHand
- * Copyright (C) 2010 Intel Corporation
+ * Copyright (C) 2010, 2011 Intel Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -45,6 +45,7 @@
 #include <gio/gio.h>
 #include <gst/gst.h>
 #include <gst/video/video.h>
+#include <gst/interfaces/streamvolume.h>
 
 #include "clutter-gst-debug.h"
 #include "clutter-gst-private.h"
@@ -78,6 +79,9 @@ struct _ClutterGstVideoTexturePrivate
   /* natural width / height (in pixels) of the texture (after par applied) */
   guint texture_width;
   guint texture_height;
+
+  /* This is a cubic volume, suitable for use in a UI cf. StreamVolume doc */
+  gdouble volume;
 
   gdouble buffer_fill;
   gdouble duration;
@@ -600,8 +604,10 @@ set_audio_volume (ClutterGstVideoTexture *video_texture,
 
   CLUTTER_GST_NOTE (MEDIA, "set volume: %.02f", volume);
 
-  /* the :volume property is in the [0, 10] interval */
-  g_object_set (G_OBJECT (priv->pipeline), "volume", volume * 10.0, NULL);
+  volume = CLAMP (volume, 0.0, 1.0);
+  gst_stream_volume_set_volume (GST_STREAM_VOLUME (priv->pipeline),
+				GST_STREAM_VOLUME_FORMAT_CUBIC,
+				volume);
   g_object_notify (G_OBJECT (video_texture), "audio-volume");
 }
 
@@ -609,19 +615,13 @@ static gdouble
 get_audio_volume (ClutterGstVideoTexture *video_texture)
 {
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
-  gdouble volume = 0.0;
 
   if (!priv->pipeline)
     return 0.0;
 
-  /* the :volume property is in the [0, 10] interval */
-  g_object_get (priv->pipeline, "volume", &volume, NULL);
+  CLUTTER_GST_NOTE (MEDIA, "get volume: %.02f", priv->volume);
 
-  volume = CLAMP (volume / 10.0, 0.0, 1.0);
-
-  CLUTTER_GST_NOTE (MEDIA, "get volume: %.02f", volume);
-
-  return volume;
+  return priv->volume;
 }
 
 static void
@@ -1295,6 +1295,34 @@ on_source_changed (GstElement             *pipeline,
 }
 
 static gboolean
+on_volume_changed_main_context (gpointer data)
+{
+  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE (data);
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+  gdouble volume;
+
+  volume = gst_stream_volume_get_volume (GST_STREAM_VOLUME (priv->pipeline),
+					 GST_STREAM_VOLUME_FORMAT_CUBIC);
+  priv->volume = volume;
+
+  g_object_notify (G_OBJECT (video_texture), "audio-volume");
+
+  return FALSE;
+}
+
+/* playbin2 proxies the volume property change notification directly from
+ * the element having the "volume" property. This means this callback is
+ * called from the thread that runs the element, potentially different from
+ * the main thread */
+static void
+on_volume_changed (GstElement             *pipeline,
+		   GParamSpec             *pspec,
+		   ClutterGstVideoTexture *video_texture)
+{
+  g_idle_add (on_volume_changed_main_context, video_texture);
+}
+
+static gboolean
 lay_pipeline (ClutterGstVideoTexture *video_texture)
 {
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
@@ -1391,6 +1419,9 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
   g_signal_connect_object (bus, "message::async-done",
                            G_CALLBACK (bus_message_async_done_cb),
                            video_texture, 0);
+
+  g_signal_connect (priv->pipeline, "notify::volume",
+		    G_CALLBACK (on_volume_changed), video_texture);
 
   gst_object_unref (GST_OBJECT (bus));
 }
