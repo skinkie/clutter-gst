@@ -130,10 +130,8 @@ dnl ========================================================================
 
 GST_MAJORMINOR=0.10
 
-pkg_modules="gstreamer-$GST_MAJORMINOR gstreamer-plugins-base-$GST_MAJORMINOR gstreamer-base-$GST_MAJORMINOR"
+pkg_modules="gstreamer-$GST_MAJORMINOR gstreamer-plugins-base-$GST_MAJORMINOR gstreamer-base-$GST_MAJORMINOR gstreamer-interfaces-$GST_MAJORMINOR gstreamer-video-$GST_MAJORMINOR gstreamer-audio-$GST_MAJORMINOR"
 PKG_CHECK_MODULES(GST, [$pkg_modules])
-
-GST_LIBS="$GST_LIBS -lgstinterfaces-$GST_MAJORMINOR -lgstvideo-$GST_MAJORMINOR -lgstaudio-$GST_MAJORMINOR"
 
 dnl ========================================================================
 
