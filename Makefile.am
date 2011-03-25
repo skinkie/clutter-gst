@@ -8,7 +8,7 @@ endif
 
 DIST_SUBDIRS = build scripts clutter-gst tests examples doc
 
-ACLOCAL_AMFLAGS = -I build/autotools
+ACLOCAL_AMFLAGS = -I build/autotools ${ACLOCAL_FLAGS}
 
 clutter-gst-$(CLUTTER_GST_API_VERSION).pc: clutter-gst.pc
 	$(QUIET_GEN)cp -f clutter-gst.pc $@
