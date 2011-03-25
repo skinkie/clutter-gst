@@ -93,14 +93,14 @@ struct _ClutterGstVideoTexture
   /*< private >*/
   ClutterTexture              parent;
   ClutterGstVideoTexturePrivate *priv;
-}; 
+};
 
 /**
  * ClutterGstVideoTextureClass:
  *
  * Base class for #ClutterGstVideoTexture.
  */
-struct _ClutterGstVideoTextureClass 
+struct _ClutterGstVideoTextureClass
 {
   /*< private >*/
   ClutterTextureClass parent_class;
@@ -112,7 +112,7 @@ struct _ClutterGstVideoTextureClass
   void (* _clutter_reserved4) (void);
   void (* _clutter_reserved5) (void);
   void (* _clutter_reserved6) (void);
-}; 
+};
 
 GType               clutter_gst_video_texture_get_type            (void) G_GNUC_CONST;
 ClutterActor *      clutter_gst_video_texture_new                 (void);

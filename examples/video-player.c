@@ -106,7 +106,7 @@ toggle_pause_state (VideoApp *app)
 {
   if (app->paused)
     {
-      clutter_media_set_playing (CLUTTER_MEDIA(app->vtexture), 
+      clutter_media_set_playing (CLUTTER_MEDIA(app->vtexture),
                                  TRUE);
       app->paused = FALSE;
       clutter_actor_hide (app->control_play);
@@ -114,7 +114,7 @@ toggle_pause_state (VideoApp *app)
     }
   else
     {
-      clutter_media_set_playing (CLUTTER_MEDIA(app->vtexture), 
+      clutter_media_set_playing (CLUTTER_MEDIA(app->vtexture),
                                  FALSE);
       app->paused = TRUE;
       clutter_actor_hide (app->control_pause);
@@ -130,7 +130,7 @@ reset_animation (ClutterAnimation *animation,
 }
 
 static gboolean
-input_cb (ClutterStage *stage, 
+input_cb (ClutterStage *stage,
           ClutterEvent *event,
           gpointer      user_data)
 {
@@ -223,7 +223,7 @@ input_cb (ClutterStage *stage,
 }
 
 static void
-size_change (ClutterTexture *texture, 
+size_change (ClutterTexture *texture,
              gint            base_width,
              gint            base_height,
              VideoApp       *app)

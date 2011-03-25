@@ -344,12 +344,12 @@ set_uri (ClutterGstVideoTexture *video_texture,
 
   g_free (priv->uri);
 
-  if (uri) 
+  if (uri)
     {
       priv->uri = g_strdup (uri);
 
       /* Ensure the tick timeout is installed.
-       * 
+       *
        * We also have it installed in PAUSED state, because
        * seeks etc may have a delayed effect on the position.
        */
@@ -362,7 +362,7 @@ set_uri (ClutterGstVideoTexture *video_texture,
       /* try to load subtitles based on the uri of the file */
       autoload_subtitle (video_texture, uri);
     }
-  else 
+  else
     {
       priv->uri = NULL;
 
@@ -418,7 +418,7 @@ set_playing (ClutterGstVideoTexture *video_texture,
 
   CLUTTER_GST_NOTE (MEDIA, "set playing: %d", playing);
 
-  if (priv->uri) 
+  if (priv->uri)
     {
       GstState state = GST_STATE_PAUSED;
 
@@ -428,13 +428,13 @@ set_playing (ClutterGstVideoTexture *video_texture,
       priv->in_seek = FALSE;
 
       gst_element_set_state (priv->pipeline, state);
-    } 
-  else 
+    }
+  else
     {
       if (playing)
 	g_warning ("Unable to start playing: no URI is set");
     }
-  
+
   g_object_notify (G_OBJECT (video_texture), "playing");
   g_object_notify (G_OBJECT (video_texture), "progress");
 }
@@ -448,9 +448,9 @@ get_playing (ClutterGstVideoTexture *video_texture)
 
   if (!priv->pipeline)
     return FALSE;
-  
+
   gst_element_get_state (priv->pipeline, &state, &pending, 0);
-  
+
   if (pending)
     playing = (pending == GST_STATE_PLAYING);
   else
@@ -554,7 +554,7 @@ get_progress (ClutterGstVideoTexture *video_texture)
     }
   else
     progress = 0.0;
-  
+
   gst_query_unref (position_q);
   gst_query_unref (duration_q);
 
@@ -878,22 +878,22 @@ static void
 clutter_gst_video_texture_dispose (GObject *object)
 {
   ClutterGstVideoTexture        *self;
-  ClutterGstVideoTexturePrivate *priv; 
+  ClutterGstVideoTexturePrivate *priv;
 
-  self = CLUTTER_GST_VIDEO_TEXTURE(object); 
+  self = CLUTTER_GST_VIDEO_TEXTURE(object);
   priv = self->priv;
 
   /* FIXME: flush an errors off bus ? */
   /* gst_bus_set_flushing (priv->bus, TRUE); */
 
-  if (priv->pipeline) 
+  if (priv->pipeline)
     {
       gst_element_set_state (priv->pipeline, GST_STATE_NULL);
       gst_object_unref (GST_OBJECT (priv->pipeline));
       priv->pipeline = NULL;
     }
 
-  if (priv->tick_timeout_id > 0) 
+  if (priv->tick_timeout_id > 0)
     {
       g_source_remove (priv->tick_timeout_id);
       priv->tick_timeout_id = 0;
@@ -906,7 +906,7 @@ static void
 clutter_gst_video_texture_finalize (GObject *object)
 {
   ClutterGstVideoTexture        *self;
-  ClutterGstVideoTexturePrivate *priv; 
+  ClutterGstVideoTexturePrivate *priv;
 
   self = CLUTTER_GST_VIDEO_TEXTURE (object);
   priv = self->priv;
@@ -920,9 +920,9 @@ clutter_gst_video_texture_finalize (GObject *object)
 }
 
 static void
-clutter_gst_video_texture_set_property (GObject      *object, 
+clutter_gst_video_texture_set_property (GObject      *object,
 				        guint         property_id,
-				        const GValue *value, 
+				        const GValue *value,
 				        GParamSpec   *pspec)
 {
   ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE (object);
@@ -974,9 +974,9 @@ clutter_gst_video_texture_set_property (GObject      *object,
 }
 
 static void
-clutter_gst_video_texture_get_property (GObject    *object, 
+clutter_gst_video_texture_get_property (GObject    *object,
 				        guint       property_id,
-				        GValue     *value, 
+				        GValue     *value,
 				        GParamSpec *pspec)
 {
   ClutterGstVideoTexture *video_texture;
@@ -1127,7 +1127,7 @@ bus_message_error_cb (GstBus                 *bus,
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
 
   gst_message_parse_error (message, &error, NULL);
-        
+
   g_signal_emit_by_name (video_texture, "error", error);
 
   gst_element_set_state(priv->pipeline, GST_STATE_NULL);
@@ -1212,8 +1212,8 @@ bus_message_state_change_cb (GstBus                 *bus,
 
   gst_message_parse_state_changed (message, &old_state, &new_state, NULL);
 
-  if (old_state == GST_STATE_READY && 
-      new_state == GST_STATE_PAUSED) 
+  if (old_state == GST_STATE_READY &&
+      new_state == GST_STATE_PAUSED)
     {
       GstQuery *query;
 
@@ -1330,7 +1330,7 @@ lay_pipeline (ClutterGstVideoTexture *video_texture)
   GstElement *video_sink = NULL;
 
   priv->pipeline = gst_element_factory_make ("playbin2", "pipeline");
-  if (!priv->pipeline) 
+  if (!priv->pipeline)
     {
       g_critical ("Unable to create playbin2 element");
       return FALSE;
@@ -1344,10 +1344,10 @@ lay_pipeline (ClutterGstVideoTexture *video_texture)
    * FIXME - there must be a way to ask gstreamer to do this for us
    */
   audio_sink = gst_element_factory_make ("gconfaudiosink", "audio-sink");
-  if (!audio_sink) 
+  if (!audio_sink)
     {
       audio_sink = gst_element_factory_make ("autoaudiosink", "audio-sink");
-      if (!audio_sink) 
+      if (!audio_sink)
 	{
 	  audio_sink = gst_element_factory_make ("alsasink", "audio-sink");
 	  g_warning ("Could not create a GST audio_sink. "
@@ -1460,7 +1460,7 @@ ClutterActor*
 clutter_gst_video_texture_new (void)
 {
   return g_object_new (CLUTTER_GST_TYPE_VIDEO_TEXTURE,
-                       "disable-slicing", TRUE, 
+                       "disable-slicing", TRUE,
                        NULL);
 }
 

@@ -104,7 +104,7 @@ static gchar *yv12_to_rgba_shader = \
      FRAGMENT_SHADER_END
      "}";
 
-static GstStaticPadTemplate sinktemplate_all 
+static GstStaticPadTemplate sinktemplate_all
  = GST_STATIC_PAD_TEMPLATE ("sink",
                             GST_PAD_SINK,
                             GST_PAD_ALWAYS,
@@ -207,7 +207,7 @@ struct _ClutterGstVideoSinkPrivate
   int                      height;
   int                      fps_n, fps_d;
   int                      par_n, par_d;
-  
+
   GMainContext            *clutter_main_context;
   ClutterGstSource        *source;
 
@@ -383,14 +383,14 @@ _create_cogl_program (const char *source)
 {
   CoglHandle shader;
   CoglHandle program;
-  
+
   /* Create shader through Cogl - necessary as we need to be able to set
    * integer uniform variables for multi-texturing.
    */
   shader = cogl_create_shader (COGL_SHADER_TYPE_FRAGMENT);
   cogl_shader_source (shader, source);
   cogl_shader_compile (shader);
-  
+
   program = cogl_create_program ();
   cogl_program_attach_shader (program, shader);
   cogl_program_link (program);
@@ -409,7 +409,7 @@ _create_template_material (ClutterGstVideoSink *sink,
   ClutterGstVideoSinkPrivate *priv = sink->priv;
   CoglMaterial *template;
   int i;
-  
+
   if (priv->material_template)
     cogl_object_unref (priv->material_template);
 
@@ -939,7 +939,7 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
   priv = sink->priv;
 
   intersection = gst_caps_intersect (priv->caps, caps);
-  if (gst_caps_is_empty (intersection)) 
+  if (gst_caps_is_empty (intersection))
     return FALSE;
 
   gst_caps_unref (intersection);
@@ -963,12 +963,12 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
   priv->fps_n  = gst_value_get_fraction_numerator (fps);
   priv->fps_d  = gst_value_get_fraction_denominator (fps);
 
-  if (par) 
+  if (par)
     {
       priv->par_n = gst_value_get_fraction_numerator (par);
       priv->par_d = gst_value_get_fraction_denominator (par);
-    } 
-  else 
+    }
+  else
     priv->par_n = priv->par_d = 1;
 
   /* If we happen to use a ClutterGstVideoTexture, now is to good time to
@@ -1001,7 +1001,7 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
       guint32 mask;
       gst_structure_get_int (structure, "red_mask", &red_mask);
       gst_structure_get_int (structure, "blue_mask", &blue_mask);
-      
+
       mask = red_mask | blue_mask;
       if (mask < 0x1000000)
         {
@@ -1084,7 +1084,7 @@ clutter_gst_video_sink_set_property (GObject *object,
   ClutterGstVideoSink *sink = CLUTTER_GST_VIDEO_SINK (object);
   ClutterGstVideoSinkPrivate *priv = sink->priv;
 
-  switch (prop_id) 
+  switch (prop_id)
     {
     case PROP_TEXTURE:
       if (priv->texture)
@@ -1110,7 +1110,7 @@ clutter_gst_video_sink_get_property (GObject *object,
   ClutterGstVideoSink *sink = CLUTTER_GST_VIDEO_SINK (object);
   ClutterGstVideoSinkPrivate *priv = sink->priv;
 
-  switch (prop_id) 
+  switch (prop_id)
     {
     case PROP_TEXTURE:
       g_value_set_object (value, priv->texture);

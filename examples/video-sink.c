@@ -86,14 +86,14 @@ main (int argc, char *argv[])
   stage = clutter_stage_get_default ();
 
   /* Make a timeline */
-  timeline = clutter_timeline_new (1000); 
+  timeline = clutter_timeline_new (1000);
   g_object_set(timeline, "loop", TRUE, NULL);
 
   /* We need to set certain props on the target texture currently for
-   * efficient/corrent playback onto the texture (which sucks a bit)  
+   * efficient/corrent playback onto the texture (which sucks a bit)
   */
-  texture = g_object_new (CLUTTER_TYPE_TEXTURE, 
-			  "disable-slicing", TRUE, 
+  texture = g_object_new (CLUTTER_TYPE_TEXTURE,
+			  "disable-slicing", TRUE,
 			  NULL);
 
   g_signal_connect (CLUTTER_TEXTURE (texture),
