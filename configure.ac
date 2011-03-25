@@ -53,6 +53,19 @@ CLUTTER_GST_LT_AGE=lt_age
 CLUTTER_GST_LT_VERSION="$CLUTTER_GST_LT_CURRENT:$CLUTTER_GST_LT_REV:$CLUTTER_GST_LT_AGE"
 CLUTTER_GST_LT_LDFLAGS="-version-info $CLUTTER_GST_LT_VERSION"
 
+AC_CANONICAL_HOST
+AC_MSG_CHECKING([if building for some Win32 platform])
+AS_CASE([$host],
+        [*-*-mingw*|*-*-cygwin*],
+        [
+          CLUTTER_GST_LT_LDFLAGS="$CLUTTER_GST_LT_LDFLAGS -no-undefined"
+          platform_win32=yes
+        ],
+
+        [platform_win32=no]
+)
+AC_MSG_RESULT([$platform_win32])
+
 AC_SUBST(CLUTTER_GST_LT_VERSION)
 AC_SUBST(CLUTTER_GST_LT_LDFLAGS)
 
