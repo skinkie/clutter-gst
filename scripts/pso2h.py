@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 """pso2h
 
 A small python script to generated header files from compiled ARBfp1.0 shaders
