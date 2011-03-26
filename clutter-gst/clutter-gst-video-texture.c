@@ -524,7 +524,8 @@ get_progress (ClutterGstVideoTexture *video_texture)
    * effects, say on a progress bar getting updated from the progress tick. */
   if (priv->in_seek)
     {
-      CLUTTER_GST_NOTE (MEDIA, "get progress: %.02f", priv->target_progress);
+      CLUTTER_GST_NOTE (MEDIA, "get progress (target): %.02f",
+                        priv->target_progress);
       return priv->target_progress;
     }
 
@@ -549,7 +550,7 @@ get_progress (ClutterGstVideoTexture *video_texture)
   gst_query_unref (position_q);
   gst_query_unref (duration_q);
 
-  CLUTTER_GST_NOTE (MEDIA, "get progress: %.02f", progress);
+  CLUTTER_GST_NOTE (MEDIA, "get progress (pipeline): %.02f", progress);
 
   return progress;
 }
