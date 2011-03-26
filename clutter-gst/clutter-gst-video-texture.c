@@ -123,6 +123,26 @@ G_DEFINE_TYPE_WITH_CODE (ClutterGstVideoTexture,
                          G_IMPLEMENT_INTERFACE (CLUTTER_TYPE_MEDIA,
                                                 clutter_media_init));
 
+static const gchar *
+gst_state_to_string (GstState state)
+{
+  switch (state)
+    {
+    case GST_STATE_VOID_PENDING:
+      return "pending";
+    case GST_STATE_NULL:
+      return "null";
+    case GST_STATE_READY:
+      return "ready";
+    case GST_STATE_PAUSED:
+      return "paused";
+    case GST_STATE_PLAYING:
+      return "playing";
+    }
+
+  return "Unknown state";
+}
+
 /* Clutter 1.4 has this symbol, we don't want to depend on 1.4 just for that
  * just yet */
 static void
@@ -1203,6 +1223,13 @@ bus_message_state_change_cb (GstBus                 *bus,
     return;
 
   gst_message_parse_state_changed (message, &old_state, &new_state, NULL);
+
+  CLUTTER_GST_NOTE (MEDIA, "state change:  %s -> %s",
+                    gst_state_to_string (old_state),
+                    gst_state_to_string (new_state));
+
+  if (old_state == new_state)
+    return;
 
   if (old_state == GST_STATE_READY &&
       new_state == GST_STATE_PAUSED)
