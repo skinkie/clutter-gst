@@ -30,6 +30,7 @@
     <foaf:Person>
       <foaf:name>Damien Lespiau</foaf:name>
       <foaf:mbox rdf:resource="mailto:damien.lespiau@intel.com"/>
+      <gnome:userid>dlespiau</gnome:userid>
     </foaf:Person>
   </maintainer>
 
