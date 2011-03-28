@@ -64,7 +64,6 @@ struct _ClutterGstVideoTexturePrivate
   guint is_idle : 1;
   gdouble stacked_progress;
   gdouble target_progress;
-  GstState stacked_state;
 
   guint tick_timeout_id;
 
@@ -466,7 +465,6 @@ set_progress (ClutterGstVideoTexture *video_texture,
               gdouble                 progress)
 {
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
-  GstState pending;
   GstQuery *duration_q;
   gint64 position;
 
@@ -483,13 +481,6 @@ set_progress (ClutterGstVideoTexture *video_texture,
       priv->stacked_progress = progress;
       return;
     }
-
-  gst_element_get_state (priv->pipeline, &priv->stacked_state, &pending, 0);
-
-  if (pending)
-    priv->stacked_state = pending;
-
-  gst_element_set_state (priv->pipeline, GST_STATE_PAUSED);
 
   duration_q = gst_query_new_duration (GST_FORMAT_TIME);
 
@@ -1277,7 +1268,6 @@ bus_message_async_done_cb (GstBus                 *bus,
       g_object_notify (G_OBJECT (video_texture), "progress");
 
       priv->in_seek = FALSE;
-      gst_element_set_state (priv->pipeline, priv->stacked_state);
 
       if (priv->stacked_progress)
         {
