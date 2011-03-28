@@ -26,12 +26,6 @@
 
   <programming-language>C</programming-language>
 
-  <category rdf:resource="http://labs.o-hand.com/doap/category/library"/>
-  <category rdf:resource="http://labs.o-hand.com/doap/category/graphics"/>
-  <category rdf:resource="http://labs.o-hand.com/doap/category/embedded"/>
-  <category rdf:resource="http://labs.o-hand.com/doap/category/clutter"/>
-  <category rdf:resource="http://labs.o-hand.com/doap/category/gstreamer"/>
-
   <maintainer>
     <foaf:Person>
       <foaf:name>Damien Lespiau</foaf:name>
