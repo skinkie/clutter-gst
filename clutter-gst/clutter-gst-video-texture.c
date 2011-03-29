@@ -62,6 +62,7 @@ struct _ClutterGstVideoTexturePrivate
   guint can_seek : 1;
   guint in_seek : 1;
   guint is_idle : 1;
+  guint is_changing_uri : 1;
   gdouble stacked_progress;
   gdouble target_progress;
 
@@ -358,6 +359,8 @@ set_uri (ClutterGstVideoTexture *video_texture,
   GObject *self = G_OBJECT (video_texture);
   GstState state, pending;
 
+  CLUTTER_GST_NOTE (MEDIA, "setting uri %s", uri);
+
   if (!priv->pipeline)
     return;
 
@@ -394,6 +397,8 @@ set_uri (ClutterGstVideoTexture *video_texture,
 
   priv->can_seek = FALSE;
   priv->duration = 0.0;
+  priv->stacked_progress = 0.0;
+  priv->target_progress = 0.0;
 
   CLUTTER_GST_NOTE (MEDIA, "setting URI: %s", uri);
 
@@ -408,6 +413,8 @@ set_uri (ClutterGstVideoTexture *video_texture,
       g_object_set (priv->pipeline, "uri", uri, NULL);
 
       gst_element_set_state (priv->pipeline, state);
+
+      priv->is_changing_uri = TRUE;
     }
   else
     {
@@ -495,9 +502,12 @@ set_progress (ClutterGstVideoTexture *video_texture,
 
   priv->target_progress = progress;
 
-  if (priv->in_seek || priv->is_idle)
+  if (priv->in_seek || priv->is_idle || priv->is_changing_uri)
     {
-      CLUTTER_GST_NOTE (MEDIA, "already seeking/idleing. stacking progress point.");
+      /* We can't seek right now, let's save the position where we
+         want to seek and do that later. */
+      CLUTTER_GST_NOTE (MEDIA,
+                        "already seeking/idleing. stacking progress point.");
       priv->stacked_progress = progress;
       return;
     }
@@ -527,6 +537,8 @@ set_progress (ClutterGstVideoTexture *video_texture,
 
   priv->in_seek = TRUE;
   priv->stacked_progress = 0.0;
+
+  CLUTTER_GST_NOTE (MEDIA, "set progress (seeked): %.02f", progress);
 }
 
 static gdouble
@@ -542,7 +554,7 @@ get_progress (ClutterGstVideoTexture *video_texture)
   /* When seeking, the progress returned by playbin2 is 0.0. We want that to be
    * the last known position instead as returning 0.0 will have some ugly
    * effects, say on a progress bar getting updated from the progress tick. */
-  if (priv->in_seek)
+  if (priv->in_seek || priv->is_changing_uri)
     {
       CLUTTER_GST_NOTE (MEDIA, "get progress (target): %.02f",
                         priv->target_progress);
@@ -1273,7 +1285,10 @@ bus_message_state_change_cb (GstBus                 *bus,
   if (new_state == GST_STATE_NULL)
     priv->is_idle = TRUE;
   else if (new_state == GST_STATE_PLAYING)
-    priv->is_idle = FALSE;
+    {
+      priv->is_idle = FALSE;
+      priv->is_changing_uri = FALSE;
+    }
 
   if (!priv->is_idle)
     {
@@ -1409,6 +1424,7 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
 
   priv->is_idle = TRUE;
   priv->in_seek = FALSE;
+  priv->is_changing_uri = FALSE;
 
   priv->par_n = priv->par_d = 1;
 
