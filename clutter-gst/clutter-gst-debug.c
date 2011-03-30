@@ -38,7 +38,8 @@ static GTimer *clutter_gst_timer;
 static const GDebugKey clutter_gst_debug_keys[] = {
   { "misc",         CLUTTER_GST_DEBUG_MISC },
   { "media",        CLUTTER_GST_DEBUG_MEDIA },
-  { "aspect-ratio", CLUTTER_GST_DEBUG_ASPECT_RATIO }
+  { "aspect-ratio", CLUTTER_GST_DEBUG_ASPECT_RATIO },
+  { "buffering",    CLUTTER_GST_DEBUG_BUFFERING }
 };
 
 /**

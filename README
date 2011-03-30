@@ -21,7 +21,7 @@ Clutter-GStreamer requires:
 
   GLib >= 2.18.0
   Clutter >= 1.4.0
-  GStreamer >= 0.10
+  GStreamer >= 0.10.20
 
 Copyright (C) 2006, 2007, 2008  OpenedHand
 Copyright (C) 2009, 2010, 2011 Intel Corporation

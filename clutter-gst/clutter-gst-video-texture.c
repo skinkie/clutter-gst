@@ -63,8 +63,11 @@ struct _ClutterGstVideoTexturePrivate
   guint in_seek : 1;
   guint is_idle : 1;
   guint is_changing_uri : 1;
+
   gdouble stacked_progress;
+
   gdouble target_progress;
+  GstState target_state;
 
   guint tick_timeout_id;
 
@@ -444,16 +447,13 @@ set_playing (ClutterGstVideoTexture *video_texture,
 
   CLUTTER_GST_NOTE (MEDIA, "set playing: %d", playing);
 
+  priv->target_state = playing ? GST_STATE_PLAYING : GST_STATE_PAUSED;
+
   if (priv->uri)
     {
-      GstState state = GST_STATE_PAUSED;
-
-      if (playing)
-	state = GST_STATE_PLAYING;
-
       priv->in_seek = FALSE;
 
-      gst_element_set_state (priv->pipeline, state);
+      gst_element_set_state (priv->pipeline, priv->target_state);
     }
   else
     {
@@ -1184,24 +1184,51 @@ bus_message_buffering_cb (GstBus                 *bus,
                           ClutterGstVideoTexture *video_texture)
 {
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
-  const GstStructure *str;
+  GstBufferingMode mode;
+  GstState current_state, pending_state = -1;
   gint buffer_percent;
-  gboolean res;
 
-  str = gst_message_get_structure (message);
-  if (!str)
-    return;
+  gst_message_parse_buffering_stats (message, &mode, NULL, NULL, NULL);
 
-  res = gst_structure_get_int (str, "buffer-percent", &buffer_percent);
-  if (res)
+  switch (mode)
     {
-      priv->buffer_fill = CLAMP ((gdouble) buffer_percent / 100.0,
-                                 0.0,
-                                 1.0);
+    case GST_BUFFERING_STREAM:
+      gst_message_parse_buffering (message, &buffer_percent);
+      priv->buffer_fill = CLAMP ((gdouble) buffer_percent / 100.0, 0.0, 1.0);
 
-      CLUTTER_GST_NOTE (MEDIA, "buffer-fill: %.02f", priv->buffer_fill);
+      CLUTTER_GST_NOTE (BUFFERING, "buffer-fill: %.02f", priv->buffer_fill);
+
+      /* The playbin2 documentation says that we need to pause the pipeline
+       * when there's not enough data yet. We try to limit the calls to
+       * gst_element_set_state() */
+      gst_element_get_state (priv->pipeline, &current_state, NULL, 0);
+
+      if (priv->buffer_fill < 1.0)
+        {
+          if (current_state != GST_STATE_PAUSED)
+            {
+              CLUTTER_GST_NOTE (BUFFERING, "pausing the pipeline");
+              gst_element_set_state (priv->pipeline, GST_STATE_PAUSED);
+            }
+        }
+      else
+        {
+          if (current_state != priv->target_state)
+            {
+              CLUTTER_GST_NOTE (BUFFERING, "restoring the pipeline");
+              gst_element_set_state (priv->pipeline, priv->target_state);
+            }
+        }
 
       g_object_notify (G_OBJECT (video_texture), "buffer-fill");
+      break;
+
+    case GST_BUFFERING_DOWNLOAD:
+    case GST_BUFFERING_TIMESHIFT:
+    case GST_BUFFERING_LIVE:
+    default:
+      g_warning ("Buffering mode %d not handled", mode);
+      break;
     }
 }
 
@@ -1427,6 +1454,9 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
   priv->is_changing_uri = FALSE;
 
   priv->par_n = priv->par_d = 1;
+
+  /* We default to not playing until someone calls set_playing(TRUE) */
+  priv->target_state = GST_STATE_PAUSED;
 
   /* Default to a fast seek, ie. same effect than set_seek_flags (NONE); */
   priv->seek_flags = GST_SEEK_FLAG_KEY_UNIT;
