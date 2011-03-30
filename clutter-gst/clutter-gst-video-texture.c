@@ -441,13 +441,19 @@ set_playing (ClutterGstVideoTexture *video_texture,
              gboolean                playing)
 {
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+  GstState target_state;
 
   if (!priv->pipeline)
     return;
 
   CLUTTER_GST_NOTE (MEDIA, "set playing: %d", playing);
 
-  priv->target_state = playing ? GST_STATE_PLAYING : GST_STATE_PAUSED;
+  /* Don't do anything if we are not actually changing state */
+  target_state = playing ? GST_STATE_PLAYING : GST_STATE_PAUSED;
+  if (target_state == priv->target_state)
+    return;
+
+  priv->target_state = target_state;
 
   if (priv->uri)
     {
