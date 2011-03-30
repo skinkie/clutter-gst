@@ -1185,7 +1185,7 @@ bus_message_buffering_cb (GstBus                 *bus,
 {
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
   GstBufferingMode mode;
-  GstState current_state, pending_state = -1;
+  GstState current_state;
   gint buffer_percent;
 
   gst_message_parse_buffering_stats (message, &mode, NULL, NULL, NULL);
