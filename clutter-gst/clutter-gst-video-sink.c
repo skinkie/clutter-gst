@@ -55,6 +55,8 @@
 #include <gst/gst.h>
 #include <gst/gstvalue.h>
 #include <gst/video/video.h>
+#include <gst/video/gstvideosink.h>
+#include <gst/interfaces/navigation.h>
 #include <gst/riff/riff-ids.h>
 
 #include <glib.h>
@@ -219,18 +221,17 @@ struct _ClutterGstVideoSinkPrivate
   GArray                  *signal_handler_ids;
 };
 
+#define GstNavigationClass GstNavigationInterface
+GST_BOILERPLATE_WITH_INTERFACE (ClutterGstVideoSink,
+                                clutter_gst_video_sink,
+                                GstBaseSink,
+                                GST_TYPE_BASE_SINK,
+                                GstNavigation,
+                                GST_TYPE_NAVIGATION,
+                                clutter_gst_navigation);
 
-#define _do_init(bla) \
-  GST_DEBUG_CATEGORY_INIT (clutter_gst_video_sink_debug, \
-                                 "cluttersink", \
-                                 0, \
-                                 "clutter video sink")
-
-GST_BOILERPLATE_FULL (ClutterGstVideoSink,
-                          clutter_gst_video_sink,
-                      GstBaseSink,
-                      GST_TYPE_BASE_SINK,
-                      _do_init);
+static void clutter_gst_video_sink_set_texture (ClutterGstVideoSink *sink,
+                                                ClutterTexture      *texture);
 
 /*
  * ClutterGstSource implementation
@@ -879,6 +880,23 @@ clutter_gst_video_sink_base_init (gpointer g_class)
                                  &clutter_gst_video_sink_details);
 }
 
+static gboolean
+navigation_event (ClutterActor        *actor,
+                  ClutterEvent        *event,
+                  ClutterGstVideoSink *sink)
+{
+  if (event->type == CLUTTER_MOTION)
+    {
+      ClutterMotionEvent *mevent = (ClutterMotionEvent *) event;
+
+      gst_navigation_send_mouse_event (GST_NAVIGATION (sink),
+                                       "mouse-move", 0, mevent->x, mevent->y);
+    }
+  /* FIXME implement, key-press, key-release, and same for buttons */
+
+  return FALSE;
+}
+
 static void
 clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
                              ClutterGstVideoSinkClass *klass)
@@ -897,7 +915,7 @@ clutter_gst_video_sink_init (ClutterGstVideoSink      *sink,
   priv->caps = clutter_gst_build_caps (priv->renderers);
   priv->renderer_state = CLUTTER_GST_RENDERER_STOPPED;
 
-  priv->signal_handler_ids = g_array_new (FALSE, FALSE, sizeof (gulong));
+  priv->signal_handler_ids = g_array_new (FALSE, TRUE, sizeof (gulong));
 }
 
 static GstFlowReturn
@@ -1045,10 +1063,7 @@ clutter_gst_video_sink_dispose (GObject *object)
     }
 
   if (priv->texture)
-    {
-      g_object_unref (priv->texture);
-      priv->texture = NULL;
-    }
+    clutter_gst_video_sink_set_texture (self, NULL);
 
   if (priv->caps)
     {
@@ -1076,21 +1091,52 @@ clutter_gst_video_sink_finalize (GObject *object)
 }
 
 static void
+clutter_gst_video_sink_set_texture (ClutterGstVideoSink *sink,
+                                    ClutterTexture      *texture)
+{
+  const char const *events[] = { "key-press-event", "key-release-event", "motion-event" };
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+  guint i;
+
+  if (priv->texture)
+    {
+      for (i = 0; i < priv->signal_handler_ids->len; i++)
+        {
+          gulong id = g_array_index (priv->signal_handler_ids, gulong, i);
+          g_signal_handler_disconnect (priv->texture, id);
+        }
+      g_array_set_size (priv->signal_handler_ids, 0);
+      g_object_unref (priv->texture);
+    }
+
+  priv->texture = texture;
+  if (priv->texture == NULL)
+    return;
+
+  clutter_actor_set_reactive (CLUTTER_ACTOR (priv->texture), TRUE);
+  g_object_add_weak_pointer (G_OBJECT (priv->texture), (gpointer *) &(priv->texture));
+
+  for (i = 0; i < G_N_ELEMENTS (events); i++)
+    {
+      gulong id;
+      id = g_signal_connect (priv->texture, events[i],
+                             G_CALLBACK (navigation_event), sink);
+      g_array_append_val (priv->signal_handler_ids, id);
+    }
+}
+
+static void
 clutter_gst_video_sink_set_property (GObject *object,
                                      guint prop_id,
                                      const GValue *value,
                                      GParamSpec *pspec)
 {
   ClutterGstVideoSink *sink = CLUTTER_GST_VIDEO_SINK (object);
-  ClutterGstVideoSinkPrivate *priv = sink->priv;
 
   switch (prop_id)
     {
     case PROP_TEXTURE:
-      if (priv->texture)
-        g_object_unref (priv->texture);
-
-      priv->texture = CLUTTER_TEXTURE (g_value_dup_object (value));
+      clutter_gst_video_sink_set_texture (sink, g_value_dup_object (value));
       break;
     case PROP_UPDATE_PRIORITY:
       clutter_gst_video_sink_set_priority (sink, g_value_get_int (value));
@@ -1141,7 +1187,6 @@ clutter_gst_video_sink_stop (GstBaseSink *base_sink)
 {
   ClutterGstVideoSink        *sink = CLUTTER_GST_VIDEO_SINK (base_sink);
   ClutterGstVideoSinkPrivate *priv = sink->priv;
-  guint i;
 
   if (priv->source)
     {
@@ -1153,14 +1198,6 @@ clutter_gst_video_sink_stop (GstBaseSink *base_sink)
     }
 
   priv->renderer_state = CLUTTER_GST_RENDERER_STOPPED;
-
-  for (i = 0; i < priv->signal_handler_ids->len; i++)
-    {
-      gulong id = g_array_index (priv->signal_handler_ids, gulong, i);
-
-      g_signal_handler_disconnect (priv->texture, id);
-    }
-  g_array_set_size (priv->signal_handler_ids, 0);
 
   return TRUE;
 }
@@ -1241,6 +1278,61 @@ clutter_gst_video_sink_new (ClutterTexture *texture)
                        NULL);
 }
 
+static void
+clutter_gst_navigation_send_event (GstNavigation *navigation,
+                                   GstStructure  *structure)
+{
+  ClutterGstVideoSink *sink = CLUTTER_GST_VIDEO_SINK (navigation);
+  ClutterGstVideoSinkPrivate *priv = sink->priv;
+  GstEvent *event;
+  GstPad *pad = NULL;
+  gdouble x, y;
+  gfloat x_out, y_out;
+
+  /* Converting pointer coordinates to the non scaled geometry */
+  if (!gst_structure_get_double (structure, "pointer_x", &x))
+    return;
+
+  if (!gst_structure_get_double (structure, "pointer_y", &y))
+    return;
+
+  if (clutter_actor_transform_stage_point (CLUTTER_ACTOR (priv->texture), x, y, &x_out, &y_out) == FALSE)
+    return;
+
+  x = x_out * priv->width / clutter_actor_get_width (CLUTTER_ACTOR (priv->texture));
+  y = y_out * priv->height / clutter_actor_get_height (CLUTTER_ACTOR (priv->texture));
+
+  gst_structure_set (structure,
+                     "pointer_x", G_TYPE_DOUBLE, (gdouble) x,
+                     "pointer_y", G_TYPE_DOUBLE, (gdouble) y,
+                     NULL);
+
+  event = gst_event_new_navigation (structure);
+
+  pad = gst_pad_get_peer (GST_VIDEO_SINK_PAD (sink));
+
+  if (GST_IS_PAD (pad) && GST_IS_EVENT (event))
+    {
+      gst_pad_send_event (pad, event);
+
+      gst_object_unref (pad);
+    }
+}
+
+static gboolean
+clutter_gst_navigation_supported (ClutterGstVideoSink *object, GType type)
+{
+  g_assert (type == GST_TYPE_NAVIGATION);
+  return TRUE;
+}
+
+
+static void
+clutter_gst_navigation_interface_init (GstNavigationInterface *iface)
+{
+  iface->send_event = clutter_gst_navigation_send_event;
+}
+
 static gboolean
 plugin_init (GstPlugin *plugin)
 {
@@ -1248,6 +1340,12 @@ plugin_init (GstPlugin *plugin)
                                              "cluttersink",
                                        GST_RANK_PRIMARY,
                                        CLUTTER_GST_TYPE_VIDEO_SINK);
+
+  GST_DEBUG_CATEGORY_INIT (clutter_gst_video_sink_debug,
+                                 "cluttersink",
+                                 0,
+                                 "clutter video sink");
+
   return ret;
 }
 
