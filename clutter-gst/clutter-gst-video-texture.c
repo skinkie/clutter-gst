@@ -181,8 +181,11 @@ gst_state_to_string (GstState state)
   return "Unknown state";
 }
 
+static void set_subtitle_uri (ClutterGstVideoTexture *video_texture,
+                              const gchar            *uri);
 static void configure_buffering_timeout (ClutterGstVideoTexture *video_texture,
                                          guint                   ms);
+
 static void
 clear_download_buffering (ClutterGstVideoTexture *video_texture)
 {
@@ -548,6 +551,7 @@ set_uri (ClutterGstVideoTexture *video_texture,
         }
 
       /* try to load subtitles based on the uri of the file */
+      set_subtitle_uri (video_texture, NULL);
       autoload_subtitle (video_texture, uri);
 
       /* reset the states of download buffering */
