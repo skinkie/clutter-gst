@@ -48,10 +48,34 @@
 #include <gst/interfaces/streamvolume.h>
 
 #include "clutter-gst-debug.h"
-#include "clutter-gst-private.h"
 #include "clutter-gst-enum-types.h"
+#include "clutter-gst-marshal.h"
+#include "clutter-gst-private.h"
 #include "clutter-gst-video-sink.h"
 #include "clutter-gst-video-texture.h"
+
+/* Elements don't expose header files */
+typedef enum {
+  GST_PLAY_FLAG_VIDEO         = (1 << 0),
+  GST_PLAY_FLAG_AUDIO         = (1 << 1),
+  GST_PLAY_FLAG_TEXT          = (1 << 2),
+  GST_PLAY_FLAG_VIS           = (1 << 3),
+  GST_PLAY_FLAG_SOFT_VOLUME   = (1 << 4),
+  GST_PLAY_FLAG_NATIVE_AUDIO  = (1 << 5),
+  GST_PLAY_FLAG_NATIVE_VIDEO  = (1 << 6),
+  GST_PLAY_FLAG_DOWNLOAD      = (1 << 7),
+  GST_PLAY_FLAG_BUFFERING     = (1 << 8),
+  GST_PLAY_FLAG_DEINTERLACE   = (1 << 9)
+} GstPlayFlags;
+
+enum
+{
+  DOWNLOAD_BUFFERING,
+
+  LAST_SIGNAL
+};
+
+static guint signals[LAST_SIGNAL] = { 0, };
 
 struct _ClutterGstVideoTexturePrivate
 {
@@ -63,6 +87,12 @@ struct _ClutterGstVideoTexturePrivate
   guint in_seek : 1;
   guint is_idle : 1;
   guint is_changing_uri : 1;
+  guint in_download_buffering : 1;
+
+  /* when in progressive download, we use the buffer-fill property to signal
+   * that we have enough data to play the stream. This flag allows to send
+   * the notify that buffer-fill is 1.0 only once */
+  guint virtual_stream_buffer_signalled : 1;
 
   gdouble stacked_progress;
 
@@ -70,6 +100,7 @@ struct _ClutterGstVideoTexturePrivate
   GstState target_state;
 
   guint tick_timeout_id;
+  guint buffering_timeout_id;
 
   /* width / height (in pixels) of the frame data before applying the pixel
    * aspect ratio */
@@ -95,6 +126,8 @@ struct _ClutterGstVideoTexturePrivate
   CoglColor idle_color_unpre;
 
   GstSeekFlags seek_flags;    /* flags for the seek in set_progress(); */
+
+  GstElement *download_buffering_element;
 };
 
 enum {
@@ -116,8 +149,9 @@ enum {
   PROP_SEEK_FLAGS
 };
 
-
-#define TICK_TIMEOUT 0.5
+/* idle timeouts (in ms) */
+#define TICK_TIMEOUT        500
+#define BUFFERING_TIMEOUT   250
 
 static void clutter_media_init (ClutterMediaIface *iface);
 
@@ -145,6 +179,135 @@ gst_state_to_string (GstState state)
     }
 
   return "Unknown state";
+}
+
+static void configure_buffering_timeout (ClutterGstVideoTexture *video_texture,
+                                         guint                   ms);
+static void
+clear_download_buffering (ClutterGstVideoTexture *video_texture)
+{
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+
+  if (priv->download_buffering_element)
+    {
+      g_object_unref (priv->download_buffering_element);
+      priv->download_buffering_element = NULL;
+    }
+  configure_buffering_timeout (video_texture, 0);
+  priv->in_download_buffering = FALSE;
+  priv->virtual_stream_buffer_signalled = 0;
+}
+
+static gboolean
+buffering_timeout (gpointer data)
+{
+  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE (data);
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+  gdouble start_d, stop_d, seconds_buffered;
+  gint64 start, stop, left;
+  GstState current_state;
+  GstElement *element;
+  GstQuery *query;
+  gboolean res;
+
+  element = priv->download_buffering_element;
+  if (element == NULL)
+    element = priv->pipeline;
+
+  /* queue2 only knows about _PERCENT and _BYTES */
+  query = gst_query_new_buffering (GST_FORMAT_PERCENT);
+  res = gst_element_query (element, query);
+
+  if (res == FALSE)
+    {
+      priv->buffering_timeout_id = 0;
+      clear_download_buffering (video_texture);
+      return FALSE;
+    }
+
+  /* signal the current range */
+  gst_query_parse_buffering_stats (query, NULL, NULL, NULL, &left);
+  gst_query_parse_buffering_range (query, NULL, &start, &stop, NULL);
+
+  CLUTTER_GST_NOTE (BUFFERING,
+                    "start %" G_GINT64_FORMAT ", stop %" G_GINT64_FORMAT
+                    ", buffering left %" G_GINT64_FORMAT, start, stop, left);
+
+  start_d = (gdouble) start / GST_FORMAT_PERCENT_MAX;
+  stop_d = (gdouble) stop / GST_FORMAT_PERCENT_MAX;
+
+  g_signal_emit (video_texture,
+                 signals[DOWNLOAD_BUFFERING], 0, start_d, stop_d);
+
+  /* handle the "virtual stream buffer" and the associated pipeline state.
+   * We pause the pipeline until 2s of content is buffered. With the current
+   * implementation of queue2, start is always 0, so even when we seek in
+   * the stream the start position of the download-buffering signal is
+   * always 0.0. FIXME: look at gst_query_parse_nth_buffering_range () */
+  seconds_buffered = priv->duration * (stop_d - start_d);
+  priv->buffer_fill = seconds_buffered / 2.0;
+  priv->buffer_fill = CLAMP (priv->buffer_fill, 0.0, 1.0);
+
+  if (priv->buffer_fill != 1.0 || !priv->virtual_stream_buffer_signalled)
+    {
+      CLUTTER_GST_NOTE (BUFFERING, "buffer holds %0.2fs of data, buffer-fill "
+                        "is %.02f", seconds_buffered, priv->buffer_fill);
+
+      g_object_notify (G_OBJECT (video_texture), "buffer-fill");
+
+      if (priv->buffer_fill == 1.0)
+        priv->virtual_stream_buffer_signalled = 1;
+    }
+
+  gst_element_get_state (priv->pipeline, &current_state, NULL, 0);
+  if (priv->buffer_fill < 1.0)
+    {
+      if (current_state != GST_STATE_PAUSED)
+        {
+          CLUTTER_GST_NOTE (BUFFERING, "pausing the pipeline");
+          gst_element_set_state (priv->pipeline, GST_STATE_PAUSED);
+        }
+    }
+  else
+    {
+      if (current_state != priv->target_state)
+        {
+          CLUTTER_GST_NOTE (BUFFERING, "restoring the pipeline");
+          gst_element_set_state (priv->pipeline, priv->target_state);
+        }
+    }
+
+  /* the file has finished downloading */
+  if (left == G_GINT64_CONSTANT (0))
+    {
+      priv->buffering_timeout_id = 0;
+
+      clear_download_buffering (video_texture);
+      gst_query_unref (query);
+      return FALSE;
+    }
+
+  gst_query_unref (query);
+  return TRUE;
+}
+
+static void
+configure_buffering_timeout (ClutterGstVideoTexture *video_texture,
+                             guint                   ms)
+{
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+
+  if (priv->buffering_timeout_id)
+    {
+      g_source_remove (priv->buffering_timeout_id);
+      priv->buffering_timeout_id = 0;
+    }
+
+  if (ms)
+    {
+      priv->buffering_timeout_id =
+        g_timeout_add (ms, buffering_timeout, video_texture);
+    }
 }
 
 /* Clutter 1.4 has this symbol, we don't want to depend on 1.4 just for that
@@ -381,21 +544,37 @@ set_uri (ClutterGstVideoTexture *video_texture,
       if (priv->tick_timeout_id == 0)
         {
           priv->tick_timeout_id =
-            g_timeout_add (TICK_TIMEOUT * 1000, tick_timeout, self);
+            g_timeout_add (TICK_TIMEOUT, tick_timeout, self);
         }
 
       /* try to load subtitles based on the uri of the file */
       autoload_subtitle (video_texture, uri);
+
+      /* reset the states of download buffering */
+      clear_download_buffering (video_texture);
     }
   else
     {
       priv->uri = NULL;
 
-      if (priv->tick_timeout_id != 0)
+      if (priv->tick_timeout_id)
 	{
 	  g_source_remove (priv->tick_timeout_id);
 	  priv->tick_timeout_id = 0;
 	}
+
+      if (priv->buffering_timeout_id)
+        {
+          g_source_remove (priv->buffering_timeout_id);
+          priv->buffering_timeout_id = 0;
+        }
+
+      if (priv->download_buffering_element)
+        {
+          g_object_unref (priv->download_buffering_element);
+          priv->download_buffering_element = NULL;
+        }
+
     }
 
   priv->can_seek = FALSE;
@@ -464,7 +643,7 @@ set_playing (ClutterGstVideoTexture *video_texture,
   else
     {
       if (playing)
-	g_warning ("Unable to start playing: no URI is set");
+       g_warning ("Unable to start playing: no URI is set");
     }
 
   g_object_notify (G_OBJECT (video_texture), "playing");
@@ -507,6 +686,13 @@ set_progress (ClutterGstVideoTexture *video_texture,
   CLUTTER_GST_NOTE (MEDIA, "set progress: %.02f", progress);
 
   priv->target_progress = progress;
+
+  if (priv->in_download_buffering)
+    {
+      /* we clear the virtual_stream_buffer_signalled flag as it's likely we
+       * need to buffer again */
+      priv->virtual_stream_buffer_signalled = 0;
+    }
 
   if (priv->in_seek || priv->is_idle || priv->is_changing_uri)
     {
@@ -916,17 +1102,13 @@ clutter_gst_video_texture_dispose (GObject *object)
   /* FIXME: flush an errors off bus ? */
   /* gst_bus_set_flushing (priv->bus, TRUE); */
 
+  /* start by doing the usual clean up when not wanting to play an URI */
+  set_uri (self, NULL);
+
   if (priv->pipeline)
     {
-      gst_element_set_state (priv->pipeline, GST_STATE_NULL);
       gst_object_unref (GST_OBJECT (priv->pipeline));
       priv->pipeline = NULL;
-    }
-
-  if (priv->tick_timeout_id > 0)
-    {
-      g_source_remove (priv->tick_timeout_id);
-      priv->tick_timeout_id = 0;
     }
 
   G_OBJECT_CLASS (clutter_gst_video_texture_parent_class)->dispose (object);
@@ -1146,6 +1328,25 @@ clutter_gst_video_texture_class_init (ClutterGstVideoTextureClass *klass)
                               CLUTTER_GST_SEEK_FLAG_NONE,
                               CLUTTER_GST_PARAM_READWRITE);
   g_object_class_install_property (object_class, PROP_SEEK_FLAGS, pspec);
+
+  /**
+   * ClutterGstVideoTexture::download-buffering:
+   * @start: Start of the buffer (between 0.0 and 1.0)
+   * @stop: End of the buffer (between 0.0 and 1.0)
+   *
+   * When streaming, GStreamer can cache the data in a buffer on the disk,
+   * something called progressive download or download buffering. This signal
+   * is fired when this streaming mode.
+   */
+  signals[DOWNLOAD_BUFFERING] =
+    g_signal_new ("download-buffering",
+                  G_TYPE_FROM_CLASS (object_class),
+                  G_SIGNAL_RUN_LAST,
+                  G_STRUCT_OFFSET (ClutterGstVideoTextureClass,
+                                   download_buffering),
+                  NULL, NULL,
+                  _clutter_gst_marshal_VOID__DOUBLE_DOUBLE,
+                  G_TYPE_NONE, 2, G_TYPE_DOUBLE, G_TYPE_DOUBLE);
 }
 
 static void
@@ -1196,6 +1397,9 @@ bus_message_buffering_cb (GstBus                 *bus,
 
   gst_message_parse_buffering_stats (message, &mode, NULL, NULL, NULL);
 
+  if (mode != GST_BUFFERING_DOWNLOAD)
+    priv->in_download_buffering = FALSE;
+
   switch (mode)
     {
     case GST_BUFFERING_STREAM:
@@ -1230,6 +1434,30 @@ bus_message_buffering_cb (GstBus                 *bus,
       break;
 
     case GST_BUFFERING_DOWNLOAD:
+      /* we rate limit the messages from GStreamer for a usage in a UI (we
+       * don't want *that* many updates). This is done by installing an idle
+       * handler querying the buffer range and sending a signal from there */
+
+      if (priv->in_download_buffering)
+        break;
+
+      /* install the querying idle handler the first time we receive a download
+       * buffering message */
+      configure_buffering_timeout (video_texture, BUFFERING_TIMEOUT);
+
+      /* pause the stream. the idle timeout will set the target state when
+       * having received enough data. We'll use buffer_fill as a "virtual
+       * stream buffer" to signal the application we're buffering until we
+       * can play back from the downloaded stream. */
+      gst_element_set_state (priv->pipeline, GST_STATE_PAUSED);
+      priv->buffer_fill = 0.0;
+      g_object_notify (G_OBJECT (video_texture), "buffer-fill");
+
+      priv->download_buffering_element = g_object_ref (message->src);
+      priv->in_download_buffering = TRUE;
+      priv->virtual_stream_buffer_signalled = 0;
+      break;
+
     case GST_BUFFERING_TIMESHIFT:
     case GST_BUFFERING_LIVE:
     default:
@@ -1458,6 +1686,7 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
   priv->is_idle = TRUE;
   priv->in_seek = FALSE;
   priv->is_changing_uri = FALSE;
+  priv->in_download_buffering = FALSE;
 
   priv->par_n = priv->par_d = 1;
 
@@ -1729,4 +1958,64 @@ clutter_gst_video_texture_set_seek_flags (ClutterGstVideoTexture *texture,
     priv->seek_flags = GST_SEEK_FLAG_KEY_UNIT;
   else if (flags & CLUTTER_GST_SEEK_FLAG_ACCURATE)
     priv->seek_flags = GST_SEEK_FLAG_ACCURATE;
+}
+
+/**
+ * clutter_gst_video_texture_get_buffering_mode:
+ * @texture: a #ClutterGstVideoTexture
+ *
+ * Return value: a #ClutterGstBufferingMode
+ *
+ * Since: 1.4
+ */
+ClutterGstBufferingMode
+clutter_gst_video_texture_get_buffering_mode (ClutterGstVideoTexture *texture)
+{
+  ClutterGstVideoTexturePrivate *priv;
+  GstPlayFlags flags;
+
+  g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (texture),
+                        CLUTTER_GST_BUFFERING_MODE_STREAM);
+  priv = texture->priv;
+
+  g_object_get (G_OBJECT (priv->pipeline), "flags", &flags, NULL);
+  if (flags & GST_PLAY_FLAG_DOWNLOAD)
+    return CLUTTER_GST_BUFFERING_MODE_DOWNLOAD;
+
+  return CLUTTER_GST_BUFFERING_MODE_STREAM;
+}
+
+/**
+ * clutter_gst_video_texture_set_buffering_mode:
+ * @texture: a #ClutterGstVideoTexture
+ * @mode: a #ClutterGstBufferingMode
+ *
+ * Since: 1.4
+ */
+void
+clutter_gst_video_texture_set_buffering_mode (ClutterGstVideoTexture *texture,
+                                              ClutterGstBufferingMode mode)
+{
+  ClutterGstVideoTexturePrivate *priv;
+  GstPlayFlags flags;
+
+  g_return_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (texture));
+  priv = texture->priv;
+
+  g_object_get (G_OBJECT (priv->pipeline), "flags", &flags, NULL);
+
+  switch (mode)
+    {
+    case CLUTTER_GST_BUFFERING_MODE_STREAM:
+      flags &= ~GST_PLAY_FLAG_DOWNLOAD;
+      break;
+    case CLUTTER_GST_BUFFERING_MODE_DOWNLOAD:
+      flags |= GST_PLAY_FLAG_DOWNLOAD;
+      break;
+    default:
+      g_warning ("Unexpected buffering mode %d", mode);
+      break;
+    }
+
+  g_object_set (G_OBJECT (priv->pipeline), "flags", flags, NULL);
 }

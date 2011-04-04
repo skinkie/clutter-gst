@@ -76,6 +76,21 @@ typedef enum _ClutterGstSeekFlags
   CLUTTER_GST_SEEK_FLAG_ACCURATE = 1 << 0
 } ClutterGstSeekFlags;
 
+/**
+ * ClutterGstBufferingMode:
+ * @CLUTTER_GST_BUFFERING_MODE_STREAM: In-memory buffering
+ * @CLUTTER_GST_BUFFERING_MODE_DOWNLOAD: On-disk buffering
+ *
+ * Different buffering policies clutter-gst supports
+ *
+ * Since: 1.4
+ */
+typedef enum _ClutterGstBufferingMode
+{
+  CLUTTER_GST_BUFFERING_MODE_STREAM,
+  CLUTTER_GST_BUFFERING_MODE_DOWNLOAD
+} ClutterGstBufferingMode;
+
 typedef struct _ClutterGstVideoTexture        ClutterGstVideoTexture;
 typedef struct _ClutterGstVideoTextureClass   ClutterGstVideoTextureClass;
 typedef struct _ClutterGstVideoTexturePrivate ClutterGstVideoTexturePrivate;
@@ -106,7 +121,9 @@ struct _ClutterGstVideoTextureClass
   ClutterTextureClass parent_class;
 
   /* Future padding */
-  void (* _clutter_reserved1) (void);
+  void (* download_buffering) (ClutterGstVideoTexture *video_texture,
+			       gdouble                 start,
+			       gdouble                 stop);
   void (* _clutter_reserved2) (void);
   void (* _clutter_reserved3) (void);
   void (* _clutter_reserved4) (void);
@@ -114,20 +131,23 @@ struct _ClutterGstVideoTextureClass
   void (* _clutter_reserved6) (void);
 };
 
-GType               clutter_gst_video_texture_get_type            (void) G_GNUC_CONST;
-ClutterActor *      clutter_gst_video_texture_new                 (void);
+GType			  clutter_gst_video_texture_get_type            (void) G_GNUC_CONST;
+ClutterActor *		  clutter_gst_video_texture_new                 (void);
 
-GstElement *        clutter_gst_video_texture_get_pipeline        (ClutterGstVideoTexture *texture);
+GstElement *		  clutter_gst_video_texture_get_pipeline        (ClutterGstVideoTexture *texture);
 
-CoglHandle          clutter_gst_video_texture_get_idle_material   (ClutterGstVideoTexture *texture);
-void                clutter_gst_video_texture_set_idle_material   (ClutterGstVideoTexture *texture,
-                                                                   CoglHandle              material);
-gchar *             clutter_gst_video_texture_get_user_agent      (ClutterGstVideoTexture *texture);
-void                clutter_gst_video_texture_set_user_agent      (ClutterGstVideoTexture *texture,
-                                                                   const gchar *           user_agent);
-ClutterGstSeekFlags clutter_gst_video_texture_get_seek_flags      (ClutterGstVideoTexture *texture);
-void                clutter_gst_video_texture_set_seek_flags      (ClutterGstVideoTexture *texture,
-                                                                   ClutterGstSeekFlags     flags);
+CoglHandle		  clutter_gst_video_texture_get_idle_material   (ClutterGstVideoTexture *texture);
+void			  clutter_gst_video_texture_set_idle_material   (ClutterGstVideoTexture *texture,
+									 CoglHandle              material);
+gchar *			  clutter_gst_video_texture_get_user_agent      (ClutterGstVideoTexture *texture);
+void			  clutter_gst_video_texture_set_user_agent      (ClutterGstVideoTexture *texture,
+									 const gchar *           user_agent);
+ClutterGstSeekFlags	  clutter_gst_video_texture_get_seek_flags      (ClutterGstVideoTexture *texture);
+void			  clutter_gst_video_texture_set_seek_flags      (ClutterGstVideoTexture *texture,
+									 ClutterGstSeekFlags     flags);
+ClutterGstBufferingMode	  clutter_gst_video_texture_get_buffering_mode	(ClutterGstVideoTexture *texture);
+void			  clutter_gst_video_texture_set_buffering_mode	(ClutterGstVideoTexture *texture,
+									 ClutterGstBufferingMode mode);
 
 G_END_DECLS
 

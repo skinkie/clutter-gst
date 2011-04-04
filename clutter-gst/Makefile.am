@@ -15,6 +15,11 @@ glib_enum_c = clutter-gst-enum-types.c
 glib_enum_headers = $(source_h)
 include $(top_srcdir)/build/autotools/Makefile.am.enums
 
+# glib-genmarshal
+glib_marshal_list = clutter-gst-marshal.list
+glib_marshal_prefix = _clutter_gst_marshal
+include $(top_srcdir)/build/autotools/Makefile.am.marshal
+
 source_h = 					\
 	$(srcdir)/clutter-gst.h			\
 	$(srcdir)/clutter-gst-util.h		\
@@ -25,12 +30,14 @@ source_h = 					\
 
 source_priv_h =					\
 	$(srcdir)/clutter-gst-debug.h		\
+	$(srcdir)/clutter-gst-marshal.h		\
 	$(srcdir)/clutter-gst-private.h		\
 	$(srcdir)/clutter-gst-shaders.h		\
 	$(NULL)
 
 source_c = 					\
 	$(srcdir)/clutter-gst-debug.c		\
+	$(srcdir)/clutter-gst-marshal.c		\
 	$(srcdir)/clutter-gst-video-sink.c	\
 	$(srcdir)/clutter-gst-video-texture.c	\
         $(srcdir)/clutter-gst-util.c		\

@@ -1,4 +1,7 @@
-clutter-gst-version.h
-clutter-gst-enum-types.h
 clutter-gst-enum-types.c
+clutter-gst-enum-types.h
+clutter-gst-marshal.c
+clutter-gst-marshal.h
+clutter-gst-version.h
 stamp-enum-types
+stamp-marshal
