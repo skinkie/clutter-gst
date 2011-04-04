@@ -892,7 +892,29 @@ navigation_event (ClutterActor        *actor,
       gst_navigation_send_mouse_event (GST_NAVIGATION (sink),
                                        "mouse-move", 0, mevent->x, mevent->y);
     }
-  /* FIXME implement, key-press, key-release, and same for buttons */
+  else if (event->type == CLUTTER_BUTTON_PRESS ||
+           event->type == CLUTTER_BUTTON_RELEASE)
+    {
+      ClutterButtonEvent *bevent = (ClutterButtonEvent *) event;
+      const char *type;
+
+      type = (event->type == CLUTTER_BUTTON_PRESS) ? "mouse-button-press" : "mouse-button-release";
+      gst_navigation_send_mouse_event (GST_NAVIGATION (sink),
+                                       type, bevent->button, bevent->x, bevent->y);
+    }
+  else if (event->type == CLUTTER_KEY_PRESS ||
+           event->type == CLUTTER_KEY_RELEASE)
+    {
+      ClutterKeyEvent *kevent = (ClutterKeyEvent *) kevent;
+      const char *type;
+      char *key;
+
+      type = (event->type == CLUTTER_KEY_PRESS) ? "key-press" : "key-release";
+      key = g_ucs4_to_utf8 (&kevent->unicode_value, 1, NULL, NULL, NULL);
+      gst_navigation_send_key_event (GST_NAVIGATION (sink),
+                                     type, key ? key : "unknown");
+      g_free (key);
+    }
 
   return FALSE;
 }
@@ -1094,7 +1116,13 @@ static void
 clutter_gst_video_sink_set_texture (ClutterGstVideoSink *sink,
                                     ClutterTexture      *texture)
 {
-  const char const *events[] = { "key-press-event", "key-release-event", "motion-event" };
+  const char const *events[] = {
+    "key-press-event",
+    "key-release-event",
+    "button-press-event",
+    "button-release-event",
+    "motion-event"
+  };
   ClutterGstVideoSinkPrivate *priv = sink->priv;
   guint i;
 
