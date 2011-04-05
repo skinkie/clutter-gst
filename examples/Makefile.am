@@ -27,6 +27,13 @@ video_sink_navigation_LDFLAGS = \
     $(GST_LIBS)   \
     $(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la
 
+video_sink_navigation_SOURCES = video-sink-navigation.c
+video_sink_navigation_CFLAGS = $(CLUTTER_GST_CFLAGS) $(GST_CFLAGS)
+video_sink_navigation_LDFLAGS = \
+    $(CLUTTER_GST_LIBS) \
+    $(GST_LIBS)   \
+    $(top_builddir)/clutter-gst/libclutter-gst-@CLUTTER_GST_MAJORMINOR@.la 
+
 EXTRA_DIST = media-actions-pause.png  \
              media-actions-start.png  \
              vid-panel.png            \
