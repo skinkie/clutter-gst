@@ -629,7 +629,6 @@ set_playing (ClutterGstVideoTexture *video_texture,
              gboolean                playing)
 {
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
-  GstState target_state;
 
   if (!priv->pipeline)
     return;
@@ -639,17 +638,13 @@ set_playing (ClutterGstVideoTexture *video_texture,
   priv->in_error = FALSE;
   priv->in_eos = FALSE;
 
-  /* Don't do anything if we are not actually changing state */
-  target_state = playing ? GST_STATE_PLAYING : GST_STATE_PAUSED;
-  if (target_state == priv->target_state)
-    return;
-
-  priv->target_state = target_state;
+  priv->target_state = playing ? GST_STATE_PLAYING : GST_STATE_PAUSED;
 
   if (priv->uri)
     {
       priv->in_seek = FALSE;
 
+      g_message ("set to %d", priv->target_state);
       gst_element_set_state (priv->pipeline, priv->target_state);
     }
   else
