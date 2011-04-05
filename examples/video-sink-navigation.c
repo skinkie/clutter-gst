@@ -123,6 +123,13 @@ main (int argc, char *argv[])
   constraint = clutter_bind_constraint_new (stage, CLUTTER_BIND_SIZE, 0.0);
   clutter_actor_add_constraint_with_name (texture, "size", constraint);
 
+  /* Rotate a bit */
+  clutter_actor_set_rotation (texture, CLUTTER_Z_AXIS,
+			      45.0,
+			      clutter_actor_get_width (stage) / 2,
+			      clutter_actor_get_height (stage) / 2,
+			      0.0);
+
   /* start the timeline */
   clutter_timeline_start (timeline);
 
