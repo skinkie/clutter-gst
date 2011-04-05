@@ -87,6 +87,8 @@ struct _ClutterGstVideoTexturePrivate
   guint in_seek : 1;
   guint is_idle : 1;
   guint is_changing_uri : 1;
+  guint in_error : 1;
+  guint in_eos : 1;
   guint in_download_buffering : 1;
 
   /* when in progressive download, we use the buffer-fill property to signal
@@ -535,6 +537,9 @@ set_uri (ClutterGstVideoTexture *video_texture,
 
   g_free (priv->uri);
 
+  priv->in_eos = FALSE;
+  priv->in_error = FALSE;
+
   if (uri)
     {
       priv->uri = g_strdup (uri);
@@ -631,6 +636,9 @@ set_playing (ClutterGstVideoTexture *video_texture,
 
   CLUTTER_GST_NOTE (MEDIA, "set playing: %d", playing);
 
+  priv->in_error = FALSE;
+  priv->in_eos = FALSE;
+
   /* Don't do anything if we are not actually changing state */
   target_state = playing ? GST_STATE_PLAYING : GST_STATE_PAUSED;
   if (target_state == priv->target_state)
@@ -689,6 +697,7 @@ set_progress (ClutterGstVideoTexture *video_texture,
 
   CLUTTER_GST_NOTE (MEDIA, "set progress: %.02f", progress);
 
+  priv->in_eos = FALSE;
   priv->target_progress = progress;
 
   if (priv->in_download_buffering)
@@ -746,6 +755,21 @@ get_progress (ClutterGstVideoTexture *video_texture)
 
   if (!priv->pipeline)
     return 0.0;
+
+  /* when hitting an error or after an EOS, playbin2 has some weird values when
+   * querying the duration and progress. We default to 0.0 on error and 1.0 on
+   * EOS */
+  if (priv->in_error)
+    {
+      CLUTTER_GST_NOTE (MEDIA, "get progress (error): 0.0");
+      return 0.0;
+    }
+
+  if (priv->in_eos)
+    {
+      CLUTTER_GST_NOTE (MEDIA, "get progress (eos): 1.0");
+      return 1.0;
+    }
 
   /* When seeking, the progress returned by playbin2 is 0.0. We want that to be
    * the last known position instead as returning 0.0 will have some ugly
@@ -1376,9 +1400,10 @@ bus_message_eos_cb (GstBus                 *bus,
                     ClutterGstVideoTexture *video_texture)
 {
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
-  g_object_notify (G_OBJECT (video_texture), "progress");
 
   CLUTTER_GST_NOTE (MEDIA, "EOS");
+
+  priv->in_eos = TRUE;
 
   gst_element_set_state(priv->pipeline, GST_STATE_READY);
 
@@ -1387,6 +1412,7 @@ bus_message_eos_cb (GstBus                 *bus,
   clutter_actor_queue_redraw (CLUTTER_ACTOR (video_texture));
 
   g_signal_emit_by_name (video_texture, "eos");
+  g_object_notify (G_OBJECT (video_texture), "progress");
 }
 
 static void
