@@ -1,3 +1,21 @@
+clutter-gst 1.3.8 (05/04/2011)
+===============================================================================
+
+  * list of changes since 1.3.6
+
+    o Implementation of the GstNavigation interface in the sink,
+
+    o Initial support of download buffering (opt in),
+
+    o Series of cleanups in VideoTexture (subtitles reset when changing URI,
+      state management, seek behaviour, ...)
+
+    o The audio volume suffered from an hilariously bad bug that multiplied
+      the volume set by 10. Took the opportunity to use GStreamer's
+      StreamVolume to expose a cubic volume,
+
+    o Compilation fixes for Windows.
+
 clutter-gst 1.3.6 (02/03/2011)
 ===============================================================================
 
