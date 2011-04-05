@@ -11,7 +11,8 @@
  *             Damien Lespiau    <damien.lespiau@intel.com>
  *
  * Copyright (C) 2007,2008 OpenedHand
- * Copyright (C) 2009,2010 Intel Corporation
+ * Copyright (C) 2009,2010,2011 Intel Corporation
+ * Copyright (C) 2011 Red Hat, Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
