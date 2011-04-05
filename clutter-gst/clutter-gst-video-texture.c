@@ -1380,7 +1380,7 @@ bus_message_eos_cb (GstBus                 *bus,
 
   CLUTTER_GST_NOTE (MEDIA, "EOS");
 
-  gst_element_set_state(priv->pipeline, GST_STATE_NULL);
+  gst_element_set_state(priv->pipeline, GST_STATE_READY);
 
   /* restore the idle material so we don't just display the last frame */
   priv->is_idle = TRUE;
