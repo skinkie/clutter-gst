@@ -47,10 +47,9 @@ release-upload: $(sha256_file)
 	@echo "Uploading to $(RELEASE_UPLOAD_HOST)..."
 	@scp $(tar_file) $(RELEASE_UPLOAD_DIR)
 	@echo "Uploading to master.gnome.org..."
-	@scp $(tar_file) master.gnome.org:
+	@scp $(tar_file) dlespiau@master.gnome.org:
 	@echo "Running ftpadmin install..."
-	@ssh master.gnome.org ftpadmin install $(tar_file)
-	@mv -f $(sha256_file) $(top_builddir)/build/$(sha256_file)
+	@ssh dlespiau@master.gnome.org ftpadmin install $(tar_file)
 	@echo "Done."
 
 release-message: $(sha256_file)
