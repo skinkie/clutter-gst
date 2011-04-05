@@ -11,6 +11,9 @@ RELEASE_UPLOAD_DIR  = $(RELEASE_UPLOAD_USER)@$(RELEASE_UPLOAD_HOST):upload-sourc
 RELEASE_URL_BASE = http://source.clutter-project.org/sources/clutter-gst
 RELEASE_URL      = $(RELEASE_URL_BASE)/$(CLUTTER_GST_MAJOR_VERSION).$(CLUTTER_GST_MINOR_VERSION)
 
+GNOME_RELEASE_URL_BASE = http://download.gnome.org/sources/clutter-gst
+GNOME_RELEASE_URL      = $(GNOME_RELEASE_URL_BASE)/$(CLUTTER_GST_MAJOR_VERSION).$(CLUTTER_GST_MINOR_VERSION)
+
 RELEASE_ANNOUNCE_LIST = clutter-announce@clutter-project.org (Cc: gnome-announce-list@gnome.org)
 
 tar_file = $(distdir).tar.bz2
@@ -50,9 +53,12 @@ release-message: $(sha256_file)
 	@echo "  Subject: $(PACKAGE) $(CLUTTER_GST_VERSION) ($(CLUTTER_GST_RELEASE_STATUS))"
 	@echo "Contents:"
 	@echo "--- CUT HERE ---"
+	@echo "Hi,"
+	@echo ""
 	@echo "A new $(PACKAGE) $(CLUTTER_GST_RELEASE_STATUS) is now available at:"
 	@echo ""
 	@echo "  $(RELEASE_URL)/$(tar_file)"
+	@echo "  $(GNOME_RELEASE_URL)/$(tar_file)"
 	@echo ""
 	@echo "SHA256 Checksum:"
 	@echo ""
@@ -60,10 +66,10 @@ release-message: $(sha256_file)
 	@echo ""
 	@echo "Additionally, a git clone of the source tree:"
 	@echo ""
-	@echo "  git clone git://git.clutter-project.org/clutter-gst"
+	@echo "  git clone git://git.gnome.org/clutter-gst"
 	@echo ""
 	@echo "will include a signed $(CLUTTER_GST_VERSION) tag which points to a commit named:"
-	@echo "  `git cat-file tag $(CLUTTER_GST_VERSION) | grep ^object | sed -e 's,object ,,'`"
+	@echo "  `git cat-file tag $(CLUTTER_GST_VERSION) | grep ^object | $(SED) -e 's,object ,,'`"
 	@echo ""
 	@echo "which can be verified with:"
 	@echo "  git verify-tag $(CLUTTER_GST_VERSION)"
@@ -71,6 +77,17 @@ release-message: $(sha256_file)
 	@echo "and can be checked out with a command such as:"
 	@echo "  git checkout -b build $(CLUTTER_GST_VERSION)"
 	@echo ""
+	@echo "Clutter-Gst is an integration library for using GStreamer with Clutter."
+	@echo "It provides a GStreamer sink to upload frames to GL and an actor that"
+	@echo "implements the ClutterMedia interface using playbin2."
+	@echo ""
+	@echo "Clutter-gst depends on:"
+	@echo ""
+	@echo "  GLib ≥ $(GLIB_REQ_VERSION)"
+	@echo "  Clutter ≥ $(CLUTTER_REQ_VERSION)"
+	@echo "  GStreamer ≥ $(GSTREAMER_REQ_VERSION)"
+	@echo ""
+	@$(SED) -n '1bend;/^clutter-gst /q;:end;4,$$p' $(top_srcdir)/NEWS
 	@echo "--- CUT HERE ---"
 
 release-publish: release-check

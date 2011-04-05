@@ -3,7 +3,7 @@
 # An even micro number indicates a released version.
 m4_define(clutter_gst_major_version, 1)
 m4_define(clutter_gst_minor_version, 3)
-m4_define(clutter_gst_micro_version, 7)
+m4_define(clutter_gst_micro_version, 8)
 
 m4_define(clutter_api_version, 1.0)
 m4_define([clutter_gst_api_version], [1.0])
@@ -75,6 +75,15 @@ m4_define([clutter_gst_release_status],
                        [release])])])
 AC_SUBST([CLUTTER_GST_RELEASE_STATUS], [clutter_gst_release_status])
 
+# pkg-config requirements
+GLIB_REQ_VERSION=2.18.0
+CLUTTER_REQ_VERSION=1.4.0
+GSTREAMER_REQ_VERSION=0.10.20
+
+AC_SUBST(GLIB_REQ_VERSION)
+AC_SUBST(CLUTTER_REQ_VERSION)
+AC_SUBST(GSTREAMER_REQ_VERSION)
+
 dnl ========================================================================
 
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
@@ -87,6 +96,7 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
+AC_PROG_SED
 DOLT
 AC_PATH_PROG([GLIB_MKENUMS], [glib-mkenums])
 AC_PATH_PROG([GLIB_GENMARSHAL], [glib-genmarshal])
@@ -124,14 +134,14 @@ AM_CONDITIONAL([HAVE_PYTHON], [test "x$have_python" = "xyes"])
 
 dnl ========================================================================
 
-pkg_modules="clutter-1.0 >= 1.4.0 gio-2.0"
+pkg_modules="clutter-1.0 >= $CLUTTER_REQ_VERSION gio-2.0 >= $GLIB_REQ_VERSION"
 PKG_CHECK_MODULES(CLUTTER_GST, [$pkg_modules])
 
 dnl ========================================================================
 
 GST_MAJORMINOR=0.10
 
-pkg_modules="gstreamer-$GST_MAJORMINOR >= 0.10.20 gstreamer-plugins-base-$GST_MAJORMINOR gstreamer-base-$GST_MAJORMINOR gstreamer-interfaces-$GST_MAJORMINOR gstreamer-video-$GST_MAJORMINOR gstreamer-audio-$GST_MAJORMINOR"
+pkg_modules="gstreamer-$GST_MAJORMINOR >= $GSTREAMER_REQ_VERSION gstreamer-plugins-base-$GST_MAJORMINOR gstreamer-base-$GST_MAJORMINOR gstreamer-interfaces-$GST_MAJORMINOR gstreamer-video-$GST_MAJORMINOR gstreamer-audio-$GST_MAJORMINOR"
 PKG_CHECK_MODULES(GST, [$pkg_modules])
 
 dnl ========================================================================
