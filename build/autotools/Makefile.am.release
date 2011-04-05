@@ -14,6 +14,8 @@ RELEASE_URL      = $(RELEASE_URL_BASE)/$(CLUTTER_GST_MAJOR_VERSION).$(CLUTTER_GS
 GNOME_RELEASE_URL_BASE = http://download.gnome.org/sources/clutter-gst
 GNOME_RELEASE_URL      = $(GNOME_RELEASE_URL_BASE)/$(CLUTTER_GST_MAJOR_VERSION).$(CLUTTER_GST_MINOR_VERSION)
 
+RELEASE_API_URL = http://docs.clutter-project.org/docs/clutter-gst
+
 RELEASE_ANNOUNCE_LIST = clutter-announce@clutter-project.org (Cc: gnome-announce-list@gnome.org)
 
 tar_file = $(distdir).tar.bz2
@@ -92,6 +94,14 @@ release-message: $(sha256_file)
 	@echo "  GLib ≥ $(GLIB_REQ_VERSION)"
 	@echo "  Clutter ≥ $(CLUTTER_REQ_VERSION)"
 	@echo "  GStreamer ≥ $(GSTREAMER_REQ_VERSION)"
+	@echo ""
+	@echo "API reference:"
+	@echo ""
+	@if test "x$(CLUTTER_GST_RELEASE_STATUS)" = "xsnapshot"; then \
+	  echo " $(RELEASE_API_URL)/unstable"; \
+	else \
+	  echo " $(RELEASE_API_URL)/stable"; \
+	fi
 	@echo ""
 	@$(SED) -n '1bend;/^clutter-gst /q;:end;4,$$p' $(top_srcdir)/NEWS
 	@echo "--- CUT HERE ---"
