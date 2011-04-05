@@ -1384,6 +1384,10 @@ bus_message_error_cb (GstBus                 *bus,
 
   gst_message_parse_error (message, &error, NULL);
 
+  /* restore the idle material so we don't just display the last frame */
+  priv->is_idle = TRUE;
+  clutter_actor_queue_redraw (CLUTTER_ACTOR (video_texture));
+
   g_signal_emit_by_name (video_texture, "error", error);
 
   g_error_free (error);
