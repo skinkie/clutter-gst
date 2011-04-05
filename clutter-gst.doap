@@ -61,6 +61,20 @@
     </foaf:Person>
   </author>
 
+  <author>
+    <foaf:Person>
+      <foaf:name>Bastien Nocera</foaf:name>
+      <foaf:mbox rdf:resource="mailto:hadess@hadess.net"/>
+    </foaf:Person>
+  </author>
+
+  <author>
+    <foaf:Person>
+      <foaf:name>Lionel Landwerlin</foaf:name>
+      <foaf:mbox rdf:resource="mailto:lionel.g.landwerlin@linux.intel.com"/>
+    </foaf:Person>
+  </author>
+
   <repository>
     <GitRepository>
       <browse rdf:resource="http://git.clutter-project.org/?r=clutter-gst"/>
