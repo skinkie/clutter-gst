@@ -1361,11 +1361,11 @@ bus_message_error_cb (GstBus                 *bus,
   GError *error = NULL;
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
 
+  gst_element_set_state(priv->pipeline, GST_STATE_NULL);
+
   gst_message_parse_error (message, &error, NULL);
 
   g_signal_emit_by_name (video_texture, "error", error);
-
-  gst_element_set_state(priv->pipeline, GST_STATE_NULL);
 
   g_error_free (error);
 }
