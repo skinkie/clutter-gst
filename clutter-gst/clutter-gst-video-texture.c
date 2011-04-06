@@ -644,7 +644,6 @@ set_playing (ClutterGstVideoTexture *video_texture,
     {
       priv->in_seek = FALSE;
 
-      g_message ("set to %d", priv->target_state);
       gst_element_set_state (priv->pipeline, priv->target_state);
     }
   else
