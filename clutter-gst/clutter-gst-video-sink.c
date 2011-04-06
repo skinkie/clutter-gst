@@ -1318,23 +1318,25 @@ clutter_gst_navigation_send_event (GstNavigation *navigation,
   gdouble x, y;
   gfloat x_out, y_out;
 
-  /* Converting pointer coordinates to the non scaled geometry */
-  if (!gst_structure_get_double (structure, "pointer_x", &x))
-    return;
+  /* Converting pointer coordinates to the non scaled geometry
+   * if the structure contains pointer coordinates */
+  if (gst_structure_get_double (structure, "pointer_x", &x) &&
+      gst_structure_get_double (structure, "pointer_y", &y))
+    {
+      if (clutter_actor_transform_stage_point (CLUTTER_ACTOR (priv->texture), x, y, &x_out, &y_out) == FALSE)
+        {
+          g_warning ("Failed to convert non-scaled coordinates for video-sink");
+          return;
+        }
 
-  if (!gst_structure_get_double (structure, "pointer_y", &y))
-    return;
+      x = x_out * priv->width / clutter_actor_get_width (CLUTTER_ACTOR (priv->texture));
+      y = y_out * priv->height / clutter_actor_get_height (CLUTTER_ACTOR (priv->texture));
 
-  if (clutter_actor_transform_stage_point (CLUTTER_ACTOR (priv->texture), x, y, &x_out, &y_out) == FALSE)
-    return;
-
-  x = x_out * priv->width / clutter_actor_get_width (CLUTTER_ACTOR (priv->texture));
-  y = y_out * priv->height / clutter_actor_get_height (CLUTTER_ACTOR (priv->texture));
-
-  gst_structure_set (structure,
-                     "pointer_x", G_TYPE_DOUBLE, (gdouble) x,
-                     "pointer_y", G_TYPE_DOUBLE, (gdouble) y,
-                     NULL);
+      gst_structure_set (structure,
+                         "pointer_x", G_TYPE_DOUBLE, (gdouble) x,
+                         "pointer_y", G_TYPE_DOUBLE, (gdouble) y,
+                         NULL);
+    }
 
   event = gst_event_new_navigation (structure);
 
