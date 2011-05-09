@@ -890,6 +890,7 @@ navigation_event (ClutterActor        *actor,
     {
       ClutterMotionEvent *mevent = (ClutterMotionEvent *) event;
 
+      GST_DEBUG ("Received mouse move event to %d,%d", mevent->x, mevent->y);
       gst_navigation_send_mouse_event (GST_NAVIGATION (sink),
                                        "mouse-move", 0, mevent->x, mevent->y);
     }
@@ -899,6 +900,9 @@ navigation_event (ClutterActor        *actor,
       ClutterButtonEvent *bevent = (ClutterButtonEvent *) event;
       const char *type;
 
+      GST_DEBUG ("Received button %s event at %d,%d",
+                 (event->type == CLUTTER_BUTTON_PRESS) ? "press" : "release",
+                 bevent->x, bevent->y);
       type = (event->type == CLUTTER_BUTTON_PRESS) ? "mouse-button-press" : "mouse-button-release";
       gst_navigation_send_mouse_event (GST_NAVIGATION (sink),
                                        type, bevent->button, bevent->x, bevent->y);
@@ -912,6 +916,9 @@ navigation_event (ClutterActor        *actor,
 
       type = (event->type == CLUTTER_KEY_PRESS) ? "key-press" : "key-release";
       key = g_ucs4_to_utf8 (&kevent->unicode_value, 1, NULL, NULL, NULL);
+      GST_DEBUG ("Received key %s event (%s)",
+                 (event->type == CLUTTER_KEY_PRESS) ? "press" : "release",
+                 key);
       gst_navigation_send_key_event (GST_NAVIGATION (sink),
                                      type, key ? key : "unknown");
       g_free (key);
