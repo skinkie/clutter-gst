@@ -3,7 +3,7 @@ clutter-gst 1.3.12 (06/06/2011)
 
 List of changes since 1.3.10:
 
-  o Fix the GstNavigation interface of the sink
+  o Fix set_uri() with recent versions of GStreamer,
 
   o Some warning fixes with newer versions of Clutter
 
