@@ -80,7 +80,11 @@ main (int argc, char *argv[])
           return 1;
   }
 
-  clutter_init (&argc, &argv);
+  if (clutter_init (&argc, &argv) != CLUTTER_INIT_SUCCESS)
+    {
+      g_error ("Failed to initialize clutter\n");
+      return EXIT_FAILURE;
+    }
   gst_init (&argc, &argv);
 
   stage = clutter_stage_get_default ();
