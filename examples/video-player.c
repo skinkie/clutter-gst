@@ -415,5 +415,5 @@ main (int argc, char *argv[])
 
   clutter_main ();
 
-  return 0;
+  return EXIT_SUCCESS;
 }

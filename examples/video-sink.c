@@ -75,10 +75,11 @@ main (int argc, char *argv[])
   GstElement       *colorspace;
   GstElement       *sink;
 
-  if (argc < 1) {
-          g_error ("Usage: %s", argv[0]);
-          return 1;
-  }
+  if (argc < 1)
+    {
+      g_error ("Usage: %s", argv[0]);
+      return EXIT_FAILURE;
+    }
 
   if (clutter_init (&argc, &argv) != CLUTTER_INIT_SUCCESS)
     {
@@ -127,5 +128,5 @@ main (int argc, char *argv[])
 
   clutter_main();
 
-  return 0;
+  return EXIT_SUCCESS;
 }
