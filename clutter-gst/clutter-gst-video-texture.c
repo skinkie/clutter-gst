@@ -599,7 +599,7 @@ set_uri (ClutterGstVideoTexture *video_texture,
       if (pending)
         state = pending;
 
-      gst_element_set_state (priv->pipeline, GST_STATE_READY);
+      gst_element_set_state (priv->pipeline, GST_STATE_NULL);
 
       g_object_set (priv->pipeline, "uri", uri, NULL);
 
