@@ -1,3 +1,17 @@
+clutter-gst 1.3.12 (06/06/2011)
+===============================================================================
+
+List of changes since 1.3.10:
+
+  o Fix the GstNavigation interface of the sink
+
+  o Some warning fixes with newer versions of Clutter
+
+Many thanks to:
+
+    Øyvind Kolås
+    Bastien Nocera
+
 clutter-gst 1.3.10 (09/05/2011)
 ===============================================================================
 
