@@ -24,6 +24,8 @@
  * Boston, MA 02111-1307, USA.
  */
 
+#include <stdlib.h>
+
 #include <clutter-gst/clutter-gst.h>
 
 void
