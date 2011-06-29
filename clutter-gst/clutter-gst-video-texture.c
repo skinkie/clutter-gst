@@ -566,6 +566,8 @@ set_uri (ClutterGstVideoTexture *video_texture,
     {
       priv->uri = NULL;
 
+      set_subtitle_uri (video_texture, NULL);
+
       if (priv->tick_timeout_id)
 	{
 	  g_source_remove (priv->tick_timeout_id);
