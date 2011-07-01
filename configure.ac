@@ -91,11 +91,13 @@ AS_AM_REALLY_SILENT
 
 dnl ========================================================================
 
+# require libtool >= 2.2
+LT_PREREQ([2.2.6])
+LT_INIT([disable-static])
+
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
-AC_DISABLE_STATIC
-AC_PROG_LIBTOOL
 AC_PROG_SED
 DOLT
 AC_PATH_PROG([GLIB_MKENUMS], [glib-mkenums])
