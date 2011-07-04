@@ -78,7 +78,7 @@ AC_SUBST([CLUTTER_GST_RELEASE_STATUS], [clutter_gst_release_status])
 # pkg-config requirements
 GLIB_REQ_VERSION=2.18.0
 CLUTTER_REQ_VERSION=1.4.0
-GSTREAMER_REQ_VERSION=0.10.20
+GSTREAMER_REQ_VERSION=0.10.26
 
 AC_SUBST(GLIB_REQ_VERSION)
 AC_SUBST(CLUTTER_REQ_VERSION)
@@ -143,7 +143,7 @@ dnl ========================================================================
 
 GST_MAJORMINOR=0.10
 
-pkg_modules="gstreamer-$GST_MAJORMINOR >= $GSTREAMER_REQ_VERSION gstreamer-plugins-base-$GST_MAJORMINOR gstreamer-base-$GST_MAJORMINOR gstreamer-interfaces-$GST_MAJORMINOR gstreamer-video-$GST_MAJORMINOR gstreamer-audio-$GST_MAJORMINOR"
+pkg_modules="gstreamer-$GST_MAJORMINOR >= $GSTREAMER_REQ_VERSION gstreamer-plugins-base-$GST_MAJORMINOR gstreamer-base-$GST_MAJORMINOR gstreamer-interfaces-$GST_MAJORMINOR gstreamer-video-$GST_MAJORMINOR gstreamer-audio-$GST_MAJORMINOR gstreamer-tag-$GST_MAJORMINOR"
 PKG_CHECK_MODULES(GST, [$pkg_modules])
 
 dnl ========================================================================

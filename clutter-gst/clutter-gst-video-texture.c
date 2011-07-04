@@ -45,6 +45,7 @@
 #include <gio/gio.h>
 #include <gst/gst.h>
 #include <gst/video/video.h>
+#include <gst/tag/tag.h>
 #include <gst/interfaces/streamvolume.h>
 
 #include "clutter-gst-debug.h"
@@ -130,6 +131,8 @@ struct _ClutterGstVideoTexturePrivate
   GstSeekFlags seek_flags;    /* flags for the seek in set_progress(); */
 
   GstElement *download_buffering_element;
+
+  GList *audio_streams;
 };
 
 enum {
@@ -148,7 +151,9 @@ enum {
 
   PROP_IDLE_MATERIAL,
   PROP_USER_AGENT,
-  PROP_SEEK_FLAGS
+  PROP_SEEK_FLAGS,
+  PROP_AUDIO_STREAMS,
+  PROP_AUDIO_STREAM
 };
 
 /* idle timeouts (in ms) */
@@ -187,6 +192,21 @@ static void set_subtitle_uri (ClutterGstVideoTexture *video_texture,
                               const gchar            *uri);
 static void configure_buffering_timeout (ClutterGstVideoTexture *video_texture,
                                          guint                   ms);
+
+static void
+free_string_list (GList **listp)
+{
+  GList *l;
+
+  l = *listp;
+  while (l)
+    {
+      g_free (l->data);
+      l = g_list_delete_link (l, l);
+    }
+
+  *listp = NULL;
+}
 
 static void
 clear_download_buffering (ClutterGstVideoTexture *video_texture)
@@ -624,6 +644,10 @@ set_uri (ClutterGstVideoTexture *video_texture,
   g_object_notify (self, "can-seek");
   g_object_notify (self, "duration");
   g_object_notify (self, "progress");
+
+  free_string_list (&priv->audio_streams);
+  CLUTTER_GST_NOTE (AUDIO_STREAM, "audio-streams changed");
+  g_object_notify (self, "audio-streams");
 }
 
 static void
@@ -1152,6 +1176,8 @@ clutter_gst_video_texture_finalize (GObject *object)
   if (priv->idle_material != COGL_INVALID_HANDLE)
     cogl_handle_unref (priv->idle_material);
 
+  free_string_list (&priv->audio_streams);
+
   G_OBJECT_CLASS (clutter_gst_video_texture_parent_class)->finalize (object);
 }
 
@@ -1202,6 +1228,11 @@ clutter_gst_video_texture_set_property (GObject      *object,
     case PROP_SEEK_FLAGS:
       clutter_gst_video_texture_set_seek_flags (video_texture,
                                                 g_value_get_flags (value));
+      break;
+
+    case PROP_AUDIO_STREAM:
+      clutter_gst_video_texture_set_audio_stream (video_texture,
+                                                  g_value_get_int (value));
       break;
 
     default:
@@ -1283,6 +1314,19 @@ clutter_gst_video_texture_get_property (GObject    *object,
       }
       break;
 
+    case PROP_AUDIO_STREAMS:
+      g_value_set_pointer (value, priv->audio_streams);
+      break;
+
+    case PROP_AUDIO_STREAM:
+      {
+        gint index_;
+
+        index_ = clutter_gst_video_texture_get_audio_stream (video_texture);
+        g_value_set_int (value, index_);
+      }
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
@@ -1352,6 +1396,19 @@ clutter_gst_video_texture_class_init (ClutterGstVideoTextureClass *klass)
                               CLUTTER_GST_SEEK_FLAG_NONE,
                               CLUTTER_GST_PARAM_READWRITE);
   g_object_class_install_property (object_class, PROP_SEEK_FLAGS, pspec);
+
+  pspec = g_param_spec_pointer ("audio-streams",
+                                "Audio Streams",
+                                "List of the audio streams of the media",
+                                CLUTTER_GST_PARAM_READABLE);
+  g_object_class_install_property (object_class, PROP_AUDIO_STREAMS, pspec);
+
+  pspec = g_param_spec_int ("audio-stream",
+                            "Audio Stream",
+                            "Index of the current audio stream",
+                            -1, G_MAXINT, -1,
+                            CLUTTER_GST_PARAM_READWRITE);
+  g_object_class_install_property (object_class, PROP_AUDIO_STREAM, pspec);
 
   /**
    * ClutterGstVideoTexture::download-buffering:
@@ -1611,6 +1668,15 @@ bus_message_async_done_cb (GstBus                 *bus,
 }
 
 static void
+bus_message_application_cb (GstBus                 *bus,
+                            GstMessage             *message,
+                            ClutterGstVideoTexture *video_texture)
+{
+  g_message ("application message");
+
+}
+
+static void
 on_source_changed (GstElement             *pipeline,
                    GParamSpec             *pspec,
                    ClutterGstVideoTexture *video_texture)
@@ -1644,6 +1710,147 @@ on_volume_changed (GstElement             *pipeline,
 		   ClutterGstVideoTexture *video_texture)
 {
   g_idle_add (on_volume_changed_main_context, video_texture);
+}
+
+static GList *
+get_tags (GstElement  *pipeline,
+          const gchar *property_name,
+          const gchar *action_signal)
+{
+  GList *ret = NULL;
+  gint num = 1, i, n;
+
+  g_object_get (G_OBJECT (pipeline), property_name, &n, NULL);
+  if (n == 0)
+    return NULL;
+
+  for (i = 0; i < n; i++)
+    {
+      GstTagList *tags = NULL;
+      gchar *description = NULL;
+
+      g_signal_emit_by_name (G_OBJECT (pipeline), action_signal, i, &tags);
+
+      if (tags)
+        {
+
+          gst_tag_list_get_string (tags, GST_TAG_LANGUAGE_CODE, &description);
+
+          if (description)
+            {
+              const gchar *language = gst_tag_get_language_name (description);
+
+              if (language)
+                {
+                  g_free (description);
+                  description = g_strdup (language);
+                }
+            }
+
+          if (!description)
+            gst_tag_list_get_string (tags, GST_TAG_CODEC, &description);
+
+          gst_tag_list_free (tags);
+        }
+
+      if (!description)
+        description = g_strdup_printf ("Audio Track #%d", num++);
+
+      ret = g_list_prepend (ret, description);
+
+    }
+
+  return g_list_reverse (ret);
+}
+
+static gboolean
+are_lists_equal (GList *list1,
+                 GList *list2)
+{
+  GList *l1, *l2;
+
+  l1 = list1;
+  l2 = list2;
+
+  while (l1)
+    {
+      const gchar *str1, *str2;
+
+      if (l2 == NULL)
+        return FALSE;
+
+      str1 = l1->data;
+      str2 = l2->data;
+
+      if (g_strcmp0 (str1, str2) != 0)
+        return FALSE;
+
+      l1 = g_list_next (l1);
+      l2 = g_list_next (l2);
+    }
+
+  return l2 == NULL;
+}
+
+static gboolean
+on_audio_changed_main_context (gpointer data)
+{
+  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE (data);
+  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
+  GList *audio_streams;
+
+  audio_streams = get_tags (priv->pipeline, "n-audio", "get-audio-tags");
+
+  if (!are_lists_equal (priv->audio_streams, audio_streams))
+    {
+      free_string_list (&priv->audio_streams);
+      priv->audio_streams = audio_streams;
+
+      CLUTTER_GST_NOTE (AUDIO_STREAM, "audio-streams changed");
+
+      g_object_notify (G_OBJECT (video_texture), "audio-streams");
+    }
+  else
+    {
+      free_string_list (&audio_streams);
+    }
+
+  return FALSE;
+}
+
+/* same explanation as for notify::volume's usage of g_idle_add() */
+static void
+on_audio_changed (GstElement             *pipeline,
+                  ClutterGstVideoTexture *video_texture)
+{
+  g_idle_add (on_audio_changed_main_context, video_texture);
+}
+
+static void
+on_audio_tags_changed (GstElement             *pipeline,
+                       gint                    stream,
+                       ClutterGstVideoTexture *video_texture)
+{
+  g_idle_add (on_audio_changed_main_context, video_texture);
+}
+
+static gboolean
+on_current_audio_changed_main_context (gpointer data)
+{
+  ClutterGstVideoTexture *video_texture = CLUTTER_GST_VIDEO_TEXTURE (data);
+
+  CLUTTER_GST_NOTE (AUDIO_STREAM, "audio stream changed");
+  g_object_notify (G_OBJECT (video_texture), "audio-stream");
+
+  return FALSE;
+}
+
+static void
+on_current_audio_changed (GstElement             *pipeline,
+                          GParamSpec             *pspec,
+                          ClutterGstVideoTexture *video_texture)
+{
+  g_idle_add (on_current_audio_changed_main_context, video_texture);
 }
 
 static gboolean
@@ -1748,9 +1955,19 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
   g_signal_connect_object (bus, "message::async-done",
                            G_CALLBACK (bus_message_async_done_cb),
                            video_texture, 0);
+  g_signal_connect_object (bus, "message::application",
+                           G_CALLBACK (bus_message_application_cb),
+                           video_texture, 0);
 
   g_signal_connect (priv->pipeline, "notify::volume",
 		    G_CALLBACK (on_volume_changed), video_texture);
+
+  g_signal_connect (priv->pipeline, "audio-changed",
+                    G_CALLBACK (on_audio_changed), video_texture);
+  g_signal_connect (priv->pipeline, "audio-tags-changed",
+                    G_CALLBACK (on_audio_tags_changed), video_texture);
+  g_signal_connect (priv->pipeline, "notify::current-audio",
+                    G_CALLBACK (on_current_audio_changed), video_texture);
 
   gst_object_unref (GST_OBJECT (bus));
 }
@@ -2048,4 +2265,110 @@ clutter_gst_video_texture_set_buffering_mode (ClutterGstVideoTexture *texture,
     }
 
   g_object_set (G_OBJECT (priv->pipeline), "flags", flags, NULL);
+}
+
+#ifdef CLUTTER_GST_ENABLE_DEBUG
+gchar *
+list_to_string (GList *list)
+{
+  GString *string;
+  GList *l;
+  gint n, i;
+
+  if (!list)
+    return g_strdup ("<empty list>");
+
+  string = g_string_new (NULL);
+  n = g_list_length (list);
+  for (i = 0, l = list; i < n - 1; i++, l = g_list_next (l))
+    g_string_append_printf (string, "%s, ", (gchar *) l->data);
+
+  g_string_append_printf (string, "%s", (gchar *) l->data);
+
+
+  return g_string_free (string, FALSE);
+}
+#endif
+
+/**
+ * clutter_gst_video_texture_get_audio_streams:
+ * @texture: a #ClutterGstVideoTexture
+ *
+ * Get the list of audio streams of the current media.
+ *
+ * Return value: a list of strings describing the available audio streams
+ *
+ * Since: 1.4
+ */
+GList *
+clutter_gst_video_texture_get_audio_streams (ClutterGstVideoTexture *texture)
+{
+  ClutterGstVideoTexturePrivate *priv = texture->priv;
+
+  g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (texture), NULL);
+
+  if (CLUTTER_GST_DEBUG_ENABLED (AUDIO_STREAM))
+    {
+      gchar *streams;
+
+      streams = list_to_string (priv->audio_streams);
+      CLUTTER_GST_NOTE (AUDIO_STREAM, "audio streams: %s", streams);
+      g_free (streams);
+    }
+
+  return priv->audio_streams;
+}
+
+/**
+ * clutter_gst_video_texture_get_audio_stream:
+ * @texture: a #ClutterGstVideoTexture
+ *
+ * Get the current audio stream. The number returned in the index of the
+ * audio stream playing in the list returned by
+ * clutter_gst_video_texture_get_audio_streams().
+ *
+ * Return value: the index of the current audio stream, -1 if the media has no
+ * audio stream
+ *
+ * Since: 1.4
+ */
+gint
+clutter_gst_video_texture_get_audio_stream (ClutterGstVideoTexture *texture)
+{
+  gint index_ = -1;
+
+  g_return_val_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (texture), -1);
+
+  g_object_get (G_OBJECT (texture->priv->pipeline),
+                "current-audio", &index_,
+                NULL);
+
+  CLUTTER_GST_NOTE (AUDIO_STREAM, "audio stream is #%d", index_);
+
+  return index_;
+}
+
+/**
+ * clutter_gst_video_texture_set_audio_stream:
+ * @texture: a #ClutterGstVideoTexture
+ * @index_: the index of the audio stream
+ *
+ * Set the audio stream to play. @index_ is the index of the stream
+ * in the list returned by clutter_gst_video_texture_get_audio_streams().
+ *
+ * Since: 1.4
+ */
+void
+clutter_gst_video_texture_set_audio_stream (ClutterGstVideoTexture *texture,
+                                            gint                    index_)
+{
+  ClutterGstVideoTexturePrivate *priv = texture->priv;
+
+  g_return_if_fail (CLUTTER_GST_IS_VIDEO_TEXTURE (texture));
+  g_return_if_fail (index_ >= 0 &&
+                    index_ < g_list_length (priv->audio_streams));
+
+  CLUTTER_GST_NOTE (AUDIO_STREAM, "set audio audio stream to #%d", index_);
+
+  g_object_set (G_OBJECT (priv->pipeline), "current-audio", index_, NULL);
 }

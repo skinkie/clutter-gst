@@ -148,6 +148,10 @@ void			  clutter_gst_video_texture_set_seek_flags      (ClutterGstVideoTexture *
 ClutterGstBufferingMode	  clutter_gst_video_texture_get_buffering_mode	(ClutterGstVideoTexture *texture);
 void			  clutter_gst_video_texture_set_buffering_mode	(ClutterGstVideoTexture *texture,
 									 ClutterGstBufferingMode mode);
+GList *                   clutter_gst_video_texture_get_audio_streams   (ClutterGstVideoTexture *texture);
+gint                      clutter_gst_video_texture_get_audio_stream    (ClutterGstVideoTexture *texture);
+void                      clutter_gst_video_texture_set_audio_stream    (ClutterGstVideoTexture *texture,
+                                                                         gint                    index_);
 
 G_END_DECLS
 
