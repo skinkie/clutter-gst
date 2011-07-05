@@ -2017,7 +2017,7 @@ clutter_gst_video_texture_new (void)
  * Retrieves the #GstPipeline used by the @texture, for direct use with
  * GStreamer API.
  *
- * Return value: the pipeline element used by the video texture
+ * Return value: (transfer none): the pipeline element used by the video texture
  */
 GstElement *
 clutter_gst_video_texture_get_pipeline (ClutterGstVideoTexture *texture)
@@ -2033,7 +2033,7 @@ clutter_gst_video_texture_get_pipeline (ClutterGstVideoTexture *texture)
  *
  * Retrieves the material used to draw when no media is being played.
  *
- * Return value: the #CoglHandle of the idle material
+ * Return value: (transfer none): the #CoglHandle of the idle material
  *
  * Since: 1.2
  */
