@@ -104,8 +104,8 @@ static gboolean clutter_gst_is_initialized = FALSE;
 
 /**
  * clutter_gst_init:
- * @argc: pointer to the argument list count
- * @argv: pointer to the argument list vector
+ * @argc: (inout): The number of arguments in @argv
+ * @argv: (array length=argc) (inout) (allow-none): A pointer to an array
  *
  * Utility function to initialize both Clutter and GStreamer.
  *
@@ -139,8 +139,8 @@ clutter_gst_init (int    *argc,
 
 /**
  * clutter_gst_init_with_args:
- * @argc: a pointer to the number of command line arguments.
- * @argv: a pointer to the array of command line arguments.
+ * @argc: (inout): The number of arguments in @argv
+ * @argv: (array length=argc) (inout) (allow-none): A pointer to an array
  * @parameter_string: a string which is displayed in
  *    the first line of <option>--help</option> output, after
  *    <literal><replaceable>programname</replaceable> [OPTION...]</literal>
