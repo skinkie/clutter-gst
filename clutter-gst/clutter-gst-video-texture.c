@@ -81,6 +81,7 @@ static guint signals[LAST_SIGNAL] = { 0, };
 struct _ClutterGstVideoTexturePrivate
 {
   GstElement *pipeline;
+  GstBus *bus;
 
   gchar *uri;
 
@@ -1147,11 +1148,14 @@ clutter_gst_video_texture_dispose (GObject *object)
   self = CLUTTER_GST_VIDEO_TEXTURE(object);
   priv = self->priv;
 
-  /* FIXME: flush an errors off bus ? */
-  /* gst_bus_set_flushing (priv->bus, TRUE); */
-
   /* start by doing the usual clean up when not wanting to play an URI */
   set_uri (self, NULL);
+
+  if (priv->bus)
+    {
+      gst_bus_remove_signal_watch (priv->bus);
+      priv->bus = NULL;
+    }
 
   if (priv->pipeline)
     {
@@ -1896,7 +1900,6 @@ static void
 clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
 {
   ClutterGstVideoTexturePrivate *priv;
-  GstBus *bus;
 
   video_texture->priv = priv =
     G_TYPE_INSTANCE_GET_PRIVATE (video_texture,
@@ -1924,26 +1927,26 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
   /* Default to a fast seek, ie. same effect than set_seek_flags (NONE); */
   priv->seek_flags = GST_SEEK_FLAG_KEY_UNIT;
 
-  bus = gst_pipeline_get_bus (GST_PIPELINE (priv->pipeline));
+  priv->bus = gst_pipeline_get_bus (GST_PIPELINE (priv->pipeline));
 
-  gst_bus_add_signal_watch (bus);
+  gst_bus_add_signal_watch (priv->bus);
 
-  g_signal_connect_object (bus, "message::error",
+  g_signal_connect_object (priv->bus, "message::error",
 			   G_CALLBACK (bus_message_error_cb),
 			   video_texture, 0);
-  g_signal_connect_object (bus, "message::eos",
+  g_signal_connect_object (priv->bus, "message::eos",
 			   G_CALLBACK (bus_message_eos_cb),
 			   video_texture, 0);
-  g_signal_connect_object (bus, "message::buffering",
+  g_signal_connect_object (priv->bus, "message::buffering",
 			   G_CALLBACK (bus_message_buffering_cb),
 			   video_texture, 0);
-  g_signal_connect_object (bus, "message::duration",
+  g_signal_connect_object (priv->bus, "message::duration",
 			   G_CALLBACK (bus_message_duration_cb),
 			   video_texture, 0);
-  g_signal_connect_object (bus, "message::state-changed",
+  g_signal_connect_object (priv->bus, "message::state-changed",
 			   G_CALLBACK (bus_message_state_change_cb),
 			   video_texture, 0);
-  g_signal_connect_object (bus, "message::async-done",
+  g_signal_connect_object (priv->bus, "message::async-done",
                            G_CALLBACK (bus_message_async_done_cb),
                            video_texture, 0);
 
@@ -1957,7 +1960,7 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
   g_signal_connect (priv->pipeline, "notify::current-audio",
                     G_CALLBACK (on_current_audio_changed), video_texture);
 
-  gst_object_unref (GST_OBJECT (bus));
+  gst_object_unref (GST_OBJECT (priv->bus));
 }
 
 /*
