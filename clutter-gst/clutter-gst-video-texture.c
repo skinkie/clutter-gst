@@ -1668,15 +1668,6 @@ bus_message_async_done_cb (GstBus                 *bus,
 }
 
 static void
-bus_message_application_cb (GstBus                 *bus,
-                            GstMessage             *message,
-                            ClutterGstVideoTexture *video_texture)
-{
-  g_message ("application message");
-
-}
-
-static void
 on_source_changed (GstElement             *pipeline,
                    GParamSpec             *pspec,
                    ClutterGstVideoTexture *video_texture)
@@ -1954,9 +1945,6 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
 			   video_texture, 0);
   g_signal_connect_object (bus, "message::async-done",
                            G_CALLBACK (bus_message_async_done_cb),
-                           video_texture, 0);
-  g_signal_connect_object (bus, "message::application",
-                           G_CALLBACK (bus_message_application_cb),
                            video_texture, 0);
 
   g_signal_connect (priv->pipeline, "notify::volume",
