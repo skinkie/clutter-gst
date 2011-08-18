@@ -32,6 +32,7 @@ source_h = 					\
 source_priv_h =					\
 	$(srcdir)/clutter-gst-debug.h		\
 	$(srcdir)/clutter-gst-marshal.h		\
+	$(srcdir)/clutter-gst-player.h		\
 	$(srcdir)/clutter-gst-private.h		\
 	$(srcdir)/clutter-gst-shaders.h		\
 	$(NULL)
@@ -39,6 +40,7 @@ source_priv_h =					\
 source_c = 					\
 	$(srcdir)/clutter-gst-debug.c		\
 	$(srcdir)/clutter-gst-marshal.c		\
+	$(srcdir)/clutter-gst-player.c		\
 	$(srcdir)/clutter-gst-video-sink.c	\
 	$(srcdir)/clutter-gst-video-texture.c	\
         $(srcdir)/clutter-gst-util.c		\
