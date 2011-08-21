@@ -37,6 +37,8 @@
 #include <clutter/clutter.h>
 #include <gst/gstelement.h>
 
+#include <clutter-gst/clutter-gst-types.h>
+
 G_BEGIN_DECLS
 
 #define CLUTTER_GST_TYPE_VIDEO_TEXTURE clutter_gst_video_texture_get_type()
@@ -60,36 +62,6 @@ G_BEGIN_DECLS
 #define CLUTTER_GST_VIDEO_TEXTURE_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), \
   CLUTTER_GST_TYPE_VIDEO_TEXTURE, ClutterGstVideoTextureClass))
-
-/**
- * ClutterGstSeekFlags:
- * @CLUTTER_GST_SEEK_FLAG_NONE: Fast seeks (key frame boundaries, default)
- * @CLUTTER_GST_SEEK_FLAG_ACCURATE: Accurate seeks (potentially slower)
- *
- * Flags that can be given to clutter_gst_video_texture_set_seek_flags().
- *
- * Since: 1.4
- */
-typedef enum _ClutterGstSeekFlags
-{
-  CLUTTER_GST_SEEK_FLAG_NONE     = 0,
-  CLUTTER_GST_SEEK_FLAG_ACCURATE = 1 << 0
-} ClutterGstSeekFlags;
-
-/**
- * ClutterGstBufferingMode:
- * @CLUTTER_GST_BUFFERING_MODE_STREAM: In-memory buffering
- * @CLUTTER_GST_BUFFERING_MODE_DOWNLOAD: On-disk buffering
- *
- * Different buffering policies clutter-gst supports
- *
- * Since: 1.4
- */
-typedef enum _ClutterGstBufferingMode
-{
-  CLUTTER_GST_BUFFERING_MODE_STREAM,
-  CLUTTER_GST_BUFFERING_MODE_DOWNLOAD
-} ClutterGstBufferingMode;
 
 typedef struct _ClutterGstVideoTexture        ClutterGstVideoTexture;
 typedef struct _ClutterGstVideoTextureClass   ClutterGstVideoTextureClass;

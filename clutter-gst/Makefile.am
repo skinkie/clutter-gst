@@ -22,6 +22,7 @@ include $(top_srcdir)/build/autotools/Makefile.am.marshal
 
 source_h = 					\
 	$(srcdir)/clutter-gst.h			\
+	$(srcdir)/clutter-gst-types.h		\
 	$(srcdir)/clutter-gst-util.h		\
 	$(srcdir)/clutter-gst-version.h		\
 	$(srcdir)/clutter-gst-video-sink.h 	\
