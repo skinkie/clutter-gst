@@ -90,15 +90,6 @@ G_STMT_START {                                                \
 
 #define CLUTTER_GST_MARK()      CLUTTER_GST_NOTE(MISC, "== mark ==")
 
-#define CLUTTER_GST_GLERR()                                   \
-G_STMT_START {                                                \
-    if (clutter_gst_debug_flags & CLUTTER_GST_DEBUG_GL)       \
-      { GLenum _err = glGetError (); /* roundtrip */          \
-        if (_err != GL_NO_ERROR)                              \
-          g_warning (G_STRLOC ": GL Error %x", _err);         \
-      }                                                       \
-} G_STMT_END
-
 /* We do not even define those (private) symbols when debug is disabled.
  * This is to ensure the debug code is not shiped with the library when
  * disabled */
@@ -112,7 +103,6 @@ gboolean  _clutter_gst_debug_init       (void);
 
 #define CLUTTER_GST_NOTE(type,...)         G_STMT_START { } G_STMT_END
 #define CLUTTER_GST_MARK()                 G_STMT_START { } G_STMT_END
-#define CLUTTER_GST_GLERR()                G_STMT_START { } G_STMT_END
 #define CLUTTER_GST_TIMESTAMP(type,...)    G_STMT_START { } G_STMT_END
 
 #endif /* CLUTTER_GST_ENABLE_DEBUG */
