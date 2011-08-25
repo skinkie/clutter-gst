@@ -1,8 +1,18 @@
 <SECTION>
-<FILE>clutter-gst-video-texture</FILE>
-<TITLE>ClutterGstVideoTexture</TITLE>
+<FILE>clutter-gst-types</FILE>
+<TITLE>ClutterGstTypes</TITLE>
 ClutterGstSeekFlags
 ClutterGstBufferingMode
+<SUBSECTION Standard>
+clutter_gst_seek_flags_get_type
+CLUTTER_GST_TYPE_SEEK_FLAGS
+clutter_gst_buffering_mode_get_type
+CLUTTER_GST_TYPE_BUFFERING_MODE
+</SECTION>
+
+<SECTION>
+<FILE>clutter-gst-video-texture</FILE>
+<TITLE>ClutterGstVideoTexture</TITLE>
 ClutterGstVideoTexture
 ClutterGstVideoTextureClass
 clutter_gst_video_texture_new
@@ -19,10 +29,6 @@ clutter_gst_video_texture_get_audio_streams
 clutter_gst_video_texture_get_audio_stream
 clutter_gst_video_texture_set_audio_stream
 <SUBSECTION Standard>
-clutter_gst_seek_flags_get_type
-CLUTTER_GST_TYPE_SEEK_FLAGS
-clutter_gst_buffering_mode_get_type
-CLUTTER_GST_TYPE_BUFFERING_MODE
 CLUTTER_GST_VIDEO_TEXTURE
 CLUTTER_GST_IS_VIDEO_TEXTURE
 CLUTTER_GST_TYPE_VIDEO_TEXTURE
