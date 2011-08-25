@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" 
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
                "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
 <!ENTITY version SYSTEM "version.xml">
 ]>
@@ -55,6 +55,7 @@
 
   <chapter>
     <title>Clutter Actors And Objects</title>
+    <xi:include href="xml/clutter-gst-player.xml"/>
     <xi:include href="xml/clutter-gst-video-texture.xml"/>
     <xi:include href="xml/clutter-gst-video-sink.xml"/>
     <xi:include href="xml/clutter-gst-util.xml"/>

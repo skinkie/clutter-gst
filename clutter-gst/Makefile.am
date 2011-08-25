@@ -27,12 +27,12 @@ source_h = 					\
 	$(srcdir)/clutter-gst-version.h		\
 	$(srcdir)/clutter-gst-video-sink.h 	\
 	$(srcdir)/clutter-gst-video-texture.h 	\
+	$(srcdir)/clutter-gst-player.h		\
 	$(NULL)
 
 source_priv_h =					\
 	$(srcdir)/clutter-gst-debug.h		\
 	$(srcdir)/clutter-gst-marshal.h		\
-	$(srcdir)/clutter-gst-player.h		\
 	$(srcdir)/clutter-gst-private.h		\
 	$(srcdir)/clutter-gst-shaders.h		\
 	$(NULL)

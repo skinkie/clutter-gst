@@ -26,6 +26,21 @@
  * Boston, MA 02111-1307, USA.
  */
 
+/**
+ * SECTION:clutter-gst-player
+ * @short_description: An interface for controlling playback of media data
+ *
+ * #ClutterGstPlayer is an interface for controlling playback of media
+ *  sources. Contrary to most interfaces, you don't need to implement
+ *  #ClutterGstPlayer. It already provides an implementation/logic
+ *  leaving you only tweak a few properties to get the desired behavior.
+ *
+ * #ClutterGstPlayer extends and implements #ClutterMedia to create
+ * enhanced player.
+ *
+ * #ClutterMedia is available since Clutter 0.2
+ */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -1414,6 +1429,17 @@ clutter_gst_player_get_property (GObject    *object,
     }
 }
 
+/**
+ * clutter_gst_player_class_init:
+ * @object_class: a #GObjectClass
+ *
+ * Adds the #ClutterGstPlayer properties to a class and surchages the
+ * set/get_property and dispose of #GObjectClass. You should call this
+ * function at the end of the class_init method of the class
+ * implementing #ClutterGstPlayer.
+ *
+ * Since: 1.4
+ */
 void
 clutter_gst_player_class_init (GObjectClass *object_class)
 {
@@ -1504,6 +1530,18 @@ get_pipeline (void)
   return pipeline;
 }
 
+/**
+ * clutter_gst_player_init:
+ * @player: a #ClutterGstPlayer
+ *
+ * Initialize a #ClutterGstPlayer instance. You should call this
+ * function at the beginning of the init method of the class
+ * implementing #ClutterGstPlayer.
+ *
+ * Return value: TRUE if the initialization was successfull, FALSE otherwise.
+ *
+ * Since: 1.4
+ */
 gboolean
 clutter_gst_player_init (ClutterGstPlayer *player)
 {
@@ -1518,6 +1556,7 @@ clutter_gst_player_init (ClutterGstPlayer *player)
   priv = g_slice_new0 (ClutterGstPlayerPrivate);
   PLAYER_SET_PRIVATE (player, priv);
 
+  priv->is_idle = TRUE;
   priv->in_seek = FALSE;
   priv->is_changing_uri = FALSE;
   priv->in_download_buffering = FALSE;
@@ -1585,13 +1624,27 @@ clutter_gst_player_default_init (ClutterGstPlayerIface *iface)
 {
   GParamSpec *pspec;
 
-  pspec = g_param_spec_string ("idle",
-                               "Idle",
-                               "Idle state of the player's pipeline",
-                               NULL,
-                               CLUTTER_GST_PARAM_READABLE);
+  /**
+   * ClutterGstPlayer:idle:
+   *
+   * Whether the #ClutterGstPlayer is in idle mode.
+   *
+   * Since: 1.4
+   */
+  pspec = g_param_spec_boolean ("idle",
+                                "Idle",
+                                "Idle state of the player's pipeline",
+                                TRUE,
+                                CLUTTER_GST_PARAM_READABLE);
   g_object_interface_install_property (iface, pspec);
 
+  /**
+   * ClutterGstPlayer:user-agent:
+   *
+   * The User Agent used by #ClutterGstPlayer with network protocols.
+   *
+   * Since: 1.4
+   */
   pspec = g_param_spec_string ("user-agent",
                                "User Agent",
                                "User Agent used with network protocols",
@@ -1599,6 +1652,13 @@ clutter_gst_player_default_init (ClutterGstPlayerIface *iface)
                                CLUTTER_GST_PARAM_READWRITE);
   g_object_interface_install_property (iface, pspec);
 
+  /**
+   * ClutterGstPlayer:seek-flags:
+   *
+   * Flags to use when seeking.
+   *
+   * Since: 1.4
+   */
   pspec = g_param_spec_flags ("seek-flags",
                               "Seek Flags",
                               "Flags to use when seeking",
@@ -1607,12 +1667,26 @@ clutter_gst_player_default_init (ClutterGstPlayerIface *iface)
                               CLUTTER_GST_PARAM_READWRITE);
   g_object_interface_install_property (iface, pspec);
 
+  /**
+   * ClutterGstPlayer:audio-streams:
+   *
+   * List of audio streams available on the current media.
+   *
+   * Since: 1.4
+   */
   pspec = g_param_spec_pointer ("audio-streams",
                                 "Audio Streams",
                                 "List of the audio streams of the media",
                                 CLUTTER_GST_PARAM_READABLE);
   g_object_interface_install_property (iface, pspec);
 
+  /**
+   * ClutterGstPlayer:audio-stream:
+   *
+   * Index of the current audio stream.
+   *
+   * Since: 1.4
+   */
   pspec = g_param_spec_int ("audio-stream",
                             "Audio Stream",
                             "Index of the current audio stream",
@@ -1621,6 +1695,18 @@ clutter_gst_player_default_init (ClutterGstPlayerIface *iface)
   g_object_interface_install_property (iface, pspec);
 
   /* Signals */
+
+  /**
+   * ClutterGstPlayer::download-buffering:
+   * @player: the #ClutterGstPlayer instance that received the signal
+   * @start: start position of the buffering
+   * @stop: start position of the buffering
+   *
+   * The ::download-buffering signal is emitted each time their an
+   * update about the buffering of the current media.
+   *
+   * Since: 1.4
+   */
   signals[DOWNLOAD_BUFFERING] =
     g_signal_new ("download-buffering",
                   CLUTTER_GST_TYPE_PLAYER,
@@ -1641,6 +1727,18 @@ clutter_gst_player_default_init (ClutterGstPlayerIface *iface)
     }
 }
 
+/**
+ * clutter_gst_player_get_pipeline:
+ * @player: a #ClutterGstPlayer
+ *
+ * Retrieves the #GstPipeline used by the @player, for direct use with
+ * GStreamer API.
+ *
+ * Return value: (transfer none): the #GstPipeline element used by the
+ * video texture
+ *
+ * Since: 1.4
+ */
 GstElement *
 clutter_gst_player_get_pipeline (ClutterGstPlayer *player)
 {
@@ -1653,6 +1751,17 @@ clutter_gst_player_get_pipeline (ClutterGstPlayer *player)
   return priv->pipeline;
 }
 
+/**
+ * clutter_gst_player_get_user_agent:
+ * @player: a #ClutterGstPlayer
+ *
+ * Retrieves the user agent used when streaming.
+ *
+ * Return value: the user agent used. The returned string has to be freed with
+ * g_free()
+ *
+ * Since: 1.4
+ */
 gchar *
 clutter_gst_player_get_user_agent (ClutterGstPlayer *player)
 {
@@ -1685,6 +1794,19 @@ clutter_gst_player_get_user_agent (ClutterGstPlayer *player)
   return user_agent;
 }
 
+/**
+ * clutter_gst_player_set_user_agent:
+ * @player: a #ClutterGstPlayer
+ * @user_agent: the user agent
+ *
+ * Sets the user agent to use when streaming.
+ *
+ * When streaming content, you might want to set a custom user agent, eg. to
+ * promote your software, make it appear in statistics or because the server
+ * requires a special user agent you want to impersonate.
+ *
+ * Since: 1.4
+ */
 void
 clutter_gst_player_set_user_agent (ClutterGstPlayer *player,
                                    const gchar      *user_agent)
@@ -1704,6 +1826,16 @@ clutter_gst_player_set_user_agent (ClutterGstPlayer *player,
   player_set_user_agent (player, user_agent);
 }
 
+/**
+ * clutter_gst_player_get_seek_flags:
+ * @player: a #ClutterGstPlayer
+ *
+ * Get the current value of the seek-flags property.
+ *
+ * Return value: a combination of #ClutterGstSeekFlags
+ *
+ * Since: 1.4
+ */
 ClutterGstSeekFlags
 clutter_gst_player_get_seek_flags (ClutterGstPlayer *player)
 {
@@ -1720,6 +1852,16 @@ clutter_gst_player_get_seek_flags (ClutterGstPlayer *player)
     return CLUTTER_GST_SEEK_FLAG_NONE;
 }
 
+/**
+ * clutter_gst_player_set_seek_flags:
+ * @player: a #ClutterGstPlayer
+ * @flags: a combination of #ClutterGstSeekFlags
+ *
+ * Seeking can be done with several trade-offs. Clutter-gst defaults
+ * to %CLUTTER_GST_SEEK_FLAG_NONE.
+ *
+ * Since: 1.4
+ */
 void
 clutter_gst_player_set_seek_flags (ClutterGstPlayer    *player,
                                    ClutterGstSeekFlags  flags)
@@ -1736,6 +1878,14 @@ clutter_gst_player_set_seek_flags (ClutterGstPlayer    *player,
     priv->seek_flags = GST_SEEK_FLAG_ACCURATE;
 }
 
+/**
+ * clutter_gst_player_get_buffering_mode:
+ * @player: a #ClutterGstPlayer
+ *
+ * Return value: a #ClutterGstBufferingMode
+ *
+ * Since: 1.4
+ */
 ClutterGstBufferingMode
 clutter_gst_player_get_buffering_mode (ClutterGstPlayer *player)
 {
@@ -1755,6 +1905,13 @@ clutter_gst_player_get_buffering_mode (ClutterGstPlayer *player)
   return CLUTTER_GST_BUFFERING_MODE_STREAM;
 }
 
+/**
+ * clutter_gst_player_set_buffering_mode:
+ * @player: a #ClutterGstPlayer
+ * @mode: a #ClutterGstBufferingMode
+ *
+ * Since: 1.4
+ */
 void
 clutter_gst_player_set_buffering_mode (ClutterGstPlayer        *player,
                                        ClutterGstBufferingMode  mode)
@@ -1786,6 +1943,16 @@ clutter_gst_player_set_buffering_mode (ClutterGstPlayer        *player,
   g_object_set (G_OBJECT (priv->pipeline), "flags", flags, NULL);
 }
 
+/**
+ * clutter_gst_player_get_audio_streams:
+ * @player: a #ClutterGstPlayer
+ *
+ * Get the list of audio streams of the current media.
+ *
+ * Return value: a list of strings describing the available audio streams
+ *
+ * Since: 1.4
+ */
 GList *
 clutter_gst_player_get_audio_streams (ClutterGstPlayer *player)
 {
@@ -1807,6 +1974,19 @@ clutter_gst_player_get_audio_streams (ClutterGstPlayer *player)
   return priv->audio_streams;
 }
 
+/**
+ * clutter_gst_player_get_audio_stream:
+ * @player: a #ClutterGstPlayer
+ *
+ * Get the current audio stream. The number returned in the index of the
+ * audio stream playing in the list returned by
+ * clutter_gst_player_get_audio_streams().
+ *
+ * Return value: the index of the current audio stream, -1 if the media has no
+ * audio stream
+ *
+ * Since: 1.4
+ */
 gint
 clutter_gst_player_get_audio_stream (ClutterGstPlayer *player)
 {
@@ -1826,6 +2006,16 @@ clutter_gst_player_get_audio_stream (ClutterGstPlayer *player)
   return index_;
 }
 
+/**
+ * clutter_gst_player_set_audio_stream:
+ * @player: a #ClutterGstPlayer
+ * @index_: the index of the audio stream
+ *
+ * Set the audio stream to play. @index_ is the index of the stream
+ * in the list returned by clutter_gst_player_get_audio_streams().
+ *
+ * Since: 1.4
+ */
 void
 clutter_gst_player_set_audio_stream (ClutterGstPlayer *player,
                                      gint              index_)
@@ -1846,6 +2036,16 @@ clutter_gst_player_set_audio_stream (ClutterGstPlayer *player,
                 NULL);
 }
 
+/**
+ * clutter_gst_player_get_idle:
+ * @player: a #ClutterGstPlayer
+ *
+ * Get the idle state of the pipeline.
+ *
+ * Return value: TRUE if the pipline is in idle mode, FALSE otherwise.
+ *
+ * Since: 1.4
+ */
 gboolean
 clutter_gst_player_get_idle (ClutterGstPlayer *player)
 {

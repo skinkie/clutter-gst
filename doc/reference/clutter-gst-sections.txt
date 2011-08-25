@@ -11,6 +11,34 @@ CLUTTER_GST_TYPE_BUFFERING_MODE
 </SECTION>
 
 <SECTION>
+<FILE>clutter-gst-player</FILE>
+<TITLE>ClutterGstPlayer</TITLE>
+ClutterGstPlayer
+ClutterGstPlayerIface
+clutter_gst_player_class_init
+clutter_gst_player_init
+clutter_gst_player_get_pipeline
+clutter_gst_player_get_user_agent
+clutter_gst_player_set_user_agent
+clutter_gst_player_set_seek_flags
+clutter_gst_player_get_seek_flags
+clutter_gst_player_get_buffering_mode
+clutter_gst_player_set_buffering_mode
+clutter_gst_player_get_audio_streams
+clutter_gst_player_get_audio_stream
+clutter_gst_player_set_audio_stream
+clutter_gst_player_get_idle
+<SUBSECTION Standard>
+CLUTTER_GST_PLAYER
+CLUTTER_GST_IS_PLAYER
+CLUTTER_GST_TYPE_PLAYER
+clutter_gst_player_get_type
+CLUTTER_GST_PLAYER_GET_INTERFACE
+<SUBSECTION Private>
+ClutterGstPlayerIfacePrivate
+</SECTION>
+
+<SECTION>
 <FILE>clutter-gst-video-texture</FILE>
 <TITLE>ClutterGstVideoTexture</TITLE>
 ClutterGstVideoTexture

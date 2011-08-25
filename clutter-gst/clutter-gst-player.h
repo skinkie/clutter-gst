@@ -56,6 +56,23 @@ typedef struct _ClutterGstPlayerIface ClutterGstPlayerIface;
 typedef struct _ClutterGstPlayerIfacePrivate ClutterGstPlayerIfacePrivate;
 
 
+/**
+ * ClutterGstPlayer
+ *
+ * #ClutterGstPlayer is an opaque structure whose members cannot be
+ * directly accessed
+ *
+ * Since: 1.4
+ */
+
+/**
+ * ClutterGstPlayerIface:
+ * @download_buffering: handler for the #ClutterGstPlayer::download-buffering signal
+ *
+ * Interface vtable for #ClutterGstPlayer implementations
+ *
+ * Since: 1.4
+ */
 struct _ClutterGstPlayerIface
 {
   /*< private >*/
@@ -64,9 +81,15 @@ struct _ClutterGstPlayerIface
   ClutterGstPlayerIfacePrivate *priv;
 
   /*< public >*/
+  /* signals */
   void (* download_buffering) (ClutterGstPlayer *player,
 			       gdouble           start,
 			       gdouble           stop);
+  void (* _clutter_reserved2) (void);
+  void (* _clutter_reserved3) (void);
+  void (* _clutter_reserved4) (void);
+  void (* _clutter_reserved5) (void);
+  void (* _clutter_reserved6) (void);
 };
 
 GType clutter_gst_player_get_type (void) G_GNUC_CONST;
