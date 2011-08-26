@@ -124,6 +124,10 @@ GList *                   clutter_gst_video_texture_get_audio_streams   (Clutter
 gint                      clutter_gst_video_texture_get_audio_stream    (ClutterGstVideoTexture *texture);
 void                      clutter_gst_video_texture_set_audio_stream    (ClutterGstVideoTexture *texture,
                                                                          gint                    index_);
+GList *                   clutter_gst_video_texture_get_subtitle_tracks (ClutterGstVideoTexture *texture);
+gint                      clutter_gst_video_texture_get_subtitle_track  (ClutterGstVideoTexture *texture);
+void                      clutter_gst_video_texture_set_subtitle_track  (ClutterGstVideoTexture *texture,
+                                                                         gint                    index_);
 
 G_END_DECLS
 

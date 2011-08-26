@@ -106,7 +106,9 @@ enum
   PROP_USER_AGENT,
   PROP_SEEK_FLAGS,
   PROP_AUDIO_STREAMS,
-  PROP_AUDIO_STREAM
+  PROP_AUDIO_STREAM,
+  PROP_SUBTITLE_TRACKS,
+  PROP_SUBTITLE_TRACK
 };
 
 struct _ClutterGstPlayerIfacePrivate
@@ -180,6 +182,7 @@ struct _ClutterGstPlayerPrivate
   GstElement *download_buffering_element;
 
   GList *audio_streams;
+  GList *subtitle_tracks;
 };
 
 static GQuark clutter_gst_player_private_quark = 0;
@@ -512,6 +515,10 @@ set_uri (ClutterGstPlayer *player,
   free_string_list (&priv->audio_streams);
   CLUTTER_GST_NOTE (AUDIO_STREAM, "audio-streams changed");
   g_object_notify (self, "audio-streams");
+
+  free_string_list (&priv->subtitle_tracks);
+  CLUTTER_GST_NOTE (SUBTITLES, "subtitle-tracks changed");
+  g_object_notify (self, "subtitle-tracks");
 }
 
 static void
@@ -1178,7 +1185,7 @@ get_tags (GstElement  *pipeline,
         }
 
       if (!description)
-        description = g_strdup_printf ("Audio Track #%d", num++);
+        description = g_strdup_printf ("Track #%d", num++);
 
       ret = g_list_prepend (ret, description);
 
@@ -1277,6 +1284,67 @@ on_current_audio_changed (GstElement       *pipeline,
   g_idle_add (on_current_audio_changed_main_context, player);
 }
 
+static gboolean
+on_text_changed_main_context (gpointer data)
+{
+  ClutterGstPlayer *player = CLUTTER_GST_PLAYER (data);
+  ClutterGstPlayerPrivate *priv = PLAYER_GET_PRIVATE (player);
+  GList *subtitle_tracks;
+
+  subtitle_tracks = get_tags (priv->pipeline, "n-text", "get-text-tags");
+
+  if (!are_lists_equal (priv->subtitle_tracks, subtitle_tracks))
+    {
+      free_string_list (&priv->subtitle_tracks);
+      priv->subtitle_tracks = subtitle_tracks;
+
+      CLUTTER_GST_NOTE (AUDIO_STREAM, "subtitle-tracks changed");
+
+      g_object_notify (G_OBJECT (player), "subtitle-tracks");
+    }
+  else
+    {
+      free_string_list (&subtitle_tracks);
+    }
+
+  return FALSE;
+}
+
+/* same explanation as for notify::volume's usage of g_idle_add() */
+static void
+on_text_changed (GstElement       *pipeline,
+                  ClutterGstPlayer *player)
+{
+  g_idle_add (on_text_changed_main_context, player);
+}
+
+static void
+on_text_tags_changed (GstElement       *pipeline,
+                       gint              stream,
+                       ClutterGstPlayer *player)
+{
+  g_idle_add (on_text_changed_main_context, player);
+}
+
+static gboolean
+on_current_text_changed_main_context (gpointer data)
+{
+  ClutterGstPlayer *player = CLUTTER_GST_PLAYER (data);
+
+  CLUTTER_GST_NOTE (AUDIO_STREAM, "text stream changed");
+  g_object_notify (G_OBJECT (player), "subtitle-track");
+
+  return FALSE;
+}
+
+static void
+on_current_text_changed (GstElement       *pipeline,
+                          GParamSpec       *pspec,
+                          ClutterGstPlayer *player)
+{
+  g_idle_add (on_current_text_changed_main_context, player);
+}
+
 /* GObject's magic/madness */
 
 static void
@@ -1344,6 +1412,11 @@ clutter_gst_player_set_property (GObject      *object,
     case PROP_AUDIO_STREAM:
       clutter_gst_player_set_audio_stream (player,
                                            g_value_get_int (value));
+      break;
+
+    case PROP_SUBTITLE_TRACK:
+      clutter_gst_player_set_subtitle_track (player,
+                                             g_value_get_int (value));
       break;
 
     default:
@@ -1438,6 +1511,19 @@ clutter_gst_player_get_property (GObject    *object,
       }
       break;
 
+    case PROP_SUBTITLE_TRACKS:
+      g_value_set_pointer (value, priv->subtitle_tracks);
+      break;
+
+    case PROP_SUBTITLE_TRACK:
+      {
+        gint index_;
+
+        index_ = clutter_gst_player_get_subtitle_track (player);
+        g_value_set_int (value, index_);
+      }
+      break;
+
     default:
       iface_priv = PLAYER_GET_CLASS_PRIVATE (object);
       iface_priv->get_property (object, property_id, value, pspec);
@@ -1503,10 +1589,16 @@ clutter_gst_player_class_init (GObjectClass *object_class)
                                     PROP_USER_AGENT, "user-agent");
   g_object_class_override_property (object_class,
                                     PROP_SEEK_FLAGS, "seek-flags");
+
   g_object_class_override_property (object_class,
                                     PROP_AUDIO_STREAMS, "audio-streams");
   g_object_class_override_property (object_class,
                                     PROP_AUDIO_STREAM, "audio-stream");
+
+  g_object_class_override_property (object_class,
+                                    PROP_SUBTITLE_TRACKS, "subtitle-tracks");
+  g_object_class_override_property (object_class,
+                                    PROP_SUBTITLE_TRACK, "subtitle-track");
 }
 
 static GstElement *
@@ -1629,6 +1721,16 @@ clutter_gst_player_init (ClutterGstPlayer *player)
                     G_CALLBACK (on_current_audio_changed),
                     player);
 
+  g_signal_connect (priv->pipeline, "text-changed",
+                    G_CALLBACK (on_text_changed),
+                    player);
+  g_signal_connect (priv->pipeline, "text-tags-changed",
+                    G_CALLBACK (on_text_tags_changed),
+                    player);
+  g_signal_connect (priv->pipeline, "notify::current-text",
+                    G_CALLBACK (on_current_text_changed),
+                    player);
+
   gst_object_unref (GST_OBJECT (priv->bus));
 
   return TRUE;
@@ -1705,6 +1807,19 @@ clutter_gst_player_default_init (ClutterGstPlayerIface *iface)
   pspec = g_param_spec_int ("audio-stream",
                             "Audio Stream",
                             "Index of the current audio stream",
+                            -1, G_MAXINT, -1,
+                            CLUTTER_GST_PARAM_READWRITE);
+  g_object_interface_install_property (iface, pspec);
+
+  pspec = g_param_spec_pointer ("subtitle-tracks",
+                                "Subtitles Tracks",
+                                "List of the subtitles tracks of the media",
+                                CLUTTER_GST_PARAM_READABLE);
+  g_object_interface_install_property (iface, pspec);
+
+  pspec = g_param_spec_int ("subtitle-track",
+                            "Subtitles Track",
+                            "Index of the current subtitles track",
                             -1, G_MAXINT, -1,
                             CLUTTER_GST_PARAM_READWRITE);
   g_object_interface_install_property (iface, pspec);
@@ -2048,6 +2163,67 @@ clutter_gst_player_set_audio_stream (ClutterGstPlayer *player,
 
   g_object_set (G_OBJECT (priv->pipeline),
                 "current-audio", index_,
+                NULL);
+}
+
+GList *
+clutter_gst_player_get_subtitle_tracks (ClutterGstPlayer *player)
+{
+  ClutterGstPlayerPrivate *priv;
+
+  g_return_val_if_fail (CLUTTER_GST_IS_PLAYER (player), NULL);
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  if (CLUTTER_GST_DEBUG_ENABLED (SUBTITLES))
+    {
+      gchar *tracks;
+
+      tracks = list_to_string (priv->subtitle_tracks);
+      CLUTTER_GST_NOTE (SUBTITLES, "subtitle tracks: %s", tracks);
+      g_free (tracks);
+    }
+
+  return priv->subtitle_tracks;
+}
+
+gint
+clutter_gst_player_get_subtitle_track (ClutterGstPlayer *player)
+{
+  ClutterGstPlayerPrivate *priv;
+  gint index_ = -1;
+
+  g_return_val_if_fail (CLUTTER_GST_IS_PLAYER (player), -1);
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  g_object_get (G_OBJECT (priv->pipeline),
+                "current-text", &index_,
+                NULL);
+
+  CLUTTER_GST_NOTE (SUBTITLES, "text track is #%d", index_);
+
+  return index_;
+
+}
+
+void
+clutter_gst_player_set_subtitle_track (ClutterGstPlayer *player,
+                                       gint              index_)
+{
+  ClutterGstPlayerPrivate *priv;
+
+  g_return_if_fail (CLUTTER_GST_IS_PLAYER (player));
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  g_return_if_fail (index_ >= 0 &&
+                    index_ < g_list_length (priv->subtitle_tracks));
+
+  CLUTTER_GST_NOTE (SUBTITLES, "set subtitle track to #%d", index_);
+
+  g_object_set (G_OBJECT (priv->pipeline),
+                "current-text", index_,
                 NULL);
 }
 

@@ -40,7 +40,8 @@ static const GDebugKey clutter_gst_debug_keys[] = {
   { "media",        CLUTTER_GST_DEBUG_MEDIA        },
   { "aspect-ratio", CLUTTER_GST_DEBUG_ASPECT_RATIO },
   { "buffering",    CLUTTER_GST_DEBUG_BUFFERING    },
-  { "audio-stream", CLUTTER_GST_DEBUG_AUDIO_STREAM }
+  { "audio-stream", CLUTTER_GST_DEBUG_AUDIO_STREAM },
+  { "subtitles",    CLUTTER_GST_DEBUG_SUBTITLES    }
 };
 
 /**

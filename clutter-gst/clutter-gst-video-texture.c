@@ -827,3 +827,57 @@ clutter_gst_video_texture_set_audio_stream (ClutterGstVideoTexture *texture,
 {
   clutter_gst_player_set_audio_stream (CLUTTER_GST_PLAYER (texture), index_);
 }
+
+/**
+ * clutter_gst_video_texture_get_subtitle_tracks:
+ * @texture: a #ClutterGstVideoTexture
+ *
+ * Get the list of subtitles tracks of the current media.
+ *
+ * Return value: a list of strings describing the available subtitles tracks
+ *
+ * Since: 1.4
+ */
+GList *
+clutter_gst_video_texture_get_subtitle_tracks (ClutterGstVideoTexture *texture)
+{
+  return clutter_gst_player_get_subtitle_tracks (CLUTTER_GST_PLAYER (texture));
+}
+
+/**
+ * clutter_gst_video_texture_get_subtitle_track:
+ * @texture: a #ClutterGstVideoTexture
+ *
+ * Get the current subtitles track. The number returned is the index of the
+ * subitles track in the list returned by
+ * clutter_gst_video_texture_get_subtitle_tracks().
+ *
+ * Return value: the index of the current subtitlest track, -1 if the media has no
+ * subtitles track or if the subtitles have been turned off
+ *
+ * Since: 1.4
+ */
+gint
+clutter_gst_video_texture_get_subtitle_track (ClutterGstVideoTexture *texture)
+{
+  return clutter_gst_player_get_subtitle_track (CLUTTER_GST_PLAYER (texture));
+}
+
+/**
+ * clutter_gst_video_texture_set_subtitle_track:
+ * @texture: a #ClutterGstVideoTexture
+ * @index_: the index of the subtitles track
+ *
+ * Set the subtitles track to play. @index_ is the index of the stream
+ * in the list returned by clutter_gst_video_texture_get_subtitle_tracks().
+ *
+ * If @index_ is -1, the subtitles are turned off.
+ *
+ * Since: 1.4
+ */
+void
+clutter_gst_video_texture_set_subtitle_track (ClutterGstVideoTexture *texture,
+                                              gint                    index_)
+{
+  clutter_gst_player_set_subtitle_track (CLUTTER_GST_PLAYER (texture), index_);
+}

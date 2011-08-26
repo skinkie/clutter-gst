@@ -38,7 +38,8 @@ typedef enum {
   CLUTTER_GST_DEBUG_MEDIA           = 1 << 1,
   CLUTTER_GST_DEBUG_ASPECT_RATIO    = 1 << 2,
   CLUTTER_GST_DEBUG_BUFFERING       = 1 << 3,
-  CLUTTER_GST_DEBUG_AUDIO_STREAM    = 1 << 4
+  CLUTTER_GST_DEBUG_AUDIO_STREAM    = 1 << 4,
+  CLUTTER_GST_DEBUG_SUBTITLES       = 1 << 5
 } ClutterDebugFlag;
 
 #define CLUTTER_GST_DEBUG_ENABLED(type) \

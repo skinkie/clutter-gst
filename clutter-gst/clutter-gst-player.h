@@ -117,6 +117,11 @@ gint                      clutter_gst_player_get_audio_stream    (ClutterGstPlay
 void                      clutter_gst_player_set_audio_stream    (ClutterGstPlayer        *player,
                                                                   gint                     index_);
 
+GList *                   clutter_gst_player_get_subtitle_tracks (ClutterGstPlayer       *player);
+gint                      clutter_gst_player_get_subtitle_track  (ClutterGstPlayer       *player);
+void                      clutter_gst_player_set_subtitle_track  (ClutterGstPlayer       *player,
+                                                                  gint                    index_);
+
 gboolean                  clutter_gst_player_get_idle            (ClutterGstPlayer        *player);
 
 G_END_DECLS
