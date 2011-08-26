@@ -836,8 +836,16 @@ bus_message_error_cb (GstBus           *bus,
                       ClutterGstPlayer *player)
 {
   ClutterGstPlayerPrivate *priv = PLAYER_GET_PRIVATE (player);
+  GError *error = NULL;
 
   gst_element_set_state (priv->pipeline, GST_STATE_NULL);
+
+  gst_message_parse_error (message, &error, NULL);
+  g_signal_emit_by_name (player, "error", error);
+  g_error_free (error);
+
+  priv->is_idle = TRUE;
+  g_object_notify (G_OBJECT (player), "idle");
 }
 
 static void
