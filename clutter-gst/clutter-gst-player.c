@@ -855,8 +855,15 @@ bus_message_eos_cb (GstBus           *bus,
 {
   ClutterGstPlayerPrivate *priv = PLAYER_GET_PRIVATE (player);
 
-  gst_element_set_state (priv->pipeline, GST_STATE_READY);
   priv->in_eos = TRUE;
+
+  gst_element_set_state (priv->pipeline, GST_STATE_READY);
+
+  g_signal_emit_by_name (player, "eos");
+  g_object_notify (G_OBJECT (player), "progress");
+
+  priv->is_idle = TRUE;
+  g_object_notify (G_OBJECT (player), "idle");
 }
 
 static void
