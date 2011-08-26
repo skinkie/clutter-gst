@@ -2217,7 +2217,7 @@ clutter_gst_player_set_subtitle_track (ClutterGstPlayer *player,
 
   priv = PLAYER_GET_PRIVATE (player);
 
-  g_return_if_fail (index_ >= 0 &&
+  g_return_if_fail (index_ >= -1 &&
                     index_ < g_list_length (priv->subtitle_tracks));
 
   CLUTTER_GST_NOTE (SUBTITLES, "set subtitle track to #%d", index_);
