@@ -102,6 +102,7 @@ gboolean  _clutter_gst_debug_init       (void);
 
 #else /* !CLUTTER_GST_ENABLE_DEBUG */
 
+#define CLUTTER_GST_DEBUG_ENABLED(type)    (0)
 #define CLUTTER_GST_NOTE(type,...)         G_STMT_START { } G_STMT_END
 #define CLUTTER_GST_MARK()                 G_STMT_START { } G_STMT_END
 #define CLUTTER_GST_TIMESTAMP(type,...)    G_STMT_START { } G_STMT_END
