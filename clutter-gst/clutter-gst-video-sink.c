@@ -907,21 +907,38 @@ navigation_event (ClutterActor        *actor,
       gst_navigation_send_mouse_event (GST_NAVIGATION (sink),
                                        type, bevent->button, bevent->x, bevent->y);
     }
-  else if (event->type == CLUTTER_KEY_PRESS ||
-           event->type == CLUTTER_KEY_RELEASE)
+  else if (event->type == CLUTTER_KEY_PRESS)
     {
-      ClutterKeyEvent *kevent = (ClutterKeyEvent *) kevent;
-      const char *type;
-      char *key;
+      ClutterKeyEvent *kevent = (ClutterKeyEvent *) event;
+      GstNavigationCommand command;
 
-      type = (event->type == CLUTTER_KEY_PRESS) ? "key-press" : "key-release";
-      key = g_ucs4_to_utf8 (&kevent->unicode_value, 1, NULL, NULL, NULL);
-      GST_DEBUG ("Received key %s event (%s)",
-                 (event->type == CLUTTER_KEY_PRESS) ? "press" : "release",
-                 key);
-      gst_navigation_send_key_event (GST_NAVIGATION (sink),
-                                     type, key ? key : "unknown");
-      g_free (key);
+      switch (kevent->keyval)
+        {
+        case CLUTTER_KEY_Up:
+          command = GST_NAVIGATION_COMMAND_UP;
+          break;
+        case CLUTTER_KEY_Down:
+          command = GST_NAVIGATION_COMMAND_DOWN;
+          break;
+        case CLUTTER_KEY_Left:
+          command = GST_NAVIGATION_COMMAND_LEFT;
+          break;
+        case CLUTTER_KEY_Right:
+          command = GST_NAVIGATION_COMMAND_RIGHT;
+          break;
+        case CLUTTER_KEY_Return:
+          command = GST_NAVIGATION_COMMAND_ACTIVATE;
+          break;
+        default:
+          command = GST_NAVIGATION_COMMAND_INVALID;
+        }
+
+      if (command != GST_NAVIGATION_COMMAND_INVALID)
+        {
+          gst_navigation_send_command (GST_NAVIGATION (sink), command);
+
+          return TRUE;
+        }
     }
 
   return FALSE;
