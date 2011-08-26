@@ -56,8 +56,6 @@
 
 struct _ClutterGstVideoTexturePrivate
 {
-  guint is_idle : 1;
-
   /* width / height (in pixels) of the frame data before applying the pixel
    * aspect ratio */
   gint buffer_width;
@@ -372,8 +370,10 @@ clutter_gst_video_texture_paint (ClutterActor *actor)
   ClutterGstVideoTexture *video_texture = (ClutterGstVideoTexture *) actor;
   ClutterGstVideoTexturePrivate *priv = video_texture->priv;
   ClutterActorClass *actor_class;
+  gboolean is_idle;
 
-  if (G_UNLIKELY (priv->is_idle))
+  is_idle = clutter_gst_player_get_idle (CLUTTER_GST_PLAYER (video_texture));
+  if (G_UNLIKELY (is_idle))
     {
       CoglColor *color;
       gfloat alpha;
@@ -507,11 +507,6 @@ idle_cb (ClutterGstVideoTexture *video_texture,
          GParamSpec             *pspec,
          gpointer                data)
 {
-  ClutterGstVideoTexturePrivate *priv = video_texture->priv;
-
-  priv->is_idle =
-    clutter_gst_player_get_idle (CLUTTER_GST_PLAYER (video_texture));
-
   /* restore the idle material so we don't just display the last frame */
   clutter_actor_queue_redraw (CLUTTER_ACTOR (video_texture));
 }
@@ -548,8 +543,6 @@ clutter_gst_video_texture_init (ClutterGstVideoTexture *video_texture)
     G_TYPE_INSTANCE_GET_PRIVATE (video_texture,
                                  CLUTTER_GST_TYPE_VIDEO_TEXTURE,
                                  ClutterGstVideoTexturePrivate);
-
-  priv->is_idle = TRUE;
 
   if (!clutter_gst_player_init (CLUTTER_GST_PLAYER (video_texture)))
     {
