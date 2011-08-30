@@ -2166,6 +2166,16 @@ clutter_gst_player_set_audio_stream (ClutterGstPlayer *player,
                 NULL);
 }
 
+/**
+ * clutter_gst_player_get_subtitle_tracks:
+ * @player: a #ClutterGstPlayer
+ *
+ * Get the list of subtitles tracks of the current media.
+ *
+ * Return value: a list of strings describing the available subtitles tracks
+ *
+ * Since: 1.4
+ */
 GList *
 clutter_gst_player_get_subtitle_tracks (ClutterGstPlayer *player)
 {
@@ -2187,6 +2197,19 @@ clutter_gst_player_get_subtitle_tracks (ClutterGstPlayer *player)
   return priv->subtitle_tracks;
 }
 
+/**
+ * clutter_gst_player_get_subtitle_track:
+ * @player: a #ClutterGstPlayer
+ *
+ * Get the current subtitles track. The number returned is the index of the
+ * subitles track in the list returned by
+ * clutter_gst_player_get_subtitle_tracks().
+ *
+ * Return value: the index of the current subtitlest track, -1 if the media has
+ * no subtitles track or if the subtitles have been turned off
+ *
+ * Since: 1.4
+ */
 gint
 clutter_gst_player_get_subtitle_track (ClutterGstPlayer *player)
 {
@@ -2207,6 +2230,18 @@ clutter_gst_player_get_subtitle_track (ClutterGstPlayer *player)
 
 }
 
+/**
+ * clutter_gst_player_set_subtitle_track:
+ * @player: a #ClutterGstPlayer
+ * @index_: the index of the subtitles track
+ *
+ * Set the subtitles track to play. @index_ is the index of the stream
+ * in the list returned by clutter_gst_player_get_subtitle_tracks().
+ *
+ * If @index_ is -1, the subtitles are turned off.
+ *
+ * Since: 1.4
+ */
 void
 clutter_gst_player_set_subtitle_track (ClutterGstPlayer *player,
                                        gint              index_)

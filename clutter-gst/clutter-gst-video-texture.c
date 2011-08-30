@@ -852,8 +852,8 @@ clutter_gst_video_texture_get_subtitle_tracks (ClutterGstVideoTexture *texture)
  * subitles track in the list returned by
  * clutter_gst_video_texture_get_subtitle_tracks().
  *
- * Return value: the index of the current subtitlest track, -1 if the media has no
- * subtitles track or if the subtitles have been turned off
+ * Return value: the index of the current subtitlest track, -1 if the media has
+ * no subtitles track or if the subtitles have been turned off
  *
  * Since: 1.4
  */
