@@ -103,6 +103,7 @@ ClutterGst-@CLUTTER_GST_API_VERSION@.gir: $(INTROSPECTION_SCANNER) libclutter-gs
 		--namespace ClutterGst --nsversion=@CLUTTER_GST_API_VERSION@ \
 		$(INCLUDES) \
 		$(AM_CPPFLAGS) \
+		--quiet --warn-all \
 		--add-include-path=$(srcdir) --add-include=path=. \
 		--c-include="clutter-gst/clutter-gst.h" \
 		--include=GObject-2.0 \
