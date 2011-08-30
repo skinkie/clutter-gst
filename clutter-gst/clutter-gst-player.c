@@ -121,7 +121,6 @@ struct _ClutterGstPlayerIfacePrivate
                                          guint           property_id,
                                          GValue         *value,
                                          GParamSpec     *pspec);
-  void       (*dispose)			(GObject        *object);
 };
 
 typedef struct _ClutterGstPlayerPrivate ClutterGstPlayerPrivate;
@@ -1348,23 +1347,6 @@ on_current_text_changed (GstElement       *pipeline,
 /* GObject's magic/madness */
 
 static void
-clutter_gst_player_deinit (ClutterGstPlayer *player)
-{
-  /* TODO */
-}
-
-static void
-clutter_gst_player_dispose (GObject *object)
-{
-  ClutterGstPlayer *player = CLUTTER_GST_PLAYER (object);
-  ClutterGstPlayerIfacePrivate *iface_priv = PLAYER_GET_CLASS_PRIVATE (object);
-
-  clutter_gst_player_deinit (player);
-
-  iface_priv->dispose (object);
-}
-
-static void
 clutter_gst_player_set_property (GObject      *object,
                                  guint         property_id,
                                  const GValue *value,
@@ -1535,7 +1517,7 @@ clutter_gst_player_get_property (GObject    *object,
  * @object_class: a #GObjectClass
  *
  * Adds the #ClutterGstPlayer properties to a class and surchages the
- * set/get_property and dispose of #GObjectClass. You should call this
+ * set/get_property of #GObjectClass. You should call this
  * function at the end of the class_init method of the class
  * implementing #ClutterGstPlayer.
  *
@@ -1554,10 +1536,8 @@ clutter_gst_player_class_init (GObjectClass *object_class)
   /* Save object's methods we want to override */
   priv->set_property = object_class->set_property;
   priv->get_property = object_class->get_property;
-  priv->dispose      = object_class->dispose;
 
   /* Replace by our methods */
-  object_class->dispose      = clutter_gst_player_dispose;
   object_class->set_property = clutter_gst_player_set_property;
   object_class->get_property = clutter_gst_player_get_property;
 
@@ -1644,6 +1624,10 @@ get_pipeline (void)
  * Initialize a #ClutterGstPlayer instance. You should call this
  * function at the beginning of the init method of the class
  * implementing #ClutterGstPlayer.
+ *
+ * When you're finished with the ClutterGstPlayer mixin features (usually in
+ * the dispose or finalize vfuncs), call clutter_gst_player_deinit() to
+ * desallocate the resources created by clutter_gst_player_init().
  *
  * Return value: TRUE if the initialization was successfull, FALSE otherwise.
  *
@@ -1734,6 +1718,48 @@ clutter_gst_player_init (ClutterGstPlayer *player)
   gst_object_unref (GST_OBJECT (priv->bus));
 
   return TRUE;
+}
+
+/**
+ * clutter_gst_player_deinit:
+ * @player: a #ClutterGstPlayer
+ *
+ * Frees the resources created by clutter_gst_player_init(). After
+ * clutter_gst_player_deinit() has been called, no other player method can be
+ * called on the instance.
+ *
+ * Since: 1.4
+ */
+void
+clutter_gst_player_deinit (ClutterGstPlayer *player)
+{
+  ClutterGstPlayerPrivate *priv;
+
+  g_return_if_fail (CLUTTER_GST_IS_PLAYER (player));
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  /* start by doing the usual clean up when not wanting to play an URI */
+  set_uri (player, NULL);
+
+  if (priv->bus)
+    {
+      gst_bus_remove_signal_watch (priv->bus);
+      priv->bus = NULL;
+    }
+
+  if (priv->pipeline)
+    {
+      gst_object_unref (GST_OBJECT (priv->pipeline));
+      priv->pipeline = NULL;
+    }
+
+  g_free (priv->uri);
+  g_free (priv->font_name);
+  free_string_list (&priv->audio_streams);
+  free_string_list (&priv->subtitle_tracks);
+
+  g_slice_free (ClutterGstPlayerPrivate, priv);
 }
 
 static void

@@ -420,6 +420,8 @@ clutter_gst_video_texture_finalize (GObject *object)
   self = CLUTTER_GST_VIDEO_TEXTURE (object);
   priv = self->priv;
 
+  clutter_gst_player_deinit (CLUTTER_GST_PLAYER (self));
+
   if (priv->idle_material != COGL_INVALID_HANDLE)
     cogl_handle_unref (priv->idle_material);
 

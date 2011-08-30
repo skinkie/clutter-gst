@@ -17,6 +17,7 @@ ClutterGstPlayer
 ClutterGstPlayerIface
 clutter_gst_player_class_init
 clutter_gst_player_init
+clutter_gst_player_deinit
 clutter_gst_player_get_pipeline
 clutter_gst_player_get_idle
 clutter_gst_player_get_user_agent

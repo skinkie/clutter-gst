@@ -97,6 +97,7 @@ GType clutter_gst_player_get_type (void) G_GNUC_CONST;
 void                      clutter_gst_player_class_init          (GObjectClass *object_class);
 
 gboolean                  clutter_gst_player_init                (ClutterGstPlayer        *player);
+void                      clutter_gst_player_deinit               (ClutterGstPlayer *player);
 
 GstElement *		  clutter_gst_player_get_pipeline        (ClutterGstPlayer        *player);
 
