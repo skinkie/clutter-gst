@@ -93,9 +93,7 @@ struct _ClutterGstVideoTextureClass
   ClutterTextureClass parent_class;
 
   /* Future padding */
-  void (* download_buffering) (ClutterGstVideoTexture *video_texture,
-			       gdouble                 start,
-			       gdouble                 stop);
+  void (* _clutter_reserved1) (void);
   void (* _clutter_reserved2) (void);
   void (* _clutter_reserved3) (void);
   void (* _clutter_reserved4) (void);
