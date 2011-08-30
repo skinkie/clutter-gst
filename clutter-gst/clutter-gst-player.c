@@ -1864,8 +1864,7 @@ clutter_gst_player_default_init (ClutterGstPlayerIface *iface)
  * Retrieves the #GstPipeline used by the @player, for direct use with
  * GStreamer API.
  *
- * Return value: (transfer none): the #GstPipeline element used by the
- * video texture
+ * Return value: (transfer none): the #GstPipeline element used by the player
  *
  * Since: 1.4
  */
