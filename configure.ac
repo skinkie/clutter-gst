@@ -147,6 +147,28 @@ pkg_modules="gstreamer-$GST_MAJORMINOR >= $GSTREAMER_REQ_VERSION gstreamer-plugi
 PKG_CHECK_MODULES(GST, [$pkg_modules])
 
 dnl ========================================================================
+dnl GL inclusion and link. We depend on GL for the single glGetIntegerv()
+dnl call. The end goal is to get rid of it, but we can't just yet.
+
+dnl For now, we assume Clutter/Cogl includes the GL headers (whatever they
+dnl are). By the time they don't do that, we'll hopefully won't have any
+dnl direct GL dependency.
+
+dnl As for linking against -lGL, I believe Clutter always end up puttin libGL
+dnl in its exported CFLAGS, except when compiling against the NVidia library
+dnl (which does not have the 'gl' .pc file. For now, let's just add -lGL when
+dnl we are using the glx flavour, That should fix the vast majority of the
+dnl issues
+
+dnl Why don't we "just" link against GL? check the cogl/clutter configure.ac :)
+dnl Hopefully this will be enough for the time being.
+
+clutter_soname=`$PKG_CONFIG --variable soname_infix clutter-1.0`
+AS_CASE([$clutter_soname],
+        [glx], [AC_CHECK_LIB([GL], [glGetIntegerv], [GL_LDFLAGS="-lGL"])])
+AC_SUBST([GL_LDFLAGS])
+
+dnl ========================================================================
 
 m4_define([maintainer_flags_default], [yes])
 AC_ARG_ENABLE([maintainer-flags],
