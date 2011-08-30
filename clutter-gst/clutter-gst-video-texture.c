@@ -406,12 +406,6 @@ clutter_gst_video_texture_paint (ClutterActor *actor)
  */
 
 static void
-clutter_gst_video_texture_dispose (GObject *object)
-{
-  G_OBJECT_CLASS (clutter_gst_video_texture_parent_class)->dispose (object);
-}
-
-static void
 clutter_gst_video_texture_finalize (GObject *object)
 {
   ClutterGstVideoTexture        *self;
@@ -481,7 +475,6 @@ clutter_gst_video_texture_class_init (ClutterGstVideoTextureClass *klass)
 
   g_type_class_add_private (klass, sizeof (ClutterGstVideoTexturePrivate));
 
-  object_class->dispose      = clutter_gst_video_texture_dispose;
   object_class->finalize     = clutter_gst_video_texture_finalize;
   object_class->set_property = clutter_gst_video_texture_set_property;
   object_class->get_property = clutter_gst_video_texture_get_property;
