@@ -1,3 +1,25 @@
+clutter-gst 1.3.14 (31/08/2011)
+===============================================================================
+
+List of changes since 1.3.12
+
+  o Big split between the logic around playbin2 and the clutter-specific part
+    to be able to reuse the GStreamer logic to implement new ClutterMedia
+    objects.
+
+  o Add new API to get the list of audio and subtitles tracks
+
+  o Fix the leak of GstBus in VideoTexture
+
+  o Fix the key navigation events in the sink
+
+Many thanks to:
+
+    Lionel Landwerlin
+    Bastian Winkler
+    Dinh Bowman
+    Thomas Wood
+
 clutter-gst 1.3.12 (06/06/2011)
 ===============================================================================
 
