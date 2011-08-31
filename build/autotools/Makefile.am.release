@@ -18,7 +18,7 @@ RELEASE_API_URL = http://docs.clutter-project.org/docs/clutter-gst
 
 RELEASE_ANNOUNCE_LIST = clutter-announce@clutter-project.org (Cc: gnome-announce-list@gnome.org)
 
-tar_file = $(distdir).tar.bz2
+tar_file = $(distdir).tar.xz
 sha256_file = $(distdir).sha256sum
 
 $(sha256_file): $(tar_file)
