@@ -52,6 +52,20 @@ typedef struct _VideoApp
 
 static void show_controls (VideoApp *app, gboolean vis);
 
+static gboolean opt_fullscreen = FALSE;
+
+static GOptionEntry options[] =
+{
+  { "fullscreen",
+    'f', 0,
+    G_OPTION_ARG_NONE,
+    &opt_fullscreen,
+    "Start the player in fullscreen",
+    NULL },
+
+  { NULL }
+};
+
 static gboolean
 controls_timeout_cb (gpointer data)
 {
@@ -305,8 +319,21 @@ main (int argc, char *argv[])
   ClutterColor         stage_color = { 0x00, 0x00, 0x00, 0x00 };
   ClutterColor         control_color1 = { 73, 74, 77, 0xee };
   ClutterColor         control_color2 = { 0xcc, 0xcc, 0xcc, 0xff };
+  GError              *error = NULL;
 
-  clutter_gst_init (&argc, &argv);
+  clutter_gst_init_with_args (&argc,
+                              &argv,
+                              " - A simple video player",
+                              options,
+                              NULL,
+                              &error);
+
+  if (error)
+    {
+      g_print ("%s\n", error->message);
+      g_error_free (error);
+      return EXIT_FAILURE;
+    }
 
   if (argc < 2)
     {
@@ -318,6 +345,8 @@ main (int argc, char *argv[])
   clutter_stage_set_color (CLUTTER_STAGE (stage), &stage_color);
   clutter_actor_set_size (stage, 768, 576);
   clutter_stage_set_minimum_size (CLUTTER_STAGE (stage), 640, 480);
+  if (opt_fullscreen)
+    clutter_stage_set_fullscreen (CLUTTER_STAGE (stage), TRUE);
 
   app = g_new0(VideoApp, 1);
   app->stage = stage;
