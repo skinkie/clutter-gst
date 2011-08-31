@@ -3,7 +3,7 @@
  *
  * GStreamer integration library for Clutter.
  *
- * video-player.c - A simple fullscreen video player with an OSD.
+ * video-player.c - A simple video player with an OSD.
  *
  * Copyright (C) 2007,2008 OpenedHand
  *
@@ -28,8 +28,8 @@
 #include <clutter/clutter.h>
 #include <clutter-gst/clutter-gst.h>
 
-#define SEEK_H 20
-#define SEEK_W 690
+#define SEEK_H 14
+#define SEEK_W 440
 
 typedef struct _VideoApp
 {
@@ -154,8 +154,6 @@ input_cb (ClutterStage *stage,
                                                   bev->x,
                                                   bev->y);
 
-          printf("got actor %p at pos %.2fx%.2f\n", actor, bev->x, bev->y);
-
           if (actor == app->control_pause || actor == app->control_play)
             {
               toggle_pause_state (app);
@@ -262,25 +260,28 @@ size_change (ClutterTexture *texture,
 }
 
 static void
-center_controls (VideoApp *app, ClutterActor *controls)
+position_controls (VideoApp     *app,
+                   ClutterActor *controls)
 {
-  gfloat x, y, stage_width, stage_height;
+  gfloat x, y, stage_width, stage_height, bg_width, bg_height;
 
   clutter_actor_get_size (app->stage, &stage_width, &stage_height);
+  clutter_actor_get_size (app->control, &bg_width, &bg_height);
 
-  x = (stage_width - clutter_actor_get_width (controls)) / 2;
-  y = stage_height - (stage_height / 3);
-
-  g_print ("setting x = %.2f, y = %.2f, width = %.2f\n",
-           x, y, clutter_actor_get_width (controls));
+  x = (int)((stage_width - bg_width ) / 2);
+  y = stage_height - bg_height - 28;
 
   clutter_actor_set_position (controls, x, y);
 }
 
 static void
-on_fullscreen (ClutterStage *stage, VideoApp *app)
+on_stage_allocation_changed (ClutterActor           *stage,
+                             ClutterActorBox        *box,
+                             ClutterAllocationFlags  flags,
+                             VideoApp               *app)
 {
-  center_controls (app, app->control);
+  position_controls (app, app->control);
+  show_controls (app, TRUE);
 }
 
 static void
@@ -315,7 +316,8 @@ main (int argc, char *argv[])
 
   stage = clutter_stage_get_default ();
   clutter_stage_set_color (CLUTTER_STAGE (stage), &stage_color);
-  clutter_stage_set_fullscreen (CLUTTER_STAGE (stage), TRUE);
+  clutter_actor_set_size (stage, 768, 576);
+  clutter_stage_set_minimum_size (CLUTTER_STAGE (stage), 640, 480);
 
   app = g_new0(VideoApp, 1);
   app->stage = stage;
@@ -325,8 +327,8 @@ main (int argc, char *argv[])
     g_error("failed to create vtexture");
 
   g_signal_connect (stage,
-                    "fullscreen",
-                    G_CALLBACK (on_fullscreen),
+                    "allocation-changed",
+                    G_CALLBACK (on_stage_allocation_changed),
                     app);
 
   /* Handle it ourselves so can scale up for fullscreen better */
@@ -355,7 +357,7 @@ main (int argc, char *argv[])
   clutter_actor_set_opacity (app->control_seekbar, 0x99);
 
   app->control_label =
-    clutter_text_new_full ("Sans Bold 24",
+    clutter_text_new_full ("Sans Bold 14",
                            g_path_get_basename (argv[1]),
                            &control_color1);
 
@@ -373,17 +375,17 @@ main (int argc, char *argv[])
 
   clutter_actor_set_opacity (app->control, 0xee);
 
-  clutter_actor_set_position (app->control_play, 30, 30);
-  clutter_actor_set_position (app->control_pause, 30, 30);
+  clutter_actor_set_position (app->control_play, 22, 31);
+  clutter_actor_set_position (app->control_pause, 18, 31);
 
-  clutter_actor_set_size (app->control_seek1, SEEK_W+10, SEEK_H+10);
-  clutter_actor_set_position (app->control_seek1, 200, 100);
+  clutter_actor_set_size (app->control_seek1, SEEK_W+4, SEEK_H+4);
+  clutter_actor_set_position (app->control_seek1, 80, 57);
   clutter_actor_set_size (app->control_seek2, SEEK_W, SEEK_H);
-  clutter_actor_set_position (app->control_seek2, 205, 105);
+  clutter_actor_set_position (app->control_seek2, 82, 59);
   clutter_actor_set_size (app->control_seekbar, 0, SEEK_H);
-  clutter_actor_set_position (app->control_seekbar, 205, 105);
+  clutter_actor_set_position (app->control_seekbar, 82, 59);
 
-  clutter_actor_set_position (app->control_label, 200, 40);
+  clutter_actor_set_position (app->control_label, 82, 29);
 
   /* Add control UI to stage */
   clutter_container_add (CLUTTER_CONTAINER (stage),
@@ -391,11 +393,7 @@ main (int argc, char *argv[])
                          app->control,
                          NULL);
 
-  g_print ("start\n");
-
-  center_controls (app, app->control);
-
-  g_print ("stop\n");
+  position_controls (app, app->control);
 
   clutter_stage_hide_cursor (CLUTTER_STAGE (stage));
   clutter_actor_animate (app->control, CLUTTER_EASE_OUT_QUINT, 1000,
