@@ -53,6 +53,7 @@ typedef struct _VideoApp
 static void show_controls (VideoApp *app, gboolean vis);
 
 static gboolean opt_fullscreen = FALSE;
+static gboolean opt_loop = FALSE;
 
 static GOptionEntry options[] =
 {
@@ -61,6 +62,13 @@ static GOptionEntry options[] =
     G_OPTION_ARG_NONE,
     &opt_fullscreen,
     "Start the player in fullscreen",
+    NULL },
+
+  { "loop",
+    'l', 0,
+    G_OPTION_ARG_NONE,
+    &opt_loop,
+    "Start the video again once reached the EOS",
     NULL },
 
   { NULL }
@@ -311,6 +319,17 @@ tick (GObject      *object,
                           SEEK_H);
 }
 
+static void
+on_video_texture_eos (ClutterMedia *media,
+                      VideoApp     *app)
+{
+  if (opt_loop)
+    {
+      clutter_media_set_progress (media, 0.0);
+      clutter_media_set_playing (media, TRUE);
+    }
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -363,6 +382,11 @@ main (int argc, char *argv[])
   clutter_gst_video_texture_set_seek_flags (
                                     CLUTTER_GST_VIDEO_TEXTURE (app->vtexture),
                                     CLUTTER_GST_SEEK_FLAG_ACCURATE);
+
+  g_signal_connect (app->vtexture,
+                    "eos",
+                    G_CALLBACK (on_video_texture_eos),
+                    app);
 
   g_signal_connect (stage,
                     "allocation-changed",
