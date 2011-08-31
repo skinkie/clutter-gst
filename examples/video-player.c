@@ -326,6 +326,15 @@ main (int argc, char *argv[])
   if (app->vtexture == NULL)
     g_error("failed to create vtexture");
 
+  /* By default ClutterGst seeks to the nearest key frame (faster). However
+   * it has the weird effect that when you click on the progress bar, the fill
+   * goes to the key frame position that can be quite far from where you
+   * clicked. Using the ACCURATE flag tells playbin2 to seek to the actual
+   * frame */
+  clutter_gst_video_texture_set_seek_flags (
+                                    CLUTTER_GST_VIDEO_TEXTURE (app->vtexture),
+                                    CLUTTER_GST_SEEK_FLAG_ACCURATE);
+
   g_signal_connect (stage,
                     "allocation-changed",
                     G_CALLBACK (on_stage_allocation_changed),
