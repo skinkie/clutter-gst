@@ -854,12 +854,23 @@ bus_message_error_cb (GstBus           *bus,
   g_object_notify (G_OBJECT (player), "idle");
 }
 
+/*
+ * This is what's intented in the EOS callback:
+ *   - receive EOS from playbin 2
+ *   - fire the EOS signal, the user can install a signal handler to loop the
+ *     video for instance.
+ *   - after having emitted the signal, check the state of the pipeline
+ *   - if the pipeline has been set back to playing or pause, don't touch the
+ *     idle state. This will avoid drawing a frame (or more) with the idle
+ *     material when looping
+ */
 static void
 bus_message_eos_cb (GstBus           *bus,
                     GstMessage       *message,
                     ClutterGstPlayer *player)
 {
   ClutterGstPlayerPrivate *priv = PLAYER_GET_PRIVATE (player);
+  GstState state, pending;
 
   priv->in_eos = TRUE;
 
@@ -868,8 +879,15 @@ bus_message_eos_cb (GstBus           *bus,
   g_signal_emit_by_name (player, "eos");
   g_object_notify (G_OBJECT (player), "progress");
 
-  priv->is_idle = TRUE;
-  g_object_notify (G_OBJECT (player), "idle");
+  gst_element_get_state (priv->pipeline, &state, &pending, 0);
+  if (pending)
+    state = pending;
+
+  if (!(state == GST_STATE_PLAYING || state == GST_STATE_PAUSED))
+    {
+      priv->is_idle = TRUE;
+      g_object_notify (G_OBJECT (player), "idle");
+    }
 }
 
 static void
