@@ -1635,6 +1635,257 @@ get_pipeline (void)
   return pipeline;
 }
 
+/* ClutterGstPlayerIface implementation */
+
+static GstElement *
+clutter_gst_player_get_pipeline_impl (ClutterGstPlayer *player)
+{
+  ClutterGstPlayerPrivate *priv;
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  return priv->pipeline;
+}
+
+static gchar *
+clutter_gst_player_get_user_agent_impl (ClutterGstPlayer *player)
+{
+  ClutterGstPlayerPrivate *priv;
+  GstElement *source;
+  GParamSpec *pspec;
+  gchar *user_agent;
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  /* If the user has set a custom user agent, we just return it even if it is
+   * not used by the current source element of the pipeline */
+  if (priv->user_agent)
+    return g_strdup (priv->user_agent);
+
+  /* If not, we try to retrieve the user agent used by the current source */
+  g_object_get (priv->pipeline, "source", &source, NULL);
+  if (source == NULL)
+    return NULL;
+
+  pspec = g_object_class_find_property (G_OBJECT_GET_CLASS (source),
+                                        "user-agent");
+  if (pspec == NULL)
+    return NULL;
+
+  g_object_get (source, "user-agent", &user_agent, NULL);
+
+  return user_agent;
+}
+
+static void
+clutter_gst_player_set_user_agent_impl (ClutterGstPlayer *player,
+                                        const gchar      *user_agent)
+{
+  ClutterGstPlayerPrivate *priv;
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  g_free (priv->user_agent);
+  if (user_agent)
+    priv->user_agent = g_strdup (user_agent);
+  else
+    priv->user_agent = NULL;
+
+  player_set_user_agent (player, user_agent);
+}
+
+static ClutterGstSeekFlags
+clutter_gst_player_get_seek_flags_impl (ClutterGstPlayer *player)
+{
+  ClutterGstPlayerPrivate *priv;
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  if (priv->seek_flags == GST_SEEK_FLAG_ACCURATE)
+    return CLUTTER_GST_SEEK_FLAG_ACCURATE;
+  else
+    return CLUTTER_GST_SEEK_FLAG_NONE;
+}
+
+static void
+clutter_gst_player_set_seek_flags_impl (ClutterGstPlayer    *player,
+                                        ClutterGstSeekFlags  flags)
+{
+  ClutterGstPlayerPrivate *priv;
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  if (flags == CLUTTER_GST_SEEK_FLAG_NONE)
+    priv->seek_flags = GST_SEEK_FLAG_KEY_UNIT;
+  else if (flags & CLUTTER_GST_SEEK_FLAG_ACCURATE)
+    priv->seek_flags = GST_SEEK_FLAG_ACCURATE;
+}
+
+static ClutterGstBufferingMode
+clutter_gst_player_get_buffering_mode_impl (ClutterGstPlayer *player)
+{
+  ClutterGstPlayerPrivate *priv;
+  GstPlayFlags flags;
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  g_object_get (G_OBJECT (priv->pipeline), "flags", &flags, NULL);
+
+  if (flags & GST_PLAY_FLAG_DOWNLOAD)
+    return CLUTTER_GST_BUFFERING_MODE_DOWNLOAD;
+
+  return CLUTTER_GST_BUFFERING_MODE_STREAM;
+}
+
+static void
+clutter_gst_player_set_buffering_mode_impl (ClutterGstPlayer        *player,
+                                            ClutterGstBufferingMode  mode)
+{
+  ClutterGstPlayerPrivate *priv;
+  GstPlayFlags flags;
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  g_object_get (G_OBJECT (priv->pipeline), "flags", &flags, NULL);
+
+  switch (mode)
+    {
+    case CLUTTER_GST_BUFFERING_MODE_STREAM:
+      flags &= ~GST_PLAY_FLAG_DOWNLOAD;
+      break;
+
+    case CLUTTER_GST_BUFFERING_MODE_DOWNLOAD:
+      flags |= GST_PLAY_FLAG_DOWNLOAD;
+      break;
+
+    default:
+      g_warning ("Unexpected buffering mode %d", mode);
+      break;
+    }
+
+  g_object_set (G_OBJECT (priv->pipeline), "flags", flags, NULL);
+}
+
+static GList *
+clutter_gst_player_get_audio_streams_impl (ClutterGstPlayer *player)
+{
+  ClutterGstPlayerPrivate *priv;
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  if (CLUTTER_GST_DEBUG_ENABLED (AUDIO_STREAM))
+    {
+      gchar *streams;
+
+      streams = list_to_string (priv->audio_streams);
+      CLUTTER_GST_NOTE (AUDIO_STREAM, "audio streams: %s", streams);
+      g_free (streams);
+    }
+
+  return priv->audio_streams;
+}
+
+static gint
+clutter_gst_player_get_audio_stream_impl (ClutterGstPlayer *player)
+{
+  ClutterGstPlayerPrivate *priv;
+  gint index_ = -1;
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  g_object_get (G_OBJECT (priv->pipeline),
+                "current-audio", &index_,
+                NULL);
+
+  CLUTTER_GST_NOTE (AUDIO_STREAM, "audio stream is #%d", index_);
+
+  return index_;
+}
+
+static void
+clutter_gst_player_set_audio_stream_impl (ClutterGstPlayer *player,
+                                          gint              index_)
+{
+  ClutterGstPlayerPrivate *priv;
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  g_return_if_fail (index_ >= 0 &&
+                    index_ < (gint) g_list_length (priv->audio_streams));
+
+  CLUTTER_GST_NOTE (AUDIO_STREAM, "set audio audio stream to #%d", index_);
+
+  g_object_set (G_OBJECT (priv->pipeline),
+                "current-audio", index_,
+                NULL);
+}
+
+static GList *
+clutter_gst_player_get_subtitle_tracks_impl (ClutterGstPlayer *player)
+{
+  ClutterGstPlayerPrivate *priv;
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  if (CLUTTER_GST_DEBUG_ENABLED (SUBTITLES))
+    {
+      gchar *tracks;
+
+      tracks = list_to_string (priv->subtitle_tracks);
+      CLUTTER_GST_NOTE (SUBTITLES, "subtitle tracks: %s", tracks);
+      g_free (tracks);
+    }
+
+  return priv->subtitle_tracks;
+}
+
+static gint
+clutter_gst_player_get_subtitle_track_impl (ClutterGstPlayer *player)
+{
+  ClutterGstPlayerPrivate *priv;
+  gint index_ = -1;
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  g_object_get (G_OBJECT (priv->pipeline),
+                "current-text", &index_,
+                NULL);
+
+  CLUTTER_GST_NOTE (SUBTITLES, "text track is #%d", index_);
+
+  return index_;
+}
+
+static void
+clutter_gst_player_set_subtitle_track_impl (ClutterGstPlayer *player,
+                                            gint              index_)
+{
+  ClutterGstPlayerPrivate *priv;
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  g_return_if_fail (index_ >= -1 &&
+                    index_ < (gint) g_list_length (priv->subtitle_tracks));
+
+  CLUTTER_GST_NOTE (SUBTITLES, "set subtitle track to #%d", index_);
+
+  g_object_set (G_OBJECT (priv->pipeline),
+                "current-text", index_,
+                NULL);
+}
+
+static gboolean
+clutter_gst_player_get_idle_impl (ClutterGstPlayer *player)
+{
+  ClutterGstPlayerPrivate *priv;
+
+  priv = PLAYER_GET_PRIVATE (player);
+
+  return priv->is_idle;
+}
+
+/**/
+
 /**
  * clutter_gst_player_init:
  * @player: a #ClutterGstPlayer
@@ -1655,12 +1906,30 @@ gboolean
 clutter_gst_player_init (ClutterGstPlayer *player)
 {
   ClutterGstPlayerPrivate *priv;
+  ClutterGstPlayerIface *iface;
 
   g_return_val_if_fail (CLUTTER_GST_IS_PLAYER (player), FALSE);
 
   priv = PLAYER_GET_PRIVATE (player);
   if (priv)
     return TRUE;
+
+  iface = CLUTTER_GST_PLAYER_GET_INTERFACE (player);
+
+  iface->get_pipeline = clutter_gst_player_get_pipeline_impl;
+  iface->get_user_agent = clutter_gst_player_get_user_agent_impl;
+  iface->set_user_agent = clutter_gst_player_set_user_agent_impl;
+  iface->get_seek_flags = clutter_gst_player_get_seek_flags_impl;
+  iface->set_seek_flags = clutter_gst_player_set_seek_flags_impl;
+  iface->get_buffering_mode = clutter_gst_player_get_buffering_mode_impl;
+  iface->set_buffering_mode = clutter_gst_player_set_buffering_mode_impl;
+  iface->get_audio_streams = clutter_gst_player_get_audio_streams_impl;
+  iface->get_audio_stream = clutter_gst_player_get_audio_stream_impl;
+  iface->set_audio_stream = clutter_gst_player_set_audio_stream_impl;
+  iface->get_subtitle_tracks = clutter_gst_player_get_subtitle_tracks_impl;
+  iface->get_subtitle_track = clutter_gst_player_get_subtitle_track_impl;
+  iface->set_subtitle_track = clutter_gst_player_set_subtitle_track_impl;
+  iface->get_idle = clutter_gst_player_get_idle_impl;
 
   priv = g_slice_new0 (ClutterGstPlayerPrivate);
   PLAYER_SET_PRIVATE (player, priv);
@@ -1901,6 +2170,8 @@ clutter_gst_player_default_init (ClutterGstPlayerIface *iface)
     }
 }
 
+/* ClutterGstIface */
+
 /**
  * clutter_gst_player_get_pipeline:
  * @player: a #ClutterGstPlayer
@@ -1915,13 +2186,13 @@ clutter_gst_player_default_init (ClutterGstPlayerIface *iface)
 GstElement *
 clutter_gst_player_get_pipeline (ClutterGstPlayer *player)
 {
-  ClutterGstPlayerPrivate *priv;
+  ClutterGstPlayerIface *iface;
 
   g_return_val_if_fail (CLUTTER_GST_IS_PLAYER (player), NULL);
 
-  priv = PLAYER_GET_PRIVATE (player);
+  iface = CLUTTER_GST_PLAYER_GET_INTERFACE (player);
 
-  return priv->pipeline;
+  return iface->get_pipeline (player);
 }
 
 /**
@@ -1938,33 +2209,13 @@ clutter_gst_player_get_pipeline (ClutterGstPlayer *player)
 gchar *
 clutter_gst_player_get_user_agent (ClutterGstPlayer *player)
 {
-  ClutterGstPlayerPrivate *priv;
-  GstElement *source;
-  GParamSpec *pspec;
-  gchar *user_agent;
+  ClutterGstPlayerIface *iface;
 
   g_return_val_if_fail (CLUTTER_GST_IS_PLAYER (player), NULL);
 
-  priv = PLAYER_GET_PRIVATE (player);
+  iface = CLUTTER_GST_PLAYER_GET_INTERFACE (player);
 
-  /* If the user has set a custom user agent, we just return it even if it is
-   * not used by the current source element of the pipeline */
-  if (priv->user_agent)
-    return g_strdup (priv->user_agent);
-
-  /* If not, we try to retrieve the user agent used by the current source */
-  g_object_get (priv->pipeline, "source", &source, NULL);
-  if (source == NULL)
-    return NULL;
-
-  pspec = g_object_class_find_property (G_OBJECT_GET_CLASS (source),
-                                        "user-agent");
-  if (pspec == NULL)
-    return NULL;
-
-  g_object_get (source, "user-agent", &user_agent, NULL);
-
-  return user_agent;
+  return iface->get_user_agent (player);
 }
 
 /**
@@ -1984,19 +2235,13 @@ void
 clutter_gst_player_set_user_agent (ClutterGstPlayer *player,
                                    const gchar      *user_agent)
 {
-  ClutterGstPlayerPrivate *priv;
+  ClutterGstPlayerIface *iface;
 
   g_return_if_fail (CLUTTER_GST_IS_PLAYER (player));
 
-  priv = PLAYER_GET_PRIVATE (player);
+  iface = CLUTTER_GST_PLAYER_GET_INTERFACE (player);
 
-  g_free (priv->user_agent);
-  if (user_agent)
-    priv->user_agent = g_strdup (user_agent);
-  else
-    priv->user_agent = NULL;
-
-  player_set_user_agent (player, user_agent);
+  iface->set_user_agent (player, user_agent);
 }
 
 /**
@@ -2012,17 +2257,14 @@ clutter_gst_player_set_user_agent (ClutterGstPlayer *player,
 ClutterGstSeekFlags
 clutter_gst_player_get_seek_flags (ClutterGstPlayer *player)
 {
-  ClutterGstPlayerPrivate *priv;
+  ClutterGstPlayerIface *iface;
 
   g_return_val_if_fail (CLUTTER_GST_IS_PLAYER (player),
                         CLUTTER_GST_SEEK_FLAG_NONE);
 
-  priv = PLAYER_GET_PRIVATE (player);
+  iface = CLUTTER_GST_PLAYER_GET_INTERFACE (player);
 
-  if (priv->seek_flags == GST_SEEK_FLAG_ACCURATE)
-    return CLUTTER_GST_SEEK_FLAG_ACCURATE;
-  else
-    return CLUTTER_GST_SEEK_FLAG_NONE;
+  return iface->get_seek_flags (player);
 }
 
 /**
@@ -2039,16 +2281,13 @@ void
 clutter_gst_player_set_seek_flags (ClutterGstPlayer    *player,
                                    ClutterGstSeekFlags  flags)
 {
-  ClutterGstPlayerPrivate *priv;
+  ClutterGstPlayerIface *iface;
 
   g_return_if_fail (CLUTTER_GST_IS_PLAYER (player));
 
-  priv = PLAYER_GET_PRIVATE (player);
+  iface = CLUTTER_GST_PLAYER_GET_INTERFACE (player);
 
-  if (flags == CLUTTER_GST_SEEK_FLAG_NONE)
-    priv->seek_flags = GST_SEEK_FLAG_KEY_UNIT;
-  else if (flags & CLUTTER_GST_SEEK_FLAG_ACCURATE)
-    priv->seek_flags = GST_SEEK_FLAG_ACCURATE;
+  iface->set_seek_flags (player, flags);
 }
 
 /**
@@ -2062,20 +2301,14 @@ clutter_gst_player_set_seek_flags (ClutterGstPlayer    *player,
 ClutterGstBufferingMode
 clutter_gst_player_get_buffering_mode (ClutterGstPlayer *player)
 {
-  ClutterGstPlayerPrivate *priv;
-  GstPlayFlags flags;
+  ClutterGstPlayerIface *iface;
 
   g_return_val_if_fail (CLUTTER_GST_IS_PLAYER (player),
                         CLUTTER_GST_BUFFERING_MODE_STREAM);
 
-  priv = PLAYER_GET_PRIVATE (player);
+  iface = CLUTTER_GST_PLAYER_GET_INTERFACE (player);
 
-  g_object_get (G_OBJECT (priv->pipeline), "flags", &flags, NULL);
-
-  if (flags & GST_PLAY_FLAG_DOWNLOAD)
-    return CLUTTER_GST_BUFFERING_MODE_DOWNLOAD;
-
-  return CLUTTER_GST_BUFFERING_MODE_STREAM;
+  return iface->get_buffering_mode (player);
 }
 
 /**
@@ -2089,31 +2322,13 @@ void
 clutter_gst_player_set_buffering_mode (ClutterGstPlayer        *player,
                                        ClutterGstBufferingMode  mode)
 {
-  ClutterGstPlayerPrivate *priv;
-  GstPlayFlags flags;
+  ClutterGstPlayerIface *iface;
 
   g_return_if_fail (CLUTTER_GST_IS_PLAYER (player));
 
-  priv = PLAYER_GET_PRIVATE (player);
+  iface = CLUTTER_GST_PLAYER_GET_INTERFACE (player);
 
-  g_object_get (G_OBJECT (priv->pipeline), "flags", &flags, NULL);
-
-  switch (mode)
-    {
-    case CLUTTER_GST_BUFFERING_MODE_STREAM:
-      flags &= ~GST_PLAY_FLAG_DOWNLOAD;
-      break;
-
-    case CLUTTER_GST_BUFFERING_MODE_DOWNLOAD:
-      flags |= GST_PLAY_FLAG_DOWNLOAD;
-      break;
-
-    default:
-      g_warning ("Unexpected buffering mode %d", mode);
-      break;
-    }
-
-  g_object_set (G_OBJECT (priv->pipeline), "flags", flags, NULL);
+  iface->set_buffering_mode (player, mode);
 }
 
 /**
@@ -2130,22 +2345,13 @@ clutter_gst_player_set_buffering_mode (ClutterGstPlayer        *player,
 GList *
 clutter_gst_player_get_audio_streams (ClutterGstPlayer *player)
 {
-  ClutterGstPlayerPrivate *priv;
+  ClutterGstPlayerIface *iface;
 
   g_return_val_if_fail (CLUTTER_GST_IS_PLAYER (player), NULL);
 
-  priv = PLAYER_GET_PRIVATE (player);
+  iface = CLUTTER_GST_PLAYER_GET_INTERFACE (player);
 
-  if (CLUTTER_GST_DEBUG_ENABLED (AUDIO_STREAM))
-    {
-      gchar *streams;
-
-      streams = list_to_string (priv->audio_streams);
-      CLUTTER_GST_NOTE (AUDIO_STREAM, "audio streams: %s", streams);
-      g_free (streams);
-    }
-
-  return priv->audio_streams;
+  return iface->get_audio_streams (player);
 }
 
 /**
@@ -2164,20 +2370,13 @@ clutter_gst_player_get_audio_streams (ClutterGstPlayer *player)
 gint
 clutter_gst_player_get_audio_stream (ClutterGstPlayer *player)
 {
-  ClutterGstPlayerPrivate *priv;
-  gint index_ = -1;
+  ClutterGstPlayerIface *iface;
 
   g_return_val_if_fail (CLUTTER_GST_IS_PLAYER (player), -1);
 
-  priv = PLAYER_GET_PRIVATE (player);
+  iface = CLUTTER_GST_PLAYER_GET_INTERFACE (player);
 
-  g_object_get (G_OBJECT (priv->pipeline),
-                "current-audio", &index_,
-                NULL);
-
-  CLUTTER_GST_NOTE (AUDIO_STREAM, "audio stream is #%d", index_);
-
-  return index_;
+  return iface->get_audio_stream (player);
 }
 
 /**
@@ -2194,20 +2393,13 @@ void
 clutter_gst_player_set_audio_stream (ClutterGstPlayer *player,
                                      gint              index_)
 {
-  ClutterGstPlayerPrivate *priv;
+  ClutterGstPlayerIface *iface;
 
   g_return_if_fail (CLUTTER_GST_IS_PLAYER (player));
 
-  priv = PLAYER_GET_PRIVATE (player);
+  iface = CLUTTER_GST_PLAYER_GET_INTERFACE (player);
 
-  g_return_if_fail (index_ >= 0 &&
-                    index_ < (gint) g_list_length (priv->audio_streams));
-
-  CLUTTER_GST_NOTE (AUDIO_STREAM, "set audio audio stream to #%d", index_);
-
-  g_object_set (G_OBJECT (priv->pipeline),
-                "current-audio", index_,
-                NULL);
+  iface->set_audio_stream (player, index_);
 }
 
 /**
@@ -2224,22 +2416,13 @@ clutter_gst_player_set_audio_stream (ClutterGstPlayer *player,
 GList *
 clutter_gst_player_get_subtitle_tracks (ClutterGstPlayer *player)
 {
-  ClutterGstPlayerPrivate *priv;
+  ClutterGstPlayerIface *iface;
 
   g_return_val_if_fail (CLUTTER_GST_IS_PLAYER (player), NULL);
 
-  priv = PLAYER_GET_PRIVATE (player);
+  iface = CLUTTER_GST_PLAYER_GET_INTERFACE (player);
 
-  if (CLUTTER_GST_DEBUG_ENABLED (SUBTITLES))
-    {
-      gchar *tracks;
-
-      tracks = list_to_string (priv->subtitle_tracks);
-      CLUTTER_GST_NOTE (SUBTITLES, "subtitle tracks: %s", tracks);
-      g_free (tracks);
-    }
-
-  return priv->subtitle_tracks;
+  return iface->get_subtitle_tracks (player);
 }
 
 /**
@@ -2258,21 +2441,13 @@ clutter_gst_player_get_subtitle_tracks (ClutterGstPlayer *player)
 gint
 clutter_gst_player_get_subtitle_track (ClutterGstPlayer *player)
 {
-  ClutterGstPlayerPrivate *priv;
-  gint index_ = -1;
+  ClutterGstPlayerIface *iface;
 
   g_return_val_if_fail (CLUTTER_GST_IS_PLAYER (player), -1);
 
-  priv = PLAYER_GET_PRIVATE (player);
+  iface = CLUTTER_GST_PLAYER_GET_INTERFACE (player);
 
-  g_object_get (G_OBJECT (priv->pipeline),
-                "current-text", &index_,
-                NULL);
-
-  CLUTTER_GST_NOTE (SUBTITLES, "text track is #%d", index_);
-
-  return index_;
-
+  return iface->get_subtitle_track (player);
 }
 
 /**
@@ -2291,20 +2466,13 @@ void
 clutter_gst_player_set_subtitle_track (ClutterGstPlayer *player,
                                        gint              index_)
 {
-  ClutterGstPlayerPrivate *priv;
+  ClutterGstPlayerIface *iface;
 
   g_return_if_fail (CLUTTER_GST_IS_PLAYER (player));
 
-  priv = PLAYER_GET_PRIVATE (player);
+  iface = CLUTTER_GST_PLAYER_GET_INTERFACE (player);
 
-  g_return_if_fail (index_ >= -1 &&
-                    index_ < (gint) g_list_length (priv->subtitle_tracks));
-
-  CLUTTER_GST_NOTE (SUBTITLES, "set subtitle track to #%d", index_);
-
-  g_object_set (G_OBJECT (priv->pipeline),
-                "current-text", index_,
-                NULL);
+  iface->set_subtitle_track (player, index_);
 }
 
 /**
@@ -2320,11 +2488,11 @@ clutter_gst_player_set_subtitle_track (ClutterGstPlayer *player,
 gboolean
 clutter_gst_player_get_idle (ClutterGstPlayer *player)
 {
-  ClutterGstPlayerPrivate *priv;
+  ClutterGstPlayerIface *iface;
 
   g_return_val_if_fail (CLUTTER_GST_IS_PLAYER (player), TRUE);
 
-  priv = PLAYER_GET_PRIVATE (player);
+  iface = CLUTTER_GST_PLAYER_GET_INTERFACE (player);
 
-  return priv->is_idle;
+  return iface->get_idle (player);
 }

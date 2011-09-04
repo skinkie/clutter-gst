@@ -81,15 +81,67 @@ struct _ClutterGstPlayerIface
   ClutterGstPlayerIfacePrivate *priv;
 
   /*< public >*/
+  GstElement * (* get_pipeline)   (ClutterGstPlayer *player);
+
+  gchar * (* get_user_agent) (ClutterGstPlayer *player);
+  void    (* set_user_agent) (ClutterGstPlayer *player,
+                              const gchar      *user_agent);
+
+  ClutterGstSeekFlags (* get_seek_flags) (ClutterGstPlayer *player);
+  void                (* set_seek_flags) (ClutterGstPlayer    *player,
+                                          ClutterGstSeekFlags  flags);
+
+  ClutterGstBufferingMode (* get_buffering_mode) (ClutterGstPlayer *player);
+  void                    (* set_buffering_mode) (ClutterGstPlayer        *player,
+                                                  ClutterGstBufferingMode  mode);
+
+  GList * (* get_audio_streams) (ClutterGstPlayer *player);
+  gint    (* get_audio_stream)  (ClutterGstPlayer *player);
+  void    (* set_audio_stream)  (ClutterGstPlayer *player,
+                                 gint              index_);
+
+  GList * (* get_subtitle_tracks) (ClutterGstPlayer *player);
+  gint    (* get_subtitle_track)  (ClutterGstPlayer *player);
+  void    (* set_subtitle_track)  (ClutterGstPlayer *player,
+                                   gint              index_);
+
+  gboolean (*get_idle) (ClutterGstPlayer *player);
+
+  void (* _iface_reserved15) (void);
+  void (* _iface_reserved16) (void);
+  void (* _iface_reserved17) (void);
+  void (* _iface_reserved18) (void);
+  void (* _iface_reserved19) (void);
+  void (* _iface_reserved20) (void);
+  void (* _iface_reserved21) (void);
+  void (* _iface_reserved22) (void);
+  void (* _iface_reserved23) (void);
+  void (* _iface_reserved24) (void);
+  void (* _iface_reserved25) (void);
+  void (* _iface_reserved26) (void);
+  void (* _iface_reserved27) (void);
+  void (* _iface_reserved28) (void);
+  void (* _iface_reserved29) (void);
+  void (* _iface_reserved30) (void);
+  void (* _iface_reserved31) (void);
+  void (* _iface_reserved32) (void);
+  void (* _iface_reserved33) (void);
+  void (* _iface_reserved34) (void);
+  void (* _iface_reserved35) (void);
+
   /* signals */
-  void (* download_buffering) (ClutterGstPlayer *player,
-			       gdouble           start,
-			       gdouble           stop);
-  void (* _clutter_reserved2) (void);
-  void (* _clutter_reserved3) (void);
-  void (* _clutter_reserved4) (void);
-  void (* _clutter_reserved5) (void);
-  void (* _clutter_reserved6) (void);
+  void (* download_buffering)  (ClutterGstPlayer *player,
+                                gdouble           start,
+                                gdouble           stop);
+  void (* _clutter_reserved2)  (void);
+  void (* _clutter_reserved3)  (void);
+  void (* _clutter_reserved4)  (void);
+  void (* _clutter_reserved5)  (void);
+  void (* _clutter_reserved6)  (void);
+  void (* _clutter_reserved7)  (void);
+  void (* _clutter_reserved8)  (void);
+  void (* _clutter_reserved9)  (void);
+  void (* _clutter_reserved10) (void);
 };
 
 GType clutter_gst_player_get_type (void) G_GNUC_CONST;
