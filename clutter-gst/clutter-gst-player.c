@@ -443,7 +443,6 @@ set_uri (ClutterGstPlayer *player,
 
       /* try to load subtitles based on the uri of the file */
       set_subtitle_uri (player, NULL);
-      autoload_subtitle (player, uri);
 
       /* reset the states of download buffering */
       player_clear_download_buffering (player);
@@ -490,6 +489,7 @@ set_uri (ClutterGstPlayer *player,
       gst_element_set_state (priv->pipeline, GST_STATE_NULL);
 
       g_object_set (priv->pipeline, "uri", uri, NULL);
+      autoload_subtitle (player, uri);
 
       gst_element_set_state (priv->pipeline, state);
 
