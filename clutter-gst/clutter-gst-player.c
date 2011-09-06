@@ -451,8 +451,6 @@ set_uri (ClutterGstPlayer *player,
     {
       priv->uri = NULL;
 
-      set_subtitle_uri (player, NULL);
-
       if (priv->tick_timeout_id)
 	{
 	  g_source_remove (priv->tick_timeout_id);
@@ -489,6 +487,7 @@ set_uri (ClutterGstPlayer *player,
       gst_element_set_state (priv->pipeline, GST_STATE_NULL);
 
       g_object_set (priv->pipeline, "uri", uri, NULL);
+      set_subtitle_uri (player, NULL);
       autoload_subtitle (player, uri);
 
       gst_element_set_state (priv->pipeline, state);
@@ -498,6 +497,7 @@ set_uri (ClutterGstPlayer *player,
   else
     {
       priv->is_idle = TRUE;
+      set_subtitle_uri (player, NULL);
       gst_element_set_state (priv->pipeline, GST_STATE_NULL);
       g_object_notify (G_OBJECT (player), "idle");
     }
