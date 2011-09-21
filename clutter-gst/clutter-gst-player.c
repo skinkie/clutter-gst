@@ -1023,7 +1023,7 @@ bus_message_duration_cb (GstBus           *bus,
   /* GstElements send a duration message on the bus with GST_CLOCK_TIME_NONE
    * as duration to signal a new duration */
   gst_message_parse_duration (message, NULL, &duration);
-  if (G_UNLIKELY (duration != GST_CLOCK_TIME_NONE))
+  if (G_UNLIKELY ((GstClockTime) duration != GST_CLOCK_TIME_NONE))
     return;
 
   query_duration (player);
@@ -2201,7 +2201,7 @@ clutter_gst_player_set_audio_stream (ClutterGstPlayer *player,
   priv = PLAYER_GET_PRIVATE (player);
 
   g_return_if_fail (index_ >= 0 &&
-                    index_ < g_list_length (priv->audio_streams));
+                    index_ < (gint) g_list_length (priv->audio_streams));
 
   CLUTTER_GST_NOTE (AUDIO_STREAM, "set audio audio stream to #%d", index_);
 
@@ -2298,7 +2298,7 @@ clutter_gst_player_set_subtitle_track (ClutterGstPlayer *player,
   priv = PLAYER_GET_PRIVATE (player);
 
   g_return_if_fail (index_ >= -1 &&
-                    index_ < g_list_length (priv->subtitle_tracks));
+                    index_ < (gint) g_list_length (priv->subtitle_tracks));
 
   CLUTTER_GST_NOTE (SUBTITLES, "set subtitle track to #%d", index_);
 
