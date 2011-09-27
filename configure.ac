@@ -163,10 +163,32 @@ dnl issues
 dnl Why don't we "just" link against GL? check the cogl/clutter configure.ac :)
 dnl Hopefully this will be enough for the time being.
 
-clutter_soname=`$PKG_CONFIG --variable soname_infix clutter-1.0`
-AS_CASE([$clutter_soname],
-        [glx], [AC_CHECK_LIB([GL], [glGetIntegerv], [GL_LDFLAGS="-lGL"])])
-AC_SUBST([GL_LDFLAGS])
+dnl With Cogl 1.8.0 all of the above is moot because we can use
+dnl cogl_renderer_get_n_fragment_texture_units() and never depend on GL/GLES
+dnl directly. However let's not hard depend on cogl 1.8.0 just yet.
+dnl Well, obviously just a little detail remaining, it's not possible to grab
+dnl the CoglContext on OS X yet.
+
+PKG_CHECK_EXISTS([clutter-osx-1.0],
+                 [
+                   AC_DEFINE([HAVE_CLUTTER_OSX], [1],
+                             ["Defined if building Clutter for OS X"])
+                 ])
+PKG_CHECK_EXISTS([cogl-1.0 >= 1.8.0],
+                 [
+                   have_cogl_1_8=yes
+                   AC_DEFINE([HAVE_COGL_1_8], [1],
+                             ["Defined if cogl-1.0 >= 1.8.0 is available"])
+                 ])
+
+AS_IF([test "x$have_cogl_1_8" != xyes],
+      [
+        clutter_soname=`$PKG_CONFIG --variable soname_infix clutter-1.0`
+        AS_CASE([$clutter_soname],
+                [glx],
+                [AC_CHECK_LIB([GL], [glGetIntegerv], [GL_LDFLAGS="-lGL"])])
+        AC_SUBST([GL_LDFLAGS])
+      ])
 
 dnl ========================================================================
 

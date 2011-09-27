@@ -380,6 +380,37 @@ _string_array_to_char_array (char	*dst,
 }
 #endif
 
+#if defined (HAVE_COGL_1_8) && !defined (HAVE_CLUTTER_OSX)
+static gint
+get_n_fragment_texture_units (void)
+{
+  ClutterBackend *backend;
+  CoglContext *context;
+  CoglDisplay *display;
+  CoglRenderer *renderer;
+  gint n;
+
+  backend = clutter_get_default_backend ();
+  context = clutter_backend_get_cogl_context (backend);
+  display = cogl_context_get_display (context);
+  renderer = cogl_display_get_renderer (display);
+
+  n = cogl_renderer_get_n_fragment_texture_units (renderer);
+  g_message ("get_n_fragment_texture_units () -> %d", n);
+
+  return n;
+}
+#else
+static gint
+get_n_fragment_texture_units (void)
+{
+  gint n_texture_units;
+
+  glGetIntegerv (GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &n_texture_units);
+  return n_texture_units;
+}
+#endif
+
 static CoglHandle
 _create_cogl_program (const char *source)
 {
@@ -796,7 +827,7 @@ clutter_gst_build_renderers_list (void)
       NULL
     };
 
-  glGetIntegerv (GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &nb_texture_units);
+  nb_texture_units = get_n_fragment_texture_units();
 
   if (nb_texture_units >= 3)
     features |= CLUTTER_GST_MULTI_TEXTURE;
