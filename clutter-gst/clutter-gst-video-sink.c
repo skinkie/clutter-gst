@@ -396,7 +396,6 @@ get_n_fragment_texture_units (void)
   renderer = cogl_display_get_renderer (display);
 
   n = cogl_renderer_get_n_fragment_texture_units (renderer);
-  g_message ("get_n_fragment_texture_units () -> %d", n);
 
   return n;
 }
