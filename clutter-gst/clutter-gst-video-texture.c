@@ -777,8 +777,8 @@ clutter_gst_video_texture_set_buffering_mode (ClutterGstVideoTexture *texture,
  *
  * Get the list of audio streams of the current media.
  *
- * Return value: (transfer none): a list of strings describing the available
- * audio streams
+ * Return value: (transfer none): a list of #GstTagList describing the
+ * available audio streams
  *
  * Since: 1.4
  */
@@ -830,8 +830,8 @@ clutter_gst_video_texture_set_audio_stream (ClutterGstVideoTexture *texture,
  *
  * Get the list of subtitles tracks of the current media.
  *
- * Return value: (transfer none): a list of strings describing the available
- * subtitles tracks
+ * Return value: (transfer none): a list of #GstTagList describing the
+ * available subtitles tracks
  *
  * Since: 1.4
  */

@@ -194,9 +194,43 @@ static gboolean player_buffering_timeout (gpointer data);
 /* Logic */
 
 #ifdef CLUTTER_GST_ENABLE_DEBUG
+static gchar *
+get_stream_description (GstTagList *tags,
+                        gint        track_num)
+{
+  gchar *description = NULL;
+
+  if (tags)
+    {
+
+      gst_tag_list_get_string (tags, GST_TAG_LANGUAGE_CODE, &description);
+
+      if (description)
+        {
+          const gchar *language = gst_tag_get_language_name (description);
+
+          if (language)
+            {
+              g_free (description);
+              description = g_strdup (language);
+            }
+        }
+
+      if (!description)
+        gst_tag_list_get_string (tags, GST_TAG_CODEC, &description);
+    }
+
+  if (!description)
+    description = g_strdup_printf ("Track %d", track_num);
+
+  return description;
+}
+
 gchar *
 list_to_string (GList *list)
 {
+  GstTagList *tags;
+  gchar *description;
   GString *string;
   GList *l;
   gint n, i;
@@ -207,9 +241,17 @@ list_to_string (GList *list)
   string = g_string_new (NULL);
   n = g_list_length (list);
   for (i = 0, l = list; i < n - 1; i++, l = g_list_next (l))
-    g_string_append_printf (string, "%s, ", (gchar *) l->data);
+    {
+      tags = l->data;
+      description = get_stream_description (tags, i);
+      g_string_append_printf (string, "%s, ", description);
+      g_free (description);
+    }
 
-  g_string_append_printf (string, "%s", (gchar *) l->data);
+  tags = l->data;
+  description = get_stream_description (tags, i);
+  g_string_append_printf (string, "%s", (gchar *) description);
+  g_free (description);
 
   return g_string_free (string, FALSE);
 }
@@ -236,14 +278,14 @@ gst_state_to_string (GstState state)
 }
 
 static void
-free_string_list (GList **listp)
+free_tags_list (GList **listp)
 {
   GList *l;
 
   l = *listp;
   while (l)
     {
-      g_free (l->data);
+      gst_tag_list_free (l->data);
       l = g_list_delete_link (l, l);
     }
 
@@ -511,11 +553,11 @@ set_uri (ClutterGstPlayer *player,
   g_object_notify (self, "duration");
   g_object_notify (self, "progress");
 
-  free_string_list (&priv->audio_streams);
+  free_tags_list (&priv->audio_streams);
   CLUTTER_GST_NOTE (AUDIO_STREAM, "audio-streams changed");
   g_object_notify (self, "audio-streams");
 
-  free_string_list (&priv->subtitle_tracks);
+  free_tags_list (&priv->subtitle_tracks);
   CLUTTER_GST_NOTE (SUBTITLES, "subtitle-tracks changed");
   g_object_notify (self, "subtitle-tracks");
 }
@@ -1166,7 +1208,7 @@ get_tags (GstElement  *pipeline,
           const gchar *action_signal)
 {
   GList *ret = NULL;
-  gint num = 1, i, n;
+  gint i, n;
 
   g_object_get (G_OBJECT (pipeline), property_name, &n, NULL);
   if (n == 0)
@@ -1175,69 +1217,13 @@ get_tags (GstElement  *pipeline,
   for (i = 0; i < n; i++)
     {
       GstTagList *tags = NULL;
-      gchar *description = NULL;
 
       g_signal_emit_by_name (G_OBJECT (pipeline), action_signal, i, &tags);
 
-      if (tags)
-        {
-
-          gst_tag_list_get_string (tags, GST_TAG_LANGUAGE_CODE, &description);
-
-          if (description)
-            {
-              const gchar *language = gst_tag_get_language_name (description);
-
-              if (language)
-                {
-                  g_free (description);
-                  description = g_strdup (language);
-                }
-            }
-
-          if (!description)
-            gst_tag_list_get_string (tags, GST_TAG_CODEC, &description);
-
-          gst_tag_list_free (tags);
-        }
-
-      if (!description)
-        description = g_strdup_printf ("Track #%d", num++);
-
-      ret = g_list_prepend (ret, description);
-
+      ret = g_list_prepend (ret, tags);
     }
 
   return g_list_reverse (ret);
-}
-
-static gboolean
-are_lists_equal (GList *list1,
-                 GList *list2)
-{
-  GList *l1, *l2;
-
-  l1 = list1;
-  l2 = list2;
-
-  while (l1)
-    {
-      const gchar *str1, *str2;
-
-      if (l2 == NULL)
-        return FALSE;
-
-      str1 = l1->data;
-      str2 = l2->data;
-
-      if (g_strcmp0 (str1, str2) != 0)
-        return FALSE;
-
-      l1 = g_list_next (l1);
-      l2 = g_list_next (l2);
-    }
-
-  return l2 == NULL;
 }
 
 static gboolean
@@ -1245,23 +1231,13 @@ on_audio_changed_main_context (gpointer data)
 {
   ClutterGstPlayer *player = CLUTTER_GST_PLAYER (data);
   ClutterGstPlayerPrivate *priv = PLAYER_GET_PRIVATE (player);
-  GList *audio_streams;
 
-  audio_streams = get_tags (priv->pipeline, "n-audio", "get-audio-tags");
+  free_tags_list (&priv->audio_streams);
+  priv->audio_streams = get_tags (priv->pipeline, "n-audio", "get-audio-tags");
 
-  if (!are_lists_equal (priv->audio_streams, audio_streams))
-    {
-      free_string_list (&priv->audio_streams);
-      priv->audio_streams = audio_streams;
+  CLUTTER_GST_NOTE (AUDIO_STREAM, "audio-streams changed");
 
-      CLUTTER_GST_NOTE (AUDIO_STREAM, "audio-streams changed");
-
-      g_object_notify (G_OBJECT (player), "audio-streams");
-    }
-  else
-    {
-      free_string_list (&audio_streams);
-    }
+  g_object_notify (G_OBJECT (player), "audio-streams");
 
   return FALSE;
 }
@@ -1279,6 +1255,13 @@ on_audio_tags_changed (GstElement       *pipeline,
                        gint              stream,
                        ClutterGstPlayer *player)
 {
+  gint current_stream;
+
+  g_object_get (G_OBJECT (pipeline), "current-audio", &current_stream, NULL);
+
+  if (current_stream != stream)
+    return;
+
   g_idle_add (on_audio_changed_main_context, player);
 }
 
@@ -1306,23 +1289,13 @@ on_text_changed_main_context (gpointer data)
 {
   ClutterGstPlayer *player = CLUTTER_GST_PLAYER (data);
   ClutterGstPlayerPrivate *priv = PLAYER_GET_PRIVATE (player);
-  GList *subtitle_tracks;
 
-  subtitle_tracks = get_tags (priv->pipeline, "n-text", "get-text-tags");
+  free_tags_list (&priv->subtitle_tracks);
+  priv->subtitle_tracks = get_tags (priv->pipeline, "n-text", "get-text-tags");
 
-  if (!are_lists_equal (priv->subtitle_tracks, subtitle_tracks))
-    {
-      free_string_list (&priv->subtitle_tracks);
-      priv->subtitle_tracks = subtitle_tracks;
+  CLUTTER_GST_NOTE (AUDIO_STREAM, "subtitle-tracks changed");
 
-      CLUTTER_GST_NOTE (AUDIO_STREAM, "subtitle-tracks changed");
-
-      g_object_notify (G_OBJECT (player), "subtitle-tracks");
-    }
-  else
-    {
-      free_string_list (&subtitle_tracks);
-    }
+  g_object_notify (G_OBJECT (player), "subtitle-tracks");
 
   return FALSE;
 }
@@ -2043,8 +2016,8 @@ clutter_gst_player_deinit (ClutterGstPlayer *player)
 
   g_free (priv->uri);
   g_free (priv->font_name);
-  free_string_list (&priv->audio_streams);
-  free_string_list (&priv->subtitle_tracks);
+  free_tags_list (&priv->audio_streams);
+  free_tags_list (&priv->subtitle_tracks);
 
   g_slice_free (ClutterGstPlayerPrivate, priv);
 }
@@ -2430,7 +2403,7 @@ clutter_gst_player_get_subtitle_tracks (ClutterGstPlayer *player)
  * @player: a #ClutterGstPlayer
  *
  * Get the current subtitles track. The number returned is the index of the
- * subitles track in the list returned by
+ * subtiles track in the list returned by
  * clutter_gst_player_get_subtitle_tracks().
  *
  * Return value: the index of the current subtitlest track, -1 if the media has
