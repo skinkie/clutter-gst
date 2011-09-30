@@ -285,7 +285,8 @@ free_tags_list (GList **listp)
   l = *listp;
   while (l)
     {
-      gst_tag_list_free (l->data);
+      if (l->data)
+        gst_tag_list_free (l->data);
       l = g_list_delete_link (l, l);
     }
 
