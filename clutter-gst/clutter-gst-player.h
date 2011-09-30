@@ -67,7 +67,8 @@ typedef struct _ClutterGstPlayerIfacePrivate ClutterGstPlayerIfacePrivate;
 
 /**
  * ClutterGstPlayerIface:
- * @download_buffering: handler for the #ClutterGstPlayer::download-buffering signal
+ * @download_buffering: handler for the #ClutterGstPlayer::download-buffering
+ * signal
  *
  * Interface vtable for #ClutterGstPlayer implementations
  *
