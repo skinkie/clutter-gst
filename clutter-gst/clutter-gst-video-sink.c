@@ -1028,7 +1028,7 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
   const GValue               *par;
   gint                        width, height;
   guint32                     fourcc;
-  guint                       red_mask, blue_mask;
+  int                         red_mask, blue_mask;
 
   sink = CLUTTER_GST_VIDEO_SINK(bsink);
   priv = sink->priv;
@@ -1094,8 +1094,8 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
   else
     {
       guint32 mask;
-      gst_structure_get_uint (structure, "red_mask", &red_mask);
-      gst_structure_get_uint (structure, "blue_mask", &blue_mask);
+      gst_structure_get_int (structure, "red_mask", &red_mask);
+      gst_structure_get_int (structure, "blue_mask", &blue_mask);
 
       mask = red_mask | blue_mask;
       if (mask < 0x1000000)
