@@ -1,3 +1,17 @@
+clutter-gst 1.4.2 (03/10/2011)
+===============================================================================
+
+List of changes since 1.4.0
+
+ o Fix an embarassing bug that was leading to crashes when uploading RGB
+   textures (https://bugzilla.gnome.org/show_bug.cgi?id=660732)
+
+ o Don't try to free NULL GstTagLists
+
+Many thanks to:
+
+    György Balló
+
 clutter-gst 1.4.0 (30/09/2011)
 ===============================================================================
 
