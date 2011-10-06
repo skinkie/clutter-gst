@@ -11,11 +11,9 @@
 #ifdef COGL_HAS_GLES
 
 #define GLES2_VARS              \
-  "precision mediump float;\n"  \
-  "varying vec2 tex_coord;\n"   \
-  "varying vec4 frag_color;\n"
-#define TEX_COORD "tex_coord"
-#define COLOR_VAR "frag_color"
+  "precision mediump float;\n"
+#define TEX_COORD "cogl_tex_coord_in[0]"
+#define COLOR_VAR "cogl_color_in"
 
 #else /* COGL_HAS_GLES */
 
