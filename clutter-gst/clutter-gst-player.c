@@ -408,13 +408,18 @@ set_subtitle_uri (ClutterGstPlayer *player,
                   const gchar      *uri)
 {
   ClutterGstPlayerPrivate *priv = PLAYER_GET_PRIVATE (player);
+  GstPlayFlags flags;
 
   if (!priv->pipeline)
     return;
 
   CLUTTER_GST_NOTE (MEDIA, "setting subtitle URI: %s", uri);
 
+  g_object_get (priv->pipeline, "flags", &flags, NULL);
+
   g_object_set (priv->pipeline, "suburi", uri, NULL);
+
+  g_object_set (priv->pipeline, "flags", flags, NULL);
 }
 
 static void
@@ -1835,6 +1840,7 @@ clutter_gst_player_set_subtitle_track_impl (ClutterGstPlayer *player,
                                             gint              index_)
 {
   ClutterGstPlayerPrivate *priv;
+  GstPlayFlags flags;
 
   priv = PLAYER_GET_PRIVATE (player);
 
@@ -1843,9 +1849,19 @@ clutter_gst_player_set_subtitle_track_impl (ClutterGstPlayer *player,
 
   CLUTTER_GST_NOTE (SUBTITLES, "set subtitle track to #%d", index_);
 
-  g_object_set (G_OBJECT (priv->pipeline),
-                "current-text", index_,
-                NULL);
+  g_object_get (priv->pipeline, "flags", &flags, NULL);
+  flags &= ~GST_PLAY_FLAG_TEXT;
+  g_object_set (priv->pipeline, "flags", flags, NULL);
+
+  if (index_ >= 0)
+    {
+      g_object_set (G_OBJECT (priv->pipeline),
+                    "current-text", index_,
+                    NULL);
+
+      flags |= GST_PLAY_FLAG_TEXT;
+      g_object_set (priv->pipeline, "flags", flags, NULL);
+    }
 }
 
 static gboolean
