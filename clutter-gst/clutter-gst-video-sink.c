@@ -1101,12 +1101,12 @@ clutter_gst_video_sink_set_caps (GstBaseSink *bsink,
       if (mask < 0x1000000)
         {
           priv->format = CLUTTER_GST_RGB24;
-          priv->bgr = (red_mask == 0xff0000) ? FALSE : TRUE;
+          priv->bgr = ((guint) red_mask == 0xff0000) ? FALSE : TRUE;
         }
       else
         {
           priv->format = CLUTTER_GST_RGB32;
-          priv->bgr = (red_mask == 0xff000000) ? FALSE : TRUE;
+          priv->bgr = ((guint) red_mask == 0xff000000) ? FALSE : TRUE;
         }
     }
 
