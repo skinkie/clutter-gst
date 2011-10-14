@@ -1,4 +1,6 @@
 #! /bin/sh
 gtkdocize || exit 1
 autoreconf -v --install || exit 1
-./configure "$@"
+if test -z "$NOCONFIGURE"; then
+    ./configure "$@" || exit 1
+fi
