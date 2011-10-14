@@ -192,12 +192,13 @@ AS_IF([test "x$have_cogl_1_8" != xyes],
 
 dnl ========================================================================
 
-m4_define([maintainer_flags_default], [yes])
+m4_define([maintainer_default], [m4_if(clutter_gst_release_status,
+                                       [git], [yes], [no])])
 AC_ARG_ENABLE([maintainer-flags],
               [AC_HELP_STRING([--enable-maintainer-flags=@<:@no/yes@:>@],
-                              [Use strict compiler flags @<:@default=maintainer_flags_default@:>@])],
+                              [Use strict compiler flags @<:@default=]maintainer_default[@:>@])],
               [],
-              [enable_maintainer_flags=maintainer_flags_default])
+              enable_maintainer_flags=maintainer_default)
 
 AS_IF([test "x$enable_maintainer_flags" = "xyes" && test "x$GCC" = "xyes"],
       [
@@ -212,12 +213,13 @@ AC_SUBST(MAINTAINER_CFLAGS)
 
 dnl === Enable debug level ====================================================
 
-m4_define([debug_default], [m4_if(m4_eval(clutter_gst_minor_version % 2), [1], [yes], [minimum])])
+m4_define([debug_default], [m4_if(clutter_gst_release_status,
+                                  [git], [yes], [minimum])])
 AC_ARG_ENABLE([debug],
               [AC_HELP_STRING([--enable-debug=@<:@no/minimum/yes@:>@],
-                              [Control Clutter-Gst debugging level @<:@default=debug_default@:>@])],
+                              [Control Clutter-Gst debugging level @<:@default=]debug_default[@:>@])],
               [],
-              [enable_debug=debug_default])
+              enable_debug=debug_default)
 
 AS_CASE([$enable_debug],
 
