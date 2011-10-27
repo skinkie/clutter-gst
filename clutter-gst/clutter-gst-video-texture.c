@@ -406,6 +406,16 @@ clutter_gst_video_texture_paint (ClutterActor *actor)
  */
 
 static void
+clutter_gst_video_texture_dispose (GObject *object)
+{
+  ClutterGstVideoTexture *self = CLUTTER_GST_VIDEO_TEXTURE (object);
+
+  clutter_gst_player_deinit (CLUTTER_GST_PLAYER (self));
+
+  G_OBJECT_CLASS (clutter_gst_video_texture_parent_class)->dispose (object);
+}
+
+static void
 clutter_gst_video_texture_finalize (GObject *object)
 {
   ClutterGstVideoTexture        *self;
@@ -413,8 +423,6 @@ clutter_gst_video_texture_finalize (GObject *object)
 
   self = CLUTTER_GST_VIDEO_TEXTURE (object);
   priv = self->priv;
-
-  clutter_gst_player_deinit (CLUTTER_GST_PLAYER (self));
 
   if (priv->idle_material != COGL_INVALID_HANDLE)
     cogl_handle_unref (priv->idle_material);
@@ -475,6 +483,7 @@ clutter_gst_video_texture_class_init (ClutterGstVideoTextureClass *klass)
 
   g_type_class_add_private (klass, sizeof (ClutterGstVideoTexturePrivate));
 
+  object_class->dispose      = clutter_gst_video_texture_dispose;
   object_class->finalize     = clutter_gst_video_texture_finalize;
   object_class->set_property = clutter_gst_video_texture_set_property;
   object_class->get_property = clutter_gst_video_texture_get_property;

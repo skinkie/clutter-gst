@@ -2016,8 +2016,30 @@ clutter_gst_player_deinit (ClutterGstPlayer *player)
 
   priv = PLAYER_GET_PRIVATE (player);
 
-  /* start by doing the usual clean up when not wanting to play an URI */
-  set_uri (player, NULL);
+  if (priv == NULL)
+    return;
+
+  PLAYER_SET_PRIVATE (player, NULL);
+
+  if (priv->tick_timeout_id)
+    {
+      g_source_remove (priv->tick_timeout_id);
+      priv->tick_timeout_id = 0;
+    }
+
+  if (priv->buffering_timeout_id)
+    {
+      g_source_remove (priv->buffering_timeout_id);
+      priv->buffering_timeout_id = 0;
+    }
+
+  if (priv->download_buffering_element)
+    {
+      g_object_unref (priv->download_buffering_element);
+      priv->download_buffering_element = NULL;
+    }
+
+  gst_element_set_state (priv->pipeline, GST_STATE_NULL);
 
   if (priv->bus)
     {
@@ -2033,6 +2055,7 @@ clutter_gst_player_deinit (ClutterGstPlayer *player)
 
   g_free (priv->uri);
   g_free (priv->font_name);
+  g_free (priv->user_agent);
   free_tags_list (&priv->audio_streams);
   free_tags_list (&priv->subtitle_tracks);
 
