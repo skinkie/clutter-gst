@@ -1189,7 +1189,6 @@ clutter_gst_video_sink_set_texture (ClutterGstVideoSink *sink,
           g_signal_handler_disconnect (priv->texture, id);
         }
       g_array_set_size (priv->signal_handler_ids, 0);
-      g_object_unref (priv->texture);
     }
 
   priv->texture = texture;
@@ -1219,7 +1218,7 @@ clutter_gst_video_sink_set_property (GObject *object,
   switch (prop_id)
     {
     case PROP_TEXTURE:
-      clutter_gst_video_sink_set_texture (sink, g_value_dup_object (value));
+      clutter_gst_video_sink_set_texture (sink, g_value_get_object (value));
       break;
     case PROP_UPDATE_PRIORITY:
       clutter_gst_video_sink_set_priority (sink, g_value_get_int (value));

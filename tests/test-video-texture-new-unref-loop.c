@@ -44,10 +44,7 @@ main (int argc, char *argv[])
   {
     g_debug("VideoTexure #%d", i);
     vtexture = clutter_gst_video_texture_new();
-    if (vtexture == NULL)
-      g_error("failed to create VideoTexture");
     g_object_ref_sink (vtexture);
-    g_object_unref (vtexture);
     g_object_unref (vtexture);
   }
 
