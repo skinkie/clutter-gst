@@ -88,6 +88,9 @@ controls_timeout_cb (gpointer data)
 static void
 show_controls (VideoApp *app, gboolean vis)
 {
+  if (app->control == NULL)
+    return;
+
   if (vis == TRUE && app->controls_showing == TRUE)
     {
       if (app->controls_timeout == 0)
@@ -126,6 +129,9 @@ show_controls (VideoApp *app, gboolean vis)
 void
 toggle_pause_state (VideoApp *app)
 {
+  if (app->vtexture == NULL)
+    return;
+
   if (app->paused)
     {
       clutter_media_set_playing (CLUTTER_MEDIA(app->vtexture),
@@ -148,7 +154,8 @@ static void
 reset_animation (ClutterAnimation *animation,
                  VideoApp         *app)
 {
-  clutter_actor_set_rotation (app->vtexture, CLUTTER_Y_AXIS, 0.0, 0, 0, 0);
+  if (app->vtexture)
+    clutter_actor_set_rotation (app->vtexture, CLUTTER_Y_AXIS, 0.0, 0, 0, 0);
 }
 
 static gboolean
@@ -208,16 +215,33 @@ input_cb (ClutterStage *stage,
         ClutterVertex center = { 0, };
         ClutterAnimation *animation = NULL;
 
-        center.x = clutter_actor_get_width (app->vtexture) / 2;
-
         switch (clutter_event_get_key_symbol (event))
           {
+          case CLUTTER_d:
+            if (app->vtexture)
+              {
+                clutter_container_remove_actor (CLUTTER_CONTAINER (app->stage),
+                                                app->vtexture);
+                app->vtexture = NULL;
+              }
+            if (app->control)
+              {
+                clutter_container_remove_actor (CLUTTER_CONTAINER (app->stage),
+                                                app->control);
+                app->control = NULL;
+              }
+            break;
           case CLUTTER_q:
           case CLUTTER_Escape:
             clutter_main_quit ();
             break;
 
           case CLUTTER_e:
+            if (app->vtexture == NULL)
+              break;
+
+            center.x = clutter_actor_get_width (app->vtexture) / 2;
+
             animation =
               clutter_actor_animate (app->vtexture, CLUTTER_LINEAR, 500,
                                      "rotation-angle-y", 360.0,
