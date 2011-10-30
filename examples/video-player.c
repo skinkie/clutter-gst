@@ -45,6 +45,8 @@ typedef struct _VideoApp
 
   ClutterActor *control_seek1, *control_seek2, *control_seekbar;
 
+  ClutterActor *logo;
+
   gboolean      controls_showing, paused;
 
   guint         controls_timeout;
@@ -303,6 +305,12 @@ size_change (ClutterTexture *texture,
 
   clutter_actor_set_position (CLUTTER_ACTOR (texture), new_x, new_y);
   clutter_actor_set_size (CLUTTER_ACTOR (texture), new_width, new_height);
+
+  if (app->logo) {
+    gint logo_width, logo_height;
+    clutter_texture_get_base_size(CLUTTER_TEXTURE(app->logo), &logo_width, &logo_height);
+    clutter_actor_set_position (CLUTTER_ACTOR (app->logo), new_x + new_width - logo_width - 10, new_y + 10);
+  }
 }
 
 static void
@@ -380,7 +388,7 @@ main (int argc, char *argv[])
 
   if (argc < 2)
     {
-      g_print ("Usage: %s [OPTIONS] <video file>\n", argv[0]);
+      g_print ("Usage: %s [OPTIONS] <video file> [logo file]\n", argv[0]);
       return EXIT_FAILURE;
     }
 
@@ -492,6 +500,14 @@ main (int argc, char *argv[])
   g_signal_connect (app->vtexture,
                     "notify::progress", G_CALLBACK (tick),
                     app);
+ 
+  /* Insert a broadcast logo, if provided */
+  if (argc > 2) {
+      app->logo =
+        clutter_texture_new_from_file (argv[2], NULL);
+        clutter_container_add (CLUTTER_CONTAINER (stage),
+                               app->logo, NULL);
+  }
 
   clutter_media_set_playing (CLUTTER_MEDIA (app->vtexture), TRUE);
 
