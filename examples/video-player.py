@@ -43,17 +43,23 @@ class Playlist:
         self.current = -1
         self.loop = loop
 
+    def _append(self, filename):
+        if filename.startswith('/'):
+            self.entries.append('file://'+filename)
+        else:
+            self.entries.append(filename)
+
     def load(self, filename):
         if filename.lower().endswith('.m3u'):
             self._loadm3u(filename)
         else:
-            self.entries.append(filename)
+            self._append(filename)
 
     def _loadm3u(self, filename):
         f = codecs.open(filename, 'r', 'utf-8')
         for line in f.read().split('\n'):
             if len(line) > 1 and line[0] != '#' and exists(line):
-                self.entries.append(line)
+                self._append(line)
 
     def advance(self):
         self.current += 1
@@ -63,7 +69,7 @@ class Playlist:
             else:
                 self.current -= 1
                 return None
-
+        print self.entries[self.current]
         return self.entries[self.current]
 
 class VideoApp:
@@ -118,7 +124,7 @@ class VideoApp:
         self.vtexture.connect_after("size-change", self._size_change)
 
         # Load up out video texture
-        self.vtexture.set_filename(self.playlist.advance())
+        self.vtexture.set_uri(self.playlist.advance())
 
         # Create the control UI
         self.control = Clutter.Group.new()
@@ -305,10 +311,6 @@ class VideoApp:
         scale 4:3 output to the proper aspect ratio (horizontally)
         """
 
-        print {'base_width': base_width, 'base_height': base_height}
-        print {'stage_width': stage_width, 'stage_height': stage_height}
-        print {'frame_width': frame_width, 'frame_height': frame_height}
-
         if self.anamorph and (3 * stage_width / 4) == stage_height:
             aspectchanger = 16.0/12.0
         else:
@@ -370,7 +372,7 @@ class VideoApp:
         else:
             filename = self.playlist.advance()
             if filename is not None:
-                media.set_filename(filename)
+                media.set_uri(filename)
                 media.set_playing(True)
             else:
                 exit()
