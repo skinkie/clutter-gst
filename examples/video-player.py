@@ -27,8 +27,9 @@
 # Boston, MA 02111-1307, USA.
 
 import sys
+import codecs
 from gi.repository import Clutter, ClutterGst
-from os.path import basename
+from os.path import basename, exists
 
 # An easy way to debug clutter and cogl without having to type the
 # command line arguments
@@ -36,9 +37,37 @@ from os.path import basename
 DEBUG = False
 debugArgs = ['--clutter-debug=all', '--cogl-debug=all']
 
+class Playlist:
+    def __init__(self, loop=False):
+        self.entries = []
+        self.current = -1
+        self.loop = loop
+
+    def load(self, filename):
+        if filename.lower().endswith('.m3u'):
+            self._loadm3u(filename)
+        else:
+            self.entries.append(filename)
+
+    def _loadm3u(self, filename):
+        f = codecs.open(filename, 'r', 'utf-8')
+        for line in f.read().split('\n'):
+            if len(line) > 1 and line[0] != '#' and exists(line):
+                self.entries.append(line)
+
+    def advance(self):
+        self.current += 1
+        if self.current >= len(self.entries):
+            if self.loop:
+                self.current = 0
+            else:
+                self.current -= 1
+                return None
+
+        return self.entries[self.current]
 
 class VideoApp:
-    def __init__(self, filename, logo=None, fullscreen=False, loop=False):
+    def __init__(self, filename, logo=None, controls_visible=True, fullscreen=False, loop=False, anamorph=False):
         """
         Build the user interface.
         """
@@ -50,10 +79,12 @@ class VideoApp:
         self.SEEK_H = 14
 
         self.fullscreen = fullscreen
-        self.logo = logo
-        self.loop = loop
 
-        self.controls_showing = True
+        self.playlist = Playlist(loop)
+        self.playlist.load(filename)
+        self.anamorph = anamorph
+
+        self.controls_showing = False
         self.paused           = True
         self.controls_timeout = 0
 
@@ -87,7 +118,7 @@ class VideoApp:
         self.vtexture.connect_after("size-change", self._size_change)
 
         # Load up out video texture
-        self.vtexture.set_filename(filename)
+        self.vtexture.set_filename(self.playlist.advance())
 
         # Create the control UI
         self.control = Clutter.Group.new()
@@ -132,6 +163,7 @@ class VideoApp:
         self.stage.add_actor(self.vtexture)
         self.stage.add_actor(self.control)
 
+        self._show_controls(not controls_visible)
         self._position_controls()
 
         self.stage.hide_cursor()
@@ -141,16 +173,18 @@ class VideoApp:
         # Hook up other events
         self.stage.connect("event", self._input_cb)
 
-        self.vtexture.connect("notify::progress", self._tick)
-
         # Insert a broadcast logo, if provided
-        if self.logo is not None:
+        if logo is not None:
             self.logo = Clutter.Texture().new_from_file(logo)
+            self.logo.hide()
+            self.logo_width, self.logo_height = self.logo.get_size()
             self.stage.add_actor(self.logo)
+        else:
+            self.logo = None
 
         self.vtexture.set_playing(True)
         self.stage.show();
-    
+
 
     def _show_controls(self, visible):
         if visible and self.controls_showing:
@@ -162,12 +196,17 @@ class VideoApp:
         
         if visible and not self.controls_showing:
             self.controls_showing = True
+            self.control_progress = self.vtexture.connect("notify::progress", self._tick)
             self.stage.show_cursor()
+            self.control.show()
             # TODO: Waiting for G-I bugfix
             # self.control.animatev(Clutter.EASE_OUT_QUINT, 250, "opacity", 224)
         elif not visible and self.controls_showing:
             self.controls_showing = False
             self.stage.hide_cursor()
+            self.control.hide()
+            self.vtexture.disconnect(self.control_progress)
+
             # TODO: Waiting for G-I bugfix
             #self.control.animate(Clutter.EASE_OUT_QUINT, 250, "opacity", 0)
 
@@ -249,16 +288,42 @@ class VideoApp:
         size of the texture to display
         """
 
+        texture.set_size(base_width, base_height)
         frame_width, frame_height = texture.get_size()
 
-        new_height = (frame_height * stage_width) / frame_width
+        """
+        Anamorph 16:9 output.
+        Normal television was 4:3, Widescreen television is 16:9.
+        This means that normal television is 12:9.
+        The of pixels we have to stretch a widescreen image is therefore: 16:12
+
+        Given too choices: a fixed anamorph 16:9 output or an output that only
+        streches widescreen to increase vertical resolution. We have to provide
+        meta information calling the WideScreenSignalling.
+
+        First we implement fixed anamorph 16:9 output, this means we have to
+        scale 4:3 output to the proper aspect ratio (horizontally)
+        """
+
+        print {'base_width': base_width, 'base_height': base_height}
+        print {'stage_width': stage_width, 'stage_height': stage_height}
+        print {'frame_width': frame_width, 'frame_height': frame_height}
+
+        if self.anamorph and (3 * stage_width / 4) == stage_height:
+            aspectchanger = 16.0/12.0
+        else:
+            aspectchanger = 1
+
+        new_height = (aspectchanger * frame_height * stage_width) / frame_width
         if new_height <= stage_height:
+            # Widescreen
             new_width = stage_width
 
             new_x = 0;
             new_y = (stage_height - new_height) / 2
         else:
-            new_width  = (frame_width * stage_height) / frame_height
+            # 4:3
+            new_width  = (frame_width * stage_height) / (frame_height * aspectchanger)
             new_height = stage_height
 
             new_x = (stage_width - new_width) / 2
@@ -268,9 +333,14 @@ class VideoApp:
         texture.set_size(new_width, new_height)
  
         if self.logo is not None:
-           logo_width, logo_height = self.logo.get_size()
-           self.logo.set_position(new_x + new_width - logo_width - 10, new_y + 10)
-    
+            self.logo.set_position(new_x + new_width - self.logo_width - 10, new_y + 10)
+            if self.anamorph:
+                # TODO: allow for search for 'in aspect' logo's
+                if new_height <= stage_height:
+                    self.logo.set_size(self.logo_width, self.logo_height * aspectchanger)
+                else:
+                    self.logo.set_size(self.logo_width / aspectchanger, self.logo_height)
+            self.logo.show()
 
     def _position_controls(self):
         stage_width, stage_height = self.stage.get_size()
@@ -294,10 +364,16 @@ class VideoApp:
 
 
     def _on_video_texture_eos(self, media):
-        if self.loop:
+        if self.playlist.loop and len(self.playlist.entries) == 1:
             media.set_progress(0.0)
             media.set_playing(True)
-
+        else:
+            filename = self.playlist.advance()
+            if filename is not None:
+                media.set_filename(filename)
+                media.set_playing(True)
+            else:
+                exit()
     
     def renderText(self):
         """
@@ -341,7 +417,7 @@ def main():
             logo = sys.argv[2]
         else:
             logo = None
-        app = VideoApp(filename, logo)
+        app = VideoApp(filename, logo, False, False, False, True)
         Clutter.main()
 
 if __name__ == "__main__":
